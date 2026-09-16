@@ -24,43 +24,70 @@ jobs:
           test -f weather-dashboard.css
           test -f weather-dashboard.js
           test -f weather-standalone-data.js
+          test -f weather-live-config.js
           test -f weather-sw.js
           test -f weather-history.html
           test -f weather-manifest.webmanifest
           test -f CNAME
+          test -f data/dashboard-data.json
+          test -f data/nowcast.json
+          test -f data/air-quality.json
+          test -f data/tide.json
+          test -f vendor/weather-dashboard-base.css
+          test -f vendor/weather-dashboard-typography.css
+          test -f vendor/weather-dashboard-enhancements.js
+          test -f vendor/weather-dashboard-legacy.js
+          test -f vendor/weather-dashboard-air-quality.js
+          test -f vendor/weather-dashboard-tide.js
+          test -f vendor/weather-dashboard-observation-status.js
+          test -f vendor/weather-dashboard-history-link.js
+          test -f vendor/weather-history.css
+          test -f vendor/weather-history.js
+          test -f cloudflare/weather-worker.js
+          test -f cloudflare/wrangler.toml
           test "$(tr -d '\r\n ' < CNAME)" = "weather.openphuquoc.com"
           grep -q 'weather.openphuquoc.com' README.md
+          grep -q 'weather-live-config.js' index.html
           grep -q 'weather-standalone-data.js' index.html
           grep -q 'weather-sw.js' index.html
-          grep -q 'weather.openphuquoc.com' index.html
-          grep -q 'fa2b76f35cb1b8031023c95508246ceee484152c' weather-dashboard.js
-          grep -q 'fa2b76f35cb1b8031023c95508246ceee484152c' weather-dashboard.css
+          grep -q '/vendor/weather-dashboard-base.css' weather-dashboard.css
+          grep -q 'REFRESH_MS=10\*60\*1000' weather-dashboard.js
 
       - name: Validate JavaScript syntax
         run: |
           node --check weather-dashboard.js
           node --check weather-standalone-data.js
+          node --check weather-live-config.js
           node --check weather-sw.js
+          node --check vendor/weather-dashboard-legacy.js
+          node --check vendor/weather-dashboard-enhancements.js
+          node --check vendor/weather-dashboard-air-quality.js
+          node --check vendor/weather-dashboard-tide.js
+          node --check vendor/weather-dashboard-observation-status.js
+          node --check vendor/weather-dashboard-history-link.js
+          node --check vendor/weather-history.js
+          node --check cloudflare/weather-worker.js
 
-      - name: Validate manifest JSON
-        run: python -m json.tool weather-manifest.webmanifest >/dev/null
-
-      - name: Validate pinned UI dependencies
-        shell: bash
+      - name: Validate manifest and mirrored data
         run: |
-          set -euo pipefail
-          base='https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@fa2b76f35cb1b8031023c95508246ceee484152c'
-          for file in weather-dashboard-base.css weather-dashboard-typography.css weather-dashboard-enhancements.js weather-dashboard-legacy.js weather-dashboard-air-quality.js weather-dashboard-tide.js weather-dashboard-observation-status.js weather-dashboard-history-link.js; do
-            curl -fsSL --retry 3 --retry-delay 2 "$base/$file" -o "/tmp/$file"
-            test -s "/tmp/$file"
-          done
+          python -m json.tool weather-manifest.webmanifest >/dev/null
+          python - <<'PY'
+          import json
+          d=json.load(open('data/dashboard-data.json',encoding='utf-8'))
+          assert d.get('report_status')=='LIVE'
+          assert isinstance(d.get('points'),dict) and d['points']
+          for name in ('nowcast.json','air-quality.json','tide.json'):
+              p=json.load(open('data/'+name,encoding='utf-8'))
+              assert p.get('status')=='POINT_NUMERIC_READY', (name,p.get('status'))
+          print('local mirror OK')
+          PY
 
-      - name: Validate live Weather data contracts
+      - name: Validate live Weather origin contracts
         shell: bash
         run: |
           set -euo pipefail
           base='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
-          for file in dashboard-data.json tide.json nowcast.json; do
+          for file in dashboard-data.json tide.json nowcast.json air-quality.json; do
             curl -fsSL --retry 3 --retry-delay 2 "$base/$file" -o "/tmp/$file"
             python - "$file" <<'PY'
           import json,sys
@@ -82,4 +109,5 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/ | grep -q 'JoTrip Weather Lab'
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/data/dashboard-data.json | python -c 'import json,sys; p=json.load(sys.stdin); assert p["report_status"]=="LIVE" and p["points"]'
           curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/weather-history.html | grep -q 'Lịch sử'

@@ -1,4 +1,4 @@
-const CACHE='jotrip-weather-shell-v5';
+const CACHE='jotrip-weather-shell-v6';
 const SHELL=[
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const SHELL=[
   '/weather-dashboard.js',
   '/weather-standalone-data.js',
   '/weather-live-config.js',
+  '/jotrip-logo-wordmark.svg',
   '/weather-app-icon.svg',
   '/weather-manifest.webmanifest',
   '/vendor/weather-dashboard-base.css',
@@ -59,7 +60,7 @@ self.addEventListener('fetch',event=>{
   if(request.mode==='navigate'){
     event.respondWith((async()=>{
       try{
-        const response=await timedFetch(request,2200);
+        const response=await timedFetch(request,2400);
         if(response.ok){
           const cache=await caches.open(CACHE);
           cache.put('/index.html',response.clone()).catch(()=>{});
@@ -71,17 +72,17 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  if(url.pathname==='/weather-live-config.js'){
+  if(url.pathname==='/weather-live-config.js'||url.pathname==='/weather-dashboard.css'||url.pathname==='/weather-standalone-data.js'){
     event.respondWith((async()=>{
       const cache=await caches.open(CACHE);
       try{
-        const response=await timedFetch(request,1400);
+        const response=await timedFetch(request,1800);
         if(response.ok){
-          cache.put('/weather-live-config.js',response.clone()).catch(()=>{});
+          cache.put(url.pathname,response.clone()).catch(()=>{});
           return response;
         }
       }catch{}
-      return (await cache.match('/weather-live-config.js',{ignoreSearch:true}))||Response.error();
+      return (await cache.match(url.pathname,{ignoreSearch:true}))||Response.error();
     })());
     return;
   }
@@ -90,7 +91,7 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{
       const cache=await caches.open(CACHE);
       try{
-        const response=await timedFetch(request,1600);
+        const response=await timedFetch(request,2600);
         if(response.ok){
           cache.put(url.pathname,response.clone()).catch(()=>{});
           return response;

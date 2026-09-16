@@ -1,8 +1,9 @@
-const CACHE='jotrip-weather-shell-v7';
+const CACHE='jotrip-weather-shell-v8';
 const SHELL=[
   '/',
   '/index.html',
   '/weather-dashboard.css',
+  '/weather-mobile-polish.css',
   '/weather-dashboard.js',
   '/weather-standalone-data.js',
   '/weather-live-config.js',
@@ -72,7 +73,7 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  if(['/weather-live-config.js','/weather-dashboard.css','/weather-dashboard.js','/weather-standalone-data.js'].includes(url.pathname)){
+  if(['/weather-live-config.js','/weather-dashboard.css','/weather-mobile-polish.css','/weather-dashboard.js','/weather-standalone-data.js'].includes(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(CACHE);
       try{

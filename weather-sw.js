@@ -1,4 +1,4 @@
-const CACHE='jotrip-weather-shell-v6';
+const CACHE='jotrip-weather-shell-v7';
 const SHELL=[
   '/',
   '/index.html',
@@ -72,7 +72,7 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  if(url.pathname==='/weather-live-config.js'||url.pathname==='/weather-dashboard.css'||url.pathname==='/weather-standalone-data.js'){
+  if(['/weather-live-config.js','/weather-dashboard.css','/weather-dashboard.js','/weather-standalone-data.js'].includes(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(CACHE);
       try{
@@ -102,7 +102,21 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  if(url.pathname.startsWith('/vendor/')||SHELL.includes(url.pathname)){
+  if(url.pathname.startsWith('/vendor/')){
+    event.respondWith((async()=>{
+      const cache=await caches.open(CACHE);
+      const cached=await cache.match(url.pathname,{ignoreSearch:true});
+      const refresh=fetch(request,{cache:'no-store'}).then(response=>{
+        if(response.ok)cache.put(url.pathname,response.clone()).catch(()=>{});
+        return response;
+      }).catch(()=>null);
+      if(cached){event.waitUntil(refresh);return cached}
+      return (await refresh)||Response.error();
+    })());
+    return;
+  }
+
+  if(SHELL.includes(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(CACHE);
       const cached=await cache.match(url.pathname,{ignoreSearch:true});

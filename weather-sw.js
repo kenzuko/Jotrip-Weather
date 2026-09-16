@@ -1,4 +1,4 @@
-const CACHE='jotrip-weather-shell-v9';
+const CACHE='jotrip-weather-shell-v10';
 const SHELL=[
   '/',
   '/index.html',

@@ -24,7 +24,7 @@
   <script src="/weather-live-config.js?v=20260916-1" defer></script>
   <script src="/weather-standalone-data.js?v=20260916-local-1" defer></script>
   <script src="/weather-dashboard.js?v=20260916-local-4" defer></script>
-  <script src="/weather-feedback.js?v=20260916-1" defer></script>
+  <script src="/weather-feedback.js?v=20260916-2" defer></script>
   <title>JoTrip Weather Lab</title>
 </head>
 <body>
@@ -154,7 +154,7 @@
   <noscript><div style="margin:16px;padding:14px;border-radius:12px;background:#fff1f2;color:#9b3f46">Weather Lab cần JavaScript để đọc dữ liệu trực tiếp.</div></noscript>
   <script>
     if('serviceWorker' in navigator){
-      window.addEventListener('load',()=>navigator.serviceWorker.register('/weather-sw.js?v=20260916-local-3',{scope:'/'}).catch(()=>{}));
+      window.addEventListener('load',()=>navigator.serviceWorker.register('/weather-sw.js?v=20260916-local-4',{scope:'/'}).catch(()=>{}));
     }
   </script>
 </body>

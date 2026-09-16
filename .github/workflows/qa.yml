@@ -30,9 +30,27 @@ jobs:
           test "$(tr -d '\r\n ' < CNAME)" = "weather.openphuquoc.com"
           grep -q 'weather.openphuquoc.com' README.md
           grep -q 'weather-standalone-data.js' index.html
+          grep -q 'weather.openphuquoc.com' index.html
+          grep -q 'fa2b76f35cb1b8031023c95508246ceee484152c' weather-dashboard.js
+          grep -q 'fa2b76f35cb1b8031023c95508246ceee484152c' weather-dashboard.css
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check weather-dashboard.js
+          node --check weather-standalone-data.js
 
       - name: Validate manifest JSON
         run: python -m json.tool weather-manifest.webmanifest >/dev/null
+
+      - name: Validate pinned UI dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@fa2b76f35cb1b8031023c95508246ceee484152c'
+          for file in weather-dashboard-base.css weather-dashboard-typography.css weather-dashboard-enhancements.js weather-dashboard-legacy.js; do
+            curl -fsSL --retry 3 --retry-delay 2 "$base/$file" -o "/tmp/$file"
+            test -s "/tmp/$file"
+          done
 
       - name: Validate live Weather data contracts
         shell: bash

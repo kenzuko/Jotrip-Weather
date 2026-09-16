@@ -1,4 +1,4 @@
-const CACHE='jotrip-weather-shell-v4';
+const CACHE='jotrip-weather-shell-v5';
 const SHELL=[
   '/',
   '/index.html',
@@ -46,7 +46,7 @@ self.addEventListener('activate',event=>{
 const timedFetch=async(request,ms)=>{
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),ms);
-  try{return await fetch(request,{signal:controller.signal})}
+  try{return await fetch(request,{signal:controller.signal,cache:'no-store'})}
   finally{clearTimeout(timer)}
 };
 
@@ -67,6 +67,21 @@ self.addEventListener('fetch',event=>{
         }
       }catch{}
       return (await caches.match('/index.html'))||(await caches.match('/'))||Response.error();
+    })());
+    return;
+  }
+
+  if(url.pathname==='/weather-live-config.js'){
+    event.respondWith((async()=>{
+      const cache=await caches.open(CACHE);
+      try{
+        const response=await timedFetch(request,1400);
+        if(response.ok){
+          cache.put('/weather-live-config.js',response.clone()).catch(()=>{});
+          return response;
+        }
+      }catch{}
+      return (await cache.match('/weather-live-config.js',{ignoreSearch:true}))||Response.error();
     })());
     return;
   }

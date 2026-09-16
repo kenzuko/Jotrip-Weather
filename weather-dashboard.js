@@ -1,21 +1,43 @@
 (()=>{
-  const V="20260916-standalone-2";
+  const V="20260916-perf-1";
   const CDN="https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@fa2b76f35cb1b8031023c95508246ceee484152c";
+  const url=path=>`${CDN}${path}?v=${V}`;
+
+  const preload=(path,as)=>{
+    const l=document.createElement('link');
+    l.rel='preload';
+    l.as=as;
+    l.href=url(path);
+    document.head.appendChild(l);
+  };
+
+  preload('/weather-dashboard-typography.css','style');
+  [
+    '/weather-dashboard-enhancements.js',
+    '/weather-dashboard-legacy.js',
+    '/weather-dashboard-air-quality.js',
+    '/weather-dashboard-tide.js',
+    '/weather-dashboard-observation-status.js',
+    '/weather-dashboard-history-link.js'
+  ].forEach(src=>preload(src,'script'));
+
   const style=href=>{
     const l=document.createElement("link");
     l.rel="stylesheet";
-    l.href=`${CDN}${href}?v=${V}`;
+    l.href=url(href);
     l.onerror=()=>console.warn(`Không tải được ${href}`);
     document.head.appendChild(l);
   };
+
   const load=src=>new Promise((ok,fail)=>{
     const s=document.createElement("script");
-    s.src=`${CDN}${src}?v=${V}`;
+    s.src=url(src);
     s.async=false;
     s.onload=ok;
     s.onerror=()=>fail(new Error(`Không tải được ${src}`));
     document.head.appendChild(s);
   });
+
   const warn=(label,err)=>console.warn(`[Weather Lab] Bỏ qua mô-đun ${label}:`,err);
   const optional=async(src,label,install)=>{
     try{await load(src);await install?.();}catch(err){warn(label,err)}
@@ -24,6 +46,7 @@
     console.error(err);
     document.body?.insertAdjacentHTML("afterbegin",'<div style="padding:12px;background:#fff1f2;color:#9b3f46">Không tải được dữ liệu cốt lõi của Weather Lab. Hãy tải lại trang sau ít phút.</div>');
   };
+
   async function boot(){
     style("/weather-dashboard-typography.css");
     try{
@@ -31,9 +54,12 @@
       await load("/weather-dashboard-legacy.js");
       await window.WeatherLabEnhancements?.afterLegacy?.();
     }catch(err){fatal(err);return}
-    await optional("/weather-dashboard-air-quality.js","chất lượng không khí",()=>window.WeatherLabAirQuality?.install?.());
-    await optional("/weather-dashboard-tide.js","thủy triều",()=>window.WeatherLabTide?.install?.());
-    await optional("/weather-dashboard-observation-status.js","trạng thái quan sát",()=>window.WeatherLabObservationStatus?.install?.());
+
+    await Promise.all([
+      optional("/weather-dashboard-air-quality.js","chất lượng không khí",()=>window.WeatherLabAirQuality?.install?.()),
+      optional("/weather-dashboard-tide.js","thủy triều",()=>window.WeatherLabTide?.install?.()),
+      optional("/weather-dashboard-observation-status.js","trạng thái quan sát",()=>window.WeatherLabObservationStatus?.install?.())
+    ]);
     await optional("/weather-dashboard-history-link.js","lịch sử và đối chiếu",()=>window.WeatherLabHistoryLink?.install?.());
   }
   boot();

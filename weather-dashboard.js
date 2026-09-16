@@ -1,7 +1,8 @@
 (()=>{
-  const V="20260916-perf-1";
-  const CDN="https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@fa2b76f35cb1b8031023c95508246ceee484152c";
-  const url=path=>`${CDN}${path}?v=${V}`;
+  const V="20260916-local-1";
+  const BASE="/vendor";
+  const REFRESH_MS=10*60*1000;
+  const url=path=>`${BASE}${path}?v=${V}`;
 
   const preload=(path,as)=>{
     const l=document.createElement('link');
@@ -29,7 +30,7 @@
     document.head.appendChild(l);
   };
 
-  const load=src=>new Promise((ok,fail)=>{
+  const loadScript=src=>new Promise((ok,fail)=>{
     const s=document.createElement("script");
     s.src=url(src);
     s.async=false;
@@ -40,18 +41,45 @@
 
   const warn=(label,err)=>console.warn(`[Weather Lab] Bỏ qua mô-đun ${label}:`,err);
   const optional=async(src,label,install)=>{
-    try{await load(src);await install?.();}catch(err){warn(label,err)}
+    try{await loadScript(src);await install?.();}catch(err){warn(label,err)}
   };
   const fatal=err=>{
     console.error(err);
-    document.body?.insertAdjacentHTML("afterbegin",'<div style="padding:12px;background:#fff1f2;color:#9b3f46">Không tải được dữ liệu cốt lõi của Weather Lab. Hãy tải lại trang sau ít phút.</div>');
+    document.body?.insertAdjacentHTML("afterbegin",'<div style="padding:12px;background:#fff1f2;color:#9b3f46">Không tải được phần hiển thị cốt lõi của Weather Lab. Hãy thử lại sau ít phút.</div>');
+  };
+
+  let lastRefreshAt=Date.now();
+  let refreshing=false;
+
+  const refreshData=async(force=false)=>{
+    if(refreshing)return;
+    if(document.visibilityState==='hidden'&&!force)return;
+    if(!force&&Date.now()-lastRefreshAt<REFRESH_MS)return;
+    if(typeof window.load!=='function')return;
+    refreshing=true;
+    try{
+      await window.load();
+      lastRefreshAt=Date.now();
+    }catch(err){
+      console.warn('[Weather Lab] Refresh nền thất bại, giữ nguyên dữ liệu đang hiển thị.',err);
+    }finally{refreshing=false}
+  };
+
+  const scheduleRefresh=()=>{
+    setInterval(()=>refreshData(false),60*1000);
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible'&&Date.now()-lastRefreshAt>=REFRESH_MS)refreshData(true);
+    });
+    window.addEventListener('pageshow',event=>{
+      if(event.persisted&&Date.now()-lastRefreshAt>=REFRESH_MS)refreshData(true);
+    });
   };
 
   async function boot(){
     style("/weather-dashboard-typography.css");
     try{
-      await load("/weather-dashboard-enhancements.js");
-      await load("/weather-dashboard-legacy.js");
+      await loadScript("/weather-dashboard-enhancements.js");
+      await loadScript("/weather-dashboard-legacy.js");
       await window.WeatherLabEnhancements?.afterLegacy?.();
     }catch(err){fatal(err);return}
 
@@ -61,6 +89,8 @@
       optional("/weather-dashboard-observation-status.js","trạng thái quan sát",()=>window.WeatherLabObservationStatus?.install?.())
     ]);
     await optional("/weather-dashboard-history-link.js","lịch sử và đối chiếu",()=>window.WeatherLabHistoryLink?.install?.());
+    lastRefreshAt=Date.now();
+    scheduleRefresh();
   }
   boot();
 })();

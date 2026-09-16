@@ -24,12 +24,14 @@ jobs:
           test -f weather-dashboard.css
           test -f weather-dashboard.js
           test -f weather-standalone-data.js
+          test -f weather-sw.js
           test -f weather-history.html
           test -f weather-manifest.webmanifest
           test -f CNAME
           test "$(tr -d '\r\n ' < CNAME)" = "weather.openphuquoc.com"
           grep -q 'weather.openphuquoc.com' README.md
           grep -q 'weather-standalone-data.js' index.html
+          grep -q 'weather-sw.js' index.html
           grep -q 'weather.openphuquoc.com' index.html
           grep -q 'fa2b76f35cb1b8031023c95508246ceee484152c' weather-dashboard.js
           grep -q 'fa2b76f35cb1b8031023c95508246ceee484152c' weather-dashboard.css
@@ -38,6 +40,7 @@ jobs:
         run: |
           node --check weather-dashboard.js
           node --check weather-standalone-data.js
+          node --check weather-sw.js
 
       - name: Validate manifest JSON
         run: python -m json.tool weather-manifest.webmanifest >/dev/null
@@ -47,7 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           base='https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@fa2b76f35cb1b8031023c95508246ceee484152c'
-          for file in weather-dashboard-base.css weather-dashboard-typography.css weather-dashboard-enhancements.js weather-dashboard-legacy.js; do
+          for file in weather-dashboard-base.css weather-dashboard-typography.css weather-dashboard-enhancements.js weather-dashboard-legacy.js weather-dashboard-air-quality.js weather-dashboard-tide.js weather-dashboard-observation-status.js weather-dashboard-history-link.js; do
             curl -fsSL --retry 3 --retry-delay 2 "$base/$file" -o "/tmp/$file"
             test -s "/tmp/$file"
           done

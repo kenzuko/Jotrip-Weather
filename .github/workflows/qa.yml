@@ -26,6 +26,8 @@ jobs:
           test -f weather-standalone-data.js
           test -f weather-live-config.js
           test -f weather-sw.js
+          test -f weather-feedback.js
+          test -f weather-feedback.css
           test -f weather-history.html
           test -f weather-manifest.webmanifest
           test -f CNAME
@@ -45,19 +47,25 @@ jobs:
           test -f vendor/weather-history.js
           test -f cloudflare/weather-worker.js
           test -f cloudflare/wrangler.toml
+          test -f cloudflare/schema.sql
           test "$(tr -d '\r\n ' < CNAME)" = "weather.openphuquoc.com"
           grep -q 'weather.openphuquoc.com' README.md
           grep -q 'weather-live-config.js' index.html
           grep -q 'weather-standalone-data.js' index.html
+          grep -q 'weather-feedback.js' index.html
+          grep -q 'weather-feedback.css' index.html
           grep -q 'weather-sw.js' index.html
           grep -q '/vendor/weather-dashboard-base.css' weather-dashboard.css
           grep -q 'REFRESH_MS=10\*60\*1000' weather-dashboard.js
+          grep -q "'/feedback'" cloudflare/weather-worker.js
+          grep -q 'weather_feedback' cloudflare/schema.sql
 
       - name: Validate JavaScript syntax
         run: |
           node --check weather-dashboard.js
           node --check weather-standalone-data.js
           node --check weather-live-config.js
+          node --check weather-feedback.js
           node --check weather-sw.js
           node --check vendor/weather-dashboard-legacy.js
           node --check vendor/weather-dashboard-enhancements.js

@@ -1,7 +1,8 @@
 (()=>{
-  const V="20260916-local-3";
+  const V="20260916-local-4";
   const BASE="/vendor";
   const REFRESH_MS=10*60*1000;
+  const DISPLAY_POINTS={an_thoi:"An Thới",duong_dong:"Dương Đông",ganh_dau:"Gành Dầu",rach_gia:"Rạch Giá"};
   const url=path=>`${BASE}${path}?v=${V}`;
 
   const preload=(path,as)=>{
@@ -52,6 +53,28 @@
   let lastUiSyncAt=Date.now();
   let refreshing=false;
 
+  const currentPointKey=()=>document.querySelector('.point-tabs button.active')?.dataset?.point||document.body?.dataset?.point||'an_thoi';
+  const polishPointTitle=()=>{
+    const el=document.getElementById('pointName');
+    if(!el)return;
+    const label=DISPLAY_POINTS[currentPointKey()];
+    if(label&&el.textContent!==label)el.textContent=label;
+  };
+  const installPointTitleGuard=()=>{
+    const original=window.renderPoint;
+    if(typeof original==='function'&&!original.__jotripPointTitleGuard){
+      const wrapped=function(...args){
+        const result=original.apply(this,args);
+        polishPointTitle();
+        return result;
+      };
+      wrapped.__jotripPointTitleGuard=true;
+      window.renderPoint=wrapped;
+    }
+    document.querySelectorAll('.point-tabs button').forEach(btn=>btn.addEventListener('click',()=>queueMicrotask(polishPointTitle)));
+    polishPointTitle();
+  };
+
   const syncAge=()=>{
     const mins=Math.max(0,Math.floor((Date.now()-lastUiSyncAt)/60000));
     return mins<1?'vừa xong':mins<60?`${mins} phút trước`:`${Math.floor(mins/60)} giờ trước`;
@@ -88,6 +111,7 @@
       inFlight=Promise.resolve(original(...args)).then(result=>{
         lastActualLoad=Date.now();
         lastUiSyncAt=lastActualLoad;
+        polishPointTitle();
         rewriteCycleText();
         return result;
       }).finally(()=>{inFlight=null});
@@ -107,6 +131,7 @@
       await window.load();
       lastRefreshAt=Date.now();
       lastUiSyncAt=lastRefreshAt;
+      polishPointTitle();
       rewriteCycleText();
     }catch(err){
       console.warn('[Weather Lab] Refresh nền thất bại, giữ nguyên dữ liệu đang hiển thị.',err);
@@ -131,6 +156,7 @@
       await window.WeatherLabEnhancements?.afterLegacy?.();
     }catch(err){fatal(err);return}
 
+    installPointTitleGuard();
     await Promise.all([
       optional("/weather-dashboard-air-quality.js","chất lượng không khí",()=>window.WeatherLabAirQuality?.install?.()),
       optional("/weather-dashboard-tide.js","thủy triều",()=>window.WeatherLabTide?.install?.()),
@@ -142,6 +168,7 @@
     lastRefreshAt=Date.now();
     lastUiSyncAt=lastRefreshAt;
     scheduleRefresh();
+    polishPointTitle();
     rewriteCycleText();
   }
   boot();

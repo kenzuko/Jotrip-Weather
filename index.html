@@ -12,17 +12,16 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://weather.openphuquoc.com/">
   <link rel="canonical" href="https://weather.openphuquoc.com/">
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://raw.githubusercontent.com">
   <link rel="preconnect" href="https://api.github.com">
-  <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
   <link rel="dns-prefetch" href="//raw.githubusercontent.com">
   <link rel="dns-prefetch" href="//api.github.com">
-  <link rel="manifest" href="/weather-manifest.webmanifest?v=20260916-2">
-  <link rel="icon" type="image/svg+xml" href="/weather-app-icon.svg?v=20260916-2">
-  <link rel="stylesheet" href="/weather-dashboard.css?v=20260916-standalone-2">
-  <script src="/weather-standalone-data.js?v=20260916-perf-1" defer></script>
-  <script src="/weather-dashboard.js?v=20260916-perf-1" defer></script>
+  <link rel="manifest" href="/weather-manifest.webmanifest?v=20260916-3">
+  <link rel="icon" type="image/svg+xml" href="/weather-app-icon.svg?v=20260916-3">
+  <link rel="stylesheet" href="/weather-dashboard.css?v=20260916-local-1">
+  <script src="/weather-live-config.js?v=20260916-1" defer></script>
+  <script src="/weather-standalone-data.js?v=20260916-local-1" defer></script>
+  <script src="/weather-dashboard.js?v=20260916-local-1" defer></script>
   <title>JoTrip Weather Lab</title>
 </head>
 <body>
@@ -58,7 +57,7 @@
       <div class="hero-temp">
         <span>Nhiệt độ</span>
         <b id="temperature">—</b>
-        <small id="temperatureNote">chưa có trong snapshot</small>
+        <small id="temperatureNote">đang đọc snapshot</small>
       </div>
     </section>
 
@@ -101,7 +100,7 @@
     <section class="decision-card panel">
       <div class="decision-main">
         <div class="decision-icon" id="decisionIcon">i</div>
-        <div><small>TRẠNG THÁI TÍNH TOÁN</small><h2 id="headline">Chưa có snapshot production</h2><p id="nextReview">Lần đọc tiếp: ...</p></div>
+        <div><small>TRẠNG THÁI TÍNH TOÁN</small><h2 id="headline">Đang đọc snapshot production</h2><p id="nextReview">Lần đọc tiếp: ...</p></div>
       </div>
       <div class="decision-statuses">
         <div class="decision-state" data-state="GO"><b>GO</b><span>Điều kiện thuận lợi</span></div>
@@ -109,7 +108,7 @@
         <div class="decision-state" data-state="HOLD"><b>HOLD</b><span>Tạm dừng</span></div>
         <div class="decision-state" data-state="TREND_ONLY"><b>TREND</b><span>Chỉ xem xu hướng</span></div>
       </div>
-      <span id="decisionBadge" class="badge neutral">CHƯA KẾT LUẬN</span>
+      <span id="decisionBadge" class="badge neutral">ĐANG ĐỌC DỮ LIỆU</span>
     </section>
 
     <section class="status-grid" aria-label="Chất lượng dữ liệu">
@@ -152,7 +151,7 @@
   <noscript><div style="margin:16px;padding:14px;border-radius:12px;background:#fff1f2;color:#9b3f46">Weather Lab cần JavaScript để đọc dữ liệu trực tiếp.</div></noscript>
   <script>
     if('serviceWorker' in navigator){
-      window.addEventListener('load',()=>navigator.serviceWorker.register('/weather-sw.js',{scope:'/'}).catch(()=>{}));
+      window.addEventListener('load',()=>navigator.serviceWorker.register('/weather-sw.js?v=20260916-local-1',{scope:'/'}).catch(()=>{}));
     }
   </script>
 </body>

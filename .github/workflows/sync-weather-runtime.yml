@@ -1,0 +1,140 @@
+name: Weather runtime mirror
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/sync-weather-runtime.yml'
+
+concurrency:
+  group: weather-runtime-mirror
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror pinned UI and validated live data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vendor data /tmp/weather-mirror
+
+          PIN='fa2b76f35cb1b8031023c95508246ceee484152c'
+          UI_BASE="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/${PIN}"
+          DATA_BASE='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
+
+          for file in \
+            weather-dashboard-base.css \
+            weather-dashboard-typography.css \
+            weather-dashboard-enhancements.js \
+            weather-dashboard-legacy.js \
+            weather-dashboard-air-quality.js \
+            weather-dashboard-tide.js \
+            weather-dashboard-observation-status.js \
+            weather-dashboard-history-link.js \
+            weather-history.css \
+            weather-history.js; do
+            curl -fsSL --retry 3 --retry-delay 1 "${UI_BASE}/${file}" -o "vendor/${file}.tmp"
+            test -s "vendor/${file}.tmp"
+            mv "vendor/${file}.tmp" "vendor/${file}"
+          done
+
+          for file in dashboard-data.json nowcast.json air-quality.json tide.json; do
+            curl -fsSL --retry 3 --retry-delay 1 "${DATA_BASE}/${file}?t=$(date +%s)" -o "/tmp/weather-mirror/${file}"
+            python -m json.tool "/tmp/weather-mirror/${file}" >/dev/null
+          done
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime
+
+          tmp=Path('/tmp/weather-mirror')
+          out=Path('data')
+          out.mkdir(exist_ok=True)
+
+          def dt(v):
+              if not v: return None
+              try: return datetime.fromisoformat(str(v).replace('Z','+00:00'))
+              except Exception: return None
+
+          def existing(name):
+              p=out/name
+              if not p.exists(): return None
+              try: return json.loads(p.read_text(encoding='utf-8'))
+              except Exception: return None
+
+          def write(name, payload):
+              (out/name).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+"\n",encoding='utf-8')
+
+          dashboard=json.loads((tmp/'dashboard-data.json').read_text(encoding='utf-8'))
+          old=existing('dashboard-data.json')
+          valid=(dashboard.get('report_status')=='LIVE' and isinstance(dashboard.get('points'),dict) and bool(dashboard['points']) and dt(dashboard.get('generated_at')))
+          monotonic=(not old or not dt(old.get('generated_at')) or dt(dashboard.get('generated_at')) >= dt(old.get('generated_at')))
+          if valid and monotonic:
+              write('dashboard-data.json',dashboard)
+          elif not old:
+              raise SystemExit('Refusing to create dashboard mirror from non-LIVE/invalid payload')
+          else:
+              print('Keeping last-good dashboard mirror')
+
+          for name in ('nowcast.json','air-quality.json','tide.json'):
+              payload=json.loads((tmp/name).read_text(encoding='utf-8'))
+              old=existing(name)
+              valid=payload.get('status')=='POINT_NUMERIC_READY'
+              new_ts=dt(payload.get('generated_at') or payload.get('sampled_time'))
+              old_ts=dt((old or {}).get('generated_at') or (old or {}).get('sampled_time'))
+              monotonic=(not old_ts or not new_ts or new_ts>=old_ts)
+              if valid and monotonic:
+                  write(name,payload)
+              elif not old:
+                  raise SystemExit(f'Refusing to create {name} mirror from invalid payload')
+              else:
+                  print(f'Keeping last-good {name} mirror')
+          PY
+
+      - name: Validate mirrored runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check vendor/weather-dashboard-legacy.js
+          node --check vendor/weather-dashboard-enhancements.js
+          node --check vendor/weather-dashboard-air-quality.js
+          node --check vendor/weather-dashboard-tide.js
+          python - <<'PY'
+          import json
+          for f in ('dashboard-data.json','nowcast.json','air-quality.json','tide.json'):
+              p=json.load(open('data/'+f,encoding='utf-8'))
+              if f=='dashboard-data.json':
+                  assert p['report_status']=='LIVE'
+                  assert p.get('points')
+              else:
+                  assert p['status']=='POINT_NUMERIC_READY'
+          print('mirror OK')
+          PY
+
+      - name: Commit mirror only when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'jotrip-weather-mirror'
+          git config user.email 'jotrip-weather-mirror@users.noreply.github.com'
+          git add vendor data
+          if git diff --cached --quiet; then
+            echo 'Mirror unchanged'
+            exit 0
+          fi
+          git commit -m 'chore: refresh Weather runtime mirror [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main

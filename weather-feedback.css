@@ -1,0 +1,31 @@
+/* Field feedback UI - qualitative observation only, never treated as calibrated ground truth. */
+.feedback-panel{margin-top:16px}
+.feedback-panel .feedback-intro{margin:0;color:#5d6c79;font-size:14px;line-height:1.45}
+.feedback-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.feedback-quick button,.feedback-chip{border:1px solid #d6e0e7;background:#fff;color:#17324a;border-radius:14px;min-height:44px;padding:9px 10px;font:inherit;font-weight:700;cursor:pointer}
+.feedback-quick button[data-value="accurate"]{background:#f3fbf6}
+.feedback-quick button[data-value="close"]{background:#fffaf0}
+.feedback-quick button[data-value="wrong"]{background:#fff4f4}
+.feedback-quick button.active,.feedback-chip.active{border-color:#0f8fc0;box-shadow:0 0 0 2px rgba(15,143,192,.12)}
+.feedback-details{margin-top:14px;padding-top:14px;border-top:1px dashed #dbe4e9}
+.feedback-row{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;margin:10px 0}
+.feedback-row>strong{font-size:13px;color:#526576}
+.feedback-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.feedback-chip{min-height:38px;padding:7px 6px;font-size:12px;font-weight:600}
+.feedback-source{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.feedback-source button{min-height:38px;border:1px solid #d6e0e7;background:#fff;border-radius:12px;font:inherit;font-size:12px;font-weight:600;color:#17324a}
+.feedback-source button.active{border-color:#0f8fc0;background:#eef9fd}
+.feedback-note{width:100%;min-height:72px;resize:vertical;border:1px solid #d6e0e7;border-radius:12px;padding:10px 12px;font:inherit;color:#17324a;background:#fff;box-sizing:border-box}
+.feedback-actions{display:flex;align-items:center;gap:10px;margin-top:10px}
+.feedback-submit{border:0;border-radius:12px;background:#128db9;color:#fff;font:inherit;font-weight:800;padding:10px 16px;min-height:42px}
+.feedback-submit:disabled{opacity:.55}
+.feedback-status{font-size:12px;color:#627383;line-height:1.35}
+.feedback-privacy{margin:8px 0 0;font-size:11px;color:#82909b;line-height:1.35}
+@media(max-width:780px){
+  .feedback-panel{margin-top:12px}
+  .feedback-quick{gap:6px}
+  .feedback-quick button{font-size:12px;padding:8px 5px}
+  .feedback-row{grid-template-columns:1fr;gap:6px}
+  .feedback-chips,.feedback-source{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .feedback-source button{font-size:11px;padding:6px 4px}
+}

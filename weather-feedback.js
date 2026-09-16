@@ -15,7 +15,6 @@
   const writeQueue=items=>{try{localStorage.setItem(QUEUE_KEY,JSON.stringify(items.slice(-MAX_QUEUE)));return true}catch{return false}};
   const queuePayload=payload=>{const q=readQueue();q.push(payload);writeQueue(q)};
   const setStatus=(message,ok=false)=>{const el=document.querySelector('[data-feedback-status]');if(el){el.textContent=message;el.style.color=ok?'#2b7b50':'#627383'}};
-  const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   async function snapshotMeta(){
     try{
@@ -115,7 +114,7 @@
         <div class="feedback-actions"><button class="feedback-submit" type="button" data-feedback-submit>Gửi phản hồi</button><span class="feedback-status" data-feedback-status></span></div>
         <p class="feedback-privacy">Không yêu cầu tên hay số điện thoại. Đây là quan sát hiện trường, không tự động được xem là số đo chuẩn để hiệu chỉnh mô hình.</p>
       </div>`;
-    anchor.insertAdjacentElement('afterend',section);
+    anchor.insertAdjacentElement('beforebegin',section);
 
     section.querySelectorAll('[data-feedback-verdict] button').forEach(btn=>btn.addEventListener('click',()=>{
       setGroup('[data-feedback-verdict] button',btn.dataset.value,'verdict');

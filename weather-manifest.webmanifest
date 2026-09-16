@@ -1,0 +1,12 @@
+{
+  "name": "JoTrip Weather Lab",
+  "short_name": "Weather Lab",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f8fa",
+  "theme_color": "#087fb8",
+  "icons": [
+    {"src":"/weather-app-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

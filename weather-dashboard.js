@@ -1,5 +1,5 @@
 (()=>{
-  const V="20260916-local-1";
+  const V="20260916-local-3";
   const BASE="/vendor";
   const REFRESH_MS=10*60*1000;
   const url=path=>`${BASE}${path}?v=${V}`;
@@ -49,7 +49,53 @@
   };
 
   let lastRefreshAt=Date.now();
+  let lastUiSyncAt=Date.now();
   let refreshing=false;
+
+  const syncAge=()=>{
+    const mins=Math.max(0,Math.floor((Date.now()-lastUiSyncAt)/60000));
+    return mins<1?'vừa xong':mins<60?`${mins} phút trước`:`${Math.floor(mins/60)} giờ trước`;
+  };
+  const snapshotAge=()=>{
+    const text=document.getElementById('snapshotAge')?.textContent?.trim();
+    if(!text||text==='-'||text==='...')return 'đang chờ';
+    return /trước$/.test(text)?text:`${text} trước`;
+  };
+  const rewriteCycleText=()=>{
+    const el=document.getElementById('cycleText');
+    if(!el)return;
+    const next=`đồng bộ ${syncAge()} · snapshot mô hình ${snapshotAge()}`;
+    if(el.textContent!==next)el.textContent=next;
+  };
+  const installCycleCopyGuard=()=>{
+    const el=document.getElementById('cycleText');
+    if(!el||el.dataset.guard==='1')return;
+    el.dataset.guard='1';
+    const observer=new MutationObserver(()=>queueMicrotask(rewriteCycleText));
+    observer.observe(el,{childList:true,characterData:true,subtree:true});
+    setInterval(rewriteCycleText,30*1000);
+    rewriteCycleText();
+  };
+  const installTenMinuteLoadGuard=()=>{
+    const original=window.load;
+    if(typeof original!=='function'||original.__jotripTenMinuteGuard)return;
+    let lastActualLoad=Date.now();
+    let inFlight=null;
+    const guarded=async(...args)=>{
+      const now=Date.now();
+      if(inFlight)return inFlight;
+      if(now-lastActualLoad<REFRESH_MS-1000){rewriteCycleText();return;}
+      inFlight=Promise.resolve(original(...args)).then(result=>{
+        lastActualLoad=Date.now();
+        lastUiSyncAt=lastActualLoad;
+        rewriteCycleText();
+        return result;
+      }).finally(()=>{inFlight=null});
+      return inFlight;
+    };
+    guarded.__jotripTenMinuteGuard=true;
+    window.load=guarded;
+  };
 
   const refreshData=async(force=false)=>{
     if(refreshing)return;
@@ -60,6 +106,8 @@
     try{
       await window.load();
       lastRefreshAt=Date.now();
+      lastUiSyncAt=lastRefreshAt;
+      rewriteCycleText();
     }catch(err){
       console.warn('[Weather Lab] Refresh nền thất bại, giữ nguyên dữ liệu đang hiển thị.',err);
     }finally{refreshing=false}
@@ -89,8 +137,12 @@
       optional("/weather-dashboard-observation-status.js","trạng thái quan sát",()=>window.WeatherLabObservationStatus?.install?.())
     ]);
     await optional("/weather-dashboard-history-link.js","lịch sử và đối chiếu",()=>window.WeatherLabHistoryLink?.install?.());
+    installTenMinuteLoadGuard();
+    installCycleCopyGuard();
     lastRefreshAt=Date.now();
+    lastUiSyncAt=lastRefreshAt;
     scheduleRefresh();
+    rewriteCycleText();
   }
   boot();
 })();

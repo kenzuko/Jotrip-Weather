@@ -1,0 +1,64 @@
+name: Weather Lab QA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate static site contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index.html
+          test -f weather-dashboard.css
+          test -f weather-dashboard.js
+          test -f weather-standalone-data.js
+          test -f weather-history.html
+          test -f weather-manifest.webmanifest
+          test -f CNAME
+          test "$(tr -d '\r\n ' < CNAME)" = "weather.openphuquoc.com"
+          grep -q 'weather.openphuquoc.com' README.md
+          grep -q 'weather-standalone-data.js' index.html
+
+      - name: Validate manifest JSON
+        run: python -m json.tool weather-manifest.webmanifest >/dev/null
+
+      - name: Validate live Weather data contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
+          for file in dashboard-data.json tide.json nowcast.json; do
+            curl -fsSL --retry 3 --retry-delay 2 "$base/$file" -o "/tmp/$file"
+            python - "$file" <<'PY'
+          import json,sys
+          name=sys.argv[1]
+          with open('/tmp/'+name,encoding='utf-8') as f:
+              data=json.load(f)
+          if name=='dashboard-data.json':
+              assert data.get('report_status') in {'LIVE','DELAYED','UNAVAILABLE'}
+              assert isinstance(data.get('points'),dict) and data['points']
+          else:
+              assert data.get('status') in {'POINT_NUMERIC_READY','UNAVAILABLE','INITIALIZING'}
+          print(name,'OK')
+          PY
+          done
+
+      - name: Check production endpoint on scheduled/manual runs
+        if: github.event_name != 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/ | grep -q 'JoTrip Weather Lab'
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/weather-history.html | grep -q 'Lịch sử'

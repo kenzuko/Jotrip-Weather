@@ -24,31 +24,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Mirror pinned UI and validated live data
+      - name: Mirror validated live data
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p vendor data /tmp/weather-mirror
-
-          PIN='fa2b76f35cb1b8031023c95508246ceee484152c'
-          UI_BASE="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/${PIN}"
+          mkdir -p data /tmp/weather-mirror
           DATA_BASE='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
-
-          for file in \
-            weather-dashboard-base.css \
-            weather-dashboard-typography.css \
-            weather-dashboard-enhancements.js \
-            weather-dashboard-legacy.js \
-            weather-dashboard-air-quality.js \
-            weather-dashboard-tide.js \
-            weather-dashboard-observation-status.js \
-            weather-dashboard-history-link.js \
-            weather-history.css \
-            weather-history.js; do
-            curl -fsSL --retry 3 --retry-delay 1 "${UI_BASE}/${file}" -o "vendor/${file}.tmp"
-            test -s "vendor/${file}.tmp"
-            mv "vendor/${file}.tmp" "vendor/${file}"
-          done
 
           for file in dashboard-data.json nowcast.json air-quality.json tide.json; do
             curl -fsSL --retry 3 --retry-delay 1 "${DATA_BASE}/${file}?t=$(date +%s)" -o "/tmp/weather-mirror/${file}"
@@ -75,7 +56,7 @@ jobs:
               try: return json.loads(p.read_text(encoding='utf-8'))
               except Exception: return None
 
-          def write(name, payload):
+          def write(name,payload):
               (out/name).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+"\n",encoding='utf-8')
 
           dashboard=json.loads((tmp/'dashboard-data.json').read_text(encoding='utf-8'))
@@ -85,33 +66,41 @@ jobs:
           if valid and monotonic:
               write('dashboard-data.json',dashboard)
           elif not old:
-              raise SystemExit('Refusing to create dashboard mirror from non-LIVE/invalid payload')
+              raise SystemExit('Refusing to create dashboard mirror from invalid payload')
           else:
+              dashboard=old
               print('Keeping last-good dashboard mirror')
 
           for name in ('nowcast.json','air-quality.json','tide.json'):
               payload=json.loads((tmp/name).read_text(encoding='utf-8'))
-              old=existing(name)
+              oldp=existing(name)
               valid=payload.get('status')=='POINT_NUMERIC_READY'
               new_ts=dt(payload.get('generated_at') or payload.get('sampled_time'))
-              old_ts=dt((old or {}).get('generated_at') or (old or {}).get('sampled_time'))
+              old_ts=dt((oldp or {}).get('generated_at') or (oldp or {}).get('sampled_time'))
               monotonic=(not old_ts or not new_ts or new_ts>=old_ts)
               if valid and monotonic:
                   write(name,payload)
-              elif not old:
+              elif not oldp:
                   raise SystemExit(f'Refusing to create {name} mirror from invalid payload')
               else:
                   print(f'Keeping last-good {name} mirror')
+
+          # Seed the first paint with a validated last-good dashboard snapshot.
+          dashboard=json.loads((out/'dashboard-data.json').read_text(encoding='utf-8'))
+          js=(
+              "// Generated from validated Weather mirror. Do not hand-edit bootstrap payload.\n"
+              "window.JOTRIP_WEATHER_LIVE_API_URL = 'https://jotrip-weather-live.kenzuko.workers.dev';\n"
+              "window.JOTRIP_WEATHER_BOOTSTRAP = "
+              + json.dumps(dashboard,ensure_ascii=False,separators=(',',':'))
+              + ";\n"
+          )
+          Path('weather-live-config.js').write_text(js,encoding='utf-8')
           PY
 
       - name: Validate mirrored runtime
         shell: bash
         run: |
           set -euo pipefail
-          node --check vendor/weather-dashboard-legacy.js
-          node --check vendor/weather-dashboard-enhancements.js
-          node --check vendor/weather-dashboard-air-quality.js
-          node --check vendor/weather-dashboard-tide.js
           python - <<'PY'
           import json
           for f in ('dashboard-data.json','nowcast.json','air-quality.json','tide.json'):
@@ -121,6 +110,9 @@ jobs:
                   assert p.get('points')
               else:
                   assert p['status']=='POINT_NUMERIC_READY'
+          text=open('weather-live-config.js',encoding='utf-8').read()
+          assert 'JOTRIP_WEATHER_BOOTSTRAP' in text
+          assert 'jotrip-weather-live.kenzuko.workers.dev' in text
           print('mirror OK')
           PY
 
@@ -130,7 +122,7 @@ jobs:
           set -euo pipefail
           git config user.name 'jotrip-weather-mirror'
           git config user.email 'jotrip-weather-mirror@users.noreply.github.com'
-          git add vendor data
+          git add data weather-live-config.js
           if git diff --cached --quiet; then
             echo 'Mirror unchanged'
             exit 0

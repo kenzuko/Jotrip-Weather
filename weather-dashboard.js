@@ -1,6 +1,6 @@
 (()=>{
-  const V="20260916-standalone-1";
-  const CDN="https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@feat/weather-lab-data-engine-v1";
+  const V="20260916-standalone-2";
+  const CDN="https://cdn.jsdelivr.net/gh/kenzuko/Jotrip-Lab@fa2b76f35cb1b8031023c95508246ceee484152c";
   const style=href=>{
     const l=document.createElement("link");
     l.rel="stylesheet";

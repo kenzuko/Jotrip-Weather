@@ -63,7 +63,7 @@ function normalizeFeedback(payload){
     source_cycles:payload.source_cycles&&typeof payload.source_cycles==='object'?payload.source_cycles:{},
     forecast,
     ui_version:cleanText(payload.ui_version,60),
-    calibration_eligible:evidence==='instrument'?1:0
+    calibration_eligible:0
   };
 }
 async function fetchText(url,ms=2400){
@@ -86,7 +86,7 @@ async function storeFeedback(env,entry){
       entry.snapshot_id,entry.forecast_generated_at,JSON.stringify(entry.source_cycles),JSON.stringify(entry.forecast),
       entry.ui_version,entry.calibration_eligible
     ).run();
-  return {ok:true,id:entry.id,stored_at:createdAt,calibration_eligible:Boolean(entry.calibration_eligible)};
+  return {ok:true,id:entry.id,stored_at:createdAt,calibration_eligible:false};
 }
 export default {
   async fetch(request,env,ctx){

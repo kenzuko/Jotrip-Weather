@@ -12,9 +12,17 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://weather.openphuquoc.com/">
   <link rel="canonical" href="https://weather.openphuquoc.com/">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://raw.githubusercontent.com">
+  <link rel="preconnect" href="https://api.github.com">
+  <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="//raw.githubusercontent.com">
+  <link rel="dns-prefetch" href="//api.github.com">
   <link rel="manifest" href="/weather-manifest.webmanifest?v=20260916-2">
   <link rel="icon" type="image/svg+xml" href="/weather-app-icon.svg?v=20260916-2">
   <link rel="stylesheet" href="/weather-dashboard.css?v=20260916-standalone-2">
+  <script src="/weather-standalone-data.js?v=20260916-perf-1" defer></script>
+  <script src="/weather-dashboard.js?v=20260916-perf-1" defer></script>
   <title>JoTrip Weather Lab</title>
 </head>
 <body>
@@ -142,7 +150,10 @@
 
   <footer><span>JoTrip Weather Lab · D0-D3 chi tiết · D4-D7 medium-range · D8-D10 trend only</span><span id="commitSha"></span></footer>
   <noscript><div style="margin:16px;padding:14px;border-radius:12px;background:#fff1f2;color:#9b3f46">Weather Lab cần JavaScript để đọc dữ liệu trực tiếp.</div></noscript>
-  <script src="/weather-standalone-data.js?v=20260916-2"></script>
-  <script src="/weather-dashboard.js?v=20260916-standalone-2"></script>
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',()=>navigator.serviceWorker.register('/weather-sw.js',{scope:'/'}).catch(()=>{}));
+    }
+  </script>
 </body>
 </html>

@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#f4f8fb">
   <title>JoTrip Weather Intelligence - Phú Quốc</title>
   <meta name="description" content="Thời tiết Phú Quốc theo thời gian thực: quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày. Miễn phí, phi thương mại.">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260918-prod2">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260918-prod3">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260918-prod2"></script>
+  <script defer src="/weather-v2.js?v=20260918-prod3"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
 </head>
 <body>
@@ -153,6 +153,24 @@
       <small id="tideAge" class="panel-foot"></small>
     </section>
   </div>
+
+  <section class="weather-scene" aria-label="Ảnh tham chiếu Phú Quốc">
+    <img loading="lazy" decoding="async" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Phu%20Quoc%20Beach.jpg?width=1600" alt="Bờ biển Phú Quốc gần Dương Đông">
+    <div class="weather-scene-shade"></div>
+    <div class="weather-scene-copy">
+      <span class="scene-badge">PHÚ QUỐC · ẢNH THẬT</span>
+      <small>ẢNH THAM CHIẾU ĐỊA PHƯƠNG</small>
+      <h2>Bờ Tây gần Dương Đông</h2>
+      <p>Không phải webcam trực tiếp. Ảnh dùng để giữ cảm giác địa phương trong sản phẩm thời tiết.</p>
+      <span class="scene-credit">FrogsLegs71 · Wikimedia Commons · CC BY-SA 3.0</span>
+    </div>
+    <div class="weather-scene-data">
+      <span>ĐIỂM ĐANG XEM</span>
+      <b id="scenePoint">Dương Đông</b>
+      <strong id="sceneTemp">--</strong>
+      <small id="sceneUpdated">Đang tải dữ liệu...</small>
+    </div>
+  </section>
 
   <section class="command-center" aria-label="Trung tâm theo dõi thời tiết">
     <div class="command-center-head">

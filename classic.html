@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f5f8fa">
+  <meta name="description" content="JoTrip Weather Lab - bảng dữ liệu thời tiết và hải văn Phú Quốc, Rạch Giá">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta property="og:title" content="JoTrip Weather Lab">
+  <meta property="og:description" content="Theo dõi thời tiết, hải văn, thủy triều, mưa đối lưu và chất lượng không khí tại Phú Quốc.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://weather.openphuquoc.com/">
+  <link rel="canonical" href="https://weather.openphuquoc.com/">
+  <link rel="preconnect" href="https://raw.githubusercontent.com">
+  <link rel="preconnect" href="https://api.github.com">
+  <link rel="dns-prefetch" href="//raw.githubusercontent.com">
+  <link rel="dns-prefetch" href="//api.github.com">
+  <link rel="manifest" href="/weather-manifest.webmanifest?v=20260916-3">
+  <link rel="icon" type="image/svg+xml" href="/weather-app-icon.svg?v=20260916-3">
+  <link rel="stylesheet" href="/weather-dashboard.css?v=20260916-local-1">
+  <link rel="stylesheet" href="/weather-mobile-polish.css?v=20260916-1">
+  <link rel="stylesheet" href="/weather-feedback.css?v=20260916-1">
+  <script src="/weather-live-config.js?v=20260916-1" defer></script>
+  <script src="/weather-standalone-data.js?v=20260916-local-1" defer></script>
+  <script src="/weather-dashboard.js?v=20260916-local-4" defer></script>
+  <script src="/weather-feedback.js?v=20260916-2" defer></script>
+  <title>JoTrip Weather Lab</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-text-logo" aria-label="JoTrip"><span class="jo">Jo</span><span class="trip">Trip</span></div>
+      <div class="brand-divider"></div>
+      <div class="brand-copy"><strong>Weather Lab</strong><span>Biển an toàn hơn, hành trình trọn vẹn hơn</span></div>
+    </div>
+    <div class="top-actions">
+      <div class="live-pill"><span id="healthDot" class="dot"></span><b>LIVE</b><span id="cycleText">Đang đọc snapshot...</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="control-shell">
+      <nav class="point-tabs" aria-label="Điểm dự báo">
+        <button data-point="an_thoi" class="active">An Thới</button>
+        <button data-point="duong_dong">Dương Đông</button>
+        <button data-point="ganh_dau">Gành Dầu</button>
+        <button data-point="rach_gia">Rạch Giá</button>
+      </nav>
+    </section>
+
+    <section class="hero-card">
+      <div class="hero-watermark">MARINE CONDITIONS</div>
+      <div class="hero-copy">
+        <small>ĐIỂM ĐANG XEM</small>
+        <h1 id="pointName">An Thới</h1>
+        <p id="heroHeadline">Đang đọc dữ liệu thời tiết và hải văn trực tiếp.</p>
+        <div class="hero-meta"><span id="pointStatus" class="source-tag">...</span><span id="heroUpdated">...</span></div>
+      </div>
+      <div class="hero-temp">
+        <span>Nhiệt độ</span>
+        <b id="temperature">—</b>
+        <small id="temperatureNote">đang đọc snapshot</small>
+      </div>
+    </section>
+
+    <section class="conditions panel">
+      <div class="panel-head premium-head">
+        <div><small>ĐIỀU KIỆN HIỆN TẠI</small><h2>Thời tiết & hải văn</h2></div>
+        <span class="section-kicker">UTC+7</span>
+      </div>
+      <div class="metric-grid">
+        <div class="metric temperature-metric"><span>Nhiệt độ</span><b id="temperatureMetric">—</b><small>°C</small></div>
+        <div class="metric"><span>Gió nền</span><b id="wind">...</b><small>km/h</small></div>
+        <div class="metric"><span>Gió giật</span><b id="gust">...</b><small>km/h</small></div>
+        <div class="metric wave-base-metric"><span>Sóng Hs</span><b id="wave">...</b><small>m · biển nền</small></div>
+        <div class="metric risk-metric"><span>Hmax rủi ro</span><b id="waveMax">...</b><small>m · sóng cá thể</small></div>
+        <div class="metric"><span>Chu kỳ đỉnh</span><b id="period">...</b><small>giây</small></div>
+        <div class="metric"><span>Mưa 3 giờ</span><b id="rain">...</b><small>mm / 3 giờ</small></div>
+        <div class="metric"><span>Dòng chảy</span><b id="current">...</b><small>km/h</small></div>
+      </div>
+      <p id="pointCaveat" class="caveat"></p>
+    </section>
+
+    <section class="forecast-shell panel">
+      <div class="panel-head premium-head forecast-title-row">
+        <div><small id="horizonLabel">TỪ HIỆN TẠI ĐẾN D+3</small><h2>Dự báo thời tiết & hải văn</h2></div>
+        <nav class="horizon-tabs" aria-label="Khoảng dự báo">
+          <button data-horizon="72" class="active">72 giờ</button>
+          <button data-horizon="120">5 ngày</button>
+          <button data-horizon="168">7 ngày</button>
+          <button data-horizon="240">10 ngày</button>
+        </nav>
+      </div>
+      <p id="chartGuide" class="chart-guide">D0-D3 hiển thị chi tiết 3 giờ. Hs là trạng thái biển nền; Hmax là biên rủi ro sóng cá thể.</p>
+      <div class="chart-wrap">
+        <canvas id="forecastChart" width="1100" height="390" aria-label="Biểu đồ dự báo gió, gió giật, Hs, Hmax và mưa"></canvas>
+        <div id="chartEmpty" class="empty">Chưa có bước dự báo tương lai trong snapshot hiện tại.</div>
+      </div>
+      <div class="legend" aria-label="Chú thích biểu đồ"><span><i class="wind"></i>Gió</span><span><i class="gust"></i>Giật</span><span><i class="wave"></i>Hs</span><span><i class="hmax"></i>Hmax</span><span><i class="rain"></i>Mưa</span></div>
+    </section>
+
+    <section class="decision-card panel">
+      <div class="decision-main">
+        <div class="decision-icon" id="decisionIcon">i</div>
+        <div><small>TRẠNG THÁI TÍNH TOÁN</small><h2 id="headline">Đang đọc snapshot production</h2><p id="nextReview">Lần đọc tiếp: ...</p></div>
+      </div>
+      <div class="decision-statuses">
+        <div class="decision-state" data-state="GO"><b>GO</b><span>Điều kiện thuận lợi</span></div>
+        <div class="decision-state" data-state="WATCH"><b>WATCH</b><span>Theo dõi thay đổi</span></div>
+        <div class="decision-state" data-state="HOLD"><b>HOLD</b><span>Tạm dừng</span></div>
+        <div class="decision-state" data-state="TREND_ONLY"><b>TREND</b><span>Chỉ xem xu hướng</span></div>
+      </div>
+      <span id="decisionBadge" class="badge neutral">ĐANG ĐỌC DỮ LIỆU</span>
+    </section>
+
+    <section class="status-grid" aria-label="Chất lượng dữ liệu">
+      <article><small>DATA MODE</small><b id="dataMode">...</b><span id="modeNote">Đang kiểm tra</span></article>
+      <article><small>SNAPSHOT</small><b id="snapshotAge">...</b><span id="snapshotId">...</span></article>
+      <article><small>ĐỘ ĐẦY ĐỦ</small><b id="completeness">...</b><span>theo point production</span></article>
+      <article><small>ĐỘ TIN CẬY</small><b id="confidence">...</b><span>không phải mức rủi ro</span></article>
+    </section>
+
+    <section class="panel forecast-table-panel">
+      <div class="panel-head premium-head"><div><small>SỐ LIỆU TỪ HIỆN TẠI</small><h2>Chi tiết theo từng mốc</h2></div><span id="tableStepNote" class="table-note">D0-D3: mỗi 3 giờ</span></div>
+      <div class="table-wrap">
+        <table class="forecast-table">
+          <thead><tr><th>Thời gian</th><th>Gió<br><small>km/h</small></th><th>Gió giật<br><small>km/h</small></th><th>Mưa<br><small>mm/kỳ</small></th><th>Hs<br><small>m</small></th><th>Hmax rủi ro<br><small>m</small></th><th>Chu kỳ<br><small>giây</small></th></tr></thead>
+          <tbody id="forecastRows"></tbody>
+        </table>
+      </div>
+      <div id="forecastCards" class="forecast-cards" aria-label="Dự báo tương lai trên điện thoại"></div>
+    </section>
+
+    <section id="longRangePanel" class="panel long-range-panel" hidden>
+      <div class="panel-head premium-head"><div><small>D+8 ĐẾN D+10</small><h2>Xu hướng ngày</h2></div><span class="trend-badge">TREND ONLY</span></div>
+      <p class="chart-guide">D+8-D+10 chỉ dùng để nhìn xu hướng và biên rủi ro. Không dùng để chốt vận hành.</p>
+      <div id="outlookCards" class="outlook-cards"></div>
+    </section>
+
+    <section class="lower-grid" id="data-health">
+      <article class="panel">
+        <div class="panel-head premium-head"><div><small>DIRECT INGEST</small><h2>Sức khỏe nguồn</h2></div></div>
+        <div id="sources" class="source-list"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head premium-head"><div><small>DATA GAPS</small><h2>Phần đang chờ</h2></div></div>
+        <div id="gaps" class="gap-list"></div>
+      </article>
+    </section>
+  </main>
+
+  <footer><span>JoTrip Weather Lab · D0-D3 chi tiết · D4-D7 medium-range · D8-D10 trend only</span><span id="commitSha"></span></footer>
+  <noscript><div style="margin:16px;padding:14px;border-radius:12px;background:#fff1f2;color:#9b3f46">Weather Lab cần JavaScript để đọc dữ liệu trực tiếp.</div></noscript>
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',()=>navigator.serviceWorker.register('/weather-sw.js?v=20260916-local-4',{scope:'/'}).catch(()=>{}));
+    }
+  </script>
+</body>
+</html>

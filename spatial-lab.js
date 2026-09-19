@@ -358,7 +358,7 @@ function spatialSupportRadius(pts){
   return median(nearest)*.92;
 }
 function drawIDW(rows,layer,alpha=.76){
-  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.36:.34);
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.50:.46);
   ctx.clearRect(0,0,c.width,c.height);
   const pts=(rows||[]).map(r=>{
     const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
@@ -373,13 +373,11 @@ function drawIDW(rows,layer,alpha=.76){
   const field=new Float32Array(total);
   field.fill(-1);
 
-  // Pass 1: continuous scalar field. IDW stays faithful to native cells;
-  // interpolation is display-only and never increases model resolution.
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
       let sw=0,sv=0,near2=Infinity;
       for(const p of pts){
-        const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+4,w=1/d2;
+        const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+5,w=1/d2;
         near2=Math.min(near2,d2);
         sw+=w;sv+=w*p.n;
       }
@@ -388,20 +386,54 @@ function drawIDW(rows,layer,alpha=.76){
     }
   }
 
-  // Pass 2: perceptual colour + very subtle relief from local scalar gradient.
-  // Relief changes luminance only, never the underlying value.
   const img=ctx.createImageData(c.width,c.height);
   const idx=(x,y)=>Math.max(0,Math.min(c.height-1,y))*c.width+Math.max(0,Math.min(c.width-1,x));
+  const sample=(x,y,fallback)=>{
+    const v=field[idx(x,y)];
+    return v>=0?v:fallback;
+  };
+  const broad=(x,y,v)=>{
+    let sum=0,n=0;
+    for(const [dx,dy] of [[-5,0],[5,0],[0,-5],[0,5],[-3,-3],[3,-3],[-3,3],[3,3]]){
+      const q=sample(x+dx,y+dy,v);
+      sum+=q;n++;
+    }
+    return n?sum/n:v;
+  };
+
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
       const pos=y*c.width+x,v=field[pos];
       if(v<0)continue;
-      const left=field[idx(x-1,y)],right=field[idx(x+1,y)],up=field[idx(x,y-1)],down=field[idx(x,y+1)];
-      const gx=(right>=0?right:v)-(left>=0?left:v);
-      const gy=(down>=0?down:v)-(up>=0?up:v);
-      const slope=Math.min(.12,Math.hypot(gx,gy)*1.9);
-      const light=(-gx*.68-gy*.42);
-      const shade=clamp(1+light*1.55+slope*.20,.84,1.14);
+
+      // Multi-scale, data-derived relief. This changes luminance only.
+      const l2=sample(x-2,y,v),r2=sample(x+2,y,v);
+      const u2=sample(x,y-2,v),d2=sample(x,y+2,v);
+      const gx=(r2-l2)*.5,gy=(d2-u2)*.5;
+      const grad=Math.hypot(gx,gy);
+
+      // Hillshade-like directional light from NW.
+      const nx=-gx*8.5,ny=-gy*8.5,nz=1;
+      const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
+      const lx=-.58,ly=-.42,lz=.69;
+      const hill=(nx*inv*lx+ny*inv*ly+nz*inv*lz);
+      const hillShade=clamp(.78+hill*.34,.68,1.20);
+
+      // Local prominence: cores are lifted, surrounding troughs are shaded.
+      const b=broad(x,y,v);
+      const prominence=clamp((v-b)*3.6,-.12,.14);
+      const coreLift=Math.pow(clamp(v,0,1),1.55)*.10;
+
+      // Soft data contour catches the eye without inventing structure.
+      const contourStep=layer==="rain24"?.11:layer==="rain"?.12:.10;
+      const phase=(v/contourStep)%1;
+      const edge=Math.min(phase,1-phase);
+      const contour=edge<.055?(1-edge/.055)*.055:0;
+
+      const shade=clamp(
+        hillShade + prominence + coreLift + contour + Math.min(.055,grad*.7),
+        .62,1.28
+      );
       const rgb=colorAt(layer,v),k=pos*4;
       img.data[k]=Math.round(clamp(rgb[0]*shade,0,255));
       img.data[k+1]=Math.round(clamp(rgb[1]*shade,0,255));
@@ -628,12 +660,12 @@ function renderField(){
     return;
   }
 
-  const alpha=state.layer==="wind"?.72
-    :state.layer==="rain"?.84
-    :state.layer==="rain24"?.88
-    :state.layer==="waves"?.70
-    :state.layer==="current"?.68
-    :.68;
+  const alpha=state.layer==="wind"?.86
+    :state.layer==="rain"?.92
+    :state.layer==="rain24"?.94
+    :state.layer==="waves"?.84
+    :state.layer==="current"?.82
+    :.82;
   drawIDW(rows,state.layer,alpha);
 
   // Near-NOW Rain gets a subtle observed Himawari cloud context, similar to

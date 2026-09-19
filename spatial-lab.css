@@ -458,3 +458,36 @@ button{cursor:pointer}
   .layer{min-width:62px}
   .layer[data-layer="rain24"]{min-width:72px}
 }
+
+
+/* V6.1 depth-first presentation */
+.map{background:#566b75!important}
+.map[data-weather-layer="wind"] .leaflet-tile-pane{opacity:.42!important}
+.map[data-weather-layer="rain"] .leaflet-tile-pane{opacity:.30!important}
+.map[data-weather-layer="rain24"] .leaflet-tile-pane{opacity:.38!important}
+.map[data-weather-layer="storm"] .leaflet-tile-pane{opacity:.20!important}
+.map[data-weather-layer="radar"] .leaflet-tile-pane{opacity:.28!important}
+.map[data-weather-layer="waves"] .leaflet-tile-pane,
+.map[data-weather-layer="current"] .leaflet-tile-pane{opacity:.36!important}
+
+.map[data-weather-layer="wind"] .leaflet-weatherLabels-pane{opacity:.68!important}
+.map[data-weather-layer="rain"] .leaflet-weatherLabels-pane{opacity:.56!important}
+.map[data-weather-layer="rain24"] .leaflet-weatherLabels-pane{opacity:.68!important}
+.map[data-weather-layer="storm"] .leaflet-weatherLabels-pane{opacity:.44!important}
+.map[data-weather-layer="radar"] .leaflet-weatherLabels-pane{opacity:.50!important}
+.map[data-weather-layer="waves"] .leaflet-weatherLabels-pane,
+.map[data-weather-layer="current"] .leaflet-weatherLabels-pane{opacity:.62!important}
+
+#fieldCanvas{
+  image-rendering:auto;
+  transform:translateZ(0);
+}
+.map[data-weather-layer="wind"] #fieldCanvas,
+.map[data-weather-layer="waves"] #fieldCanvas,
+.map[data-weather-layer="current"] #fieldCanvas{
+  filter:saturate(1.08) contrast(1.06)!important;
+}
+.map[data-weather-layer="rain"] #fieldCanvas,
+.map[data-weather-layer="rain24"] #fieldCanvas{
+  filter:saturate(1.14) contrast(1.08)!important;
+}

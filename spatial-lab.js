@@ -314,12 +314,13 @@ function piecewise(value,stops){
 function fieldTransfer(row,layer){
   if(layer==="wind")return piecewise(row.wind_kmh,[[0,.03],[4,.10],[8,.22],[14,.37],[22,.53],[30,.68],[40,.82],[55,1]]);
   if(layer==="rain")return piecewise(row.rain_mm,[[0,0],[.2,.08],[1,.20],[3,.36],[7,.53],[12,.68],[22,.84],[40,1]]);
+  if(layer==="rain24")return piecewise(row.rain24_mm,[[0,0],[1,.08],[5,.20],[10,.34],[20,.50],[35,.66],[55,.82],[80,1]]);
   if(layer==="waves")return piecewise(validWaveHs(row.wave_hs_m),[[0,.03],[.25,.12],[.5,.27],[.8,.43],[1.2,.59],[1.8,.75],[2.8,.9],[4,1]]);
   if(layer==="current")return piecewise(row.speed_kmh,[[0,.03],[.15,.12],[.35,.27],[.65,.43],[1,.58],[1.5,.73],[2.2,.88],[3,1]]);
   return piecewise(row.convective_score,[[0,0],[20,.14],[40,.32],[60,.52],[75,.70],[90,.87],[100,1]]);
 }
 function fieldAlpha(layer,t,base){
-  if(layer==="rain")return base*clamp((t-.02)*1.35,.04,.96);
+  if(layer==="rain"||layer==="rain24")return base*clamp((t-.02)*1.35,.04,.96);
   if(layer==="wind")return base*clamp(.42+t*.72,.42,.96);
   if(layer==="waves"||layer==="current")return base*clamp(.36+t*.76,.36,.94);
   return base*clamp(.16+t*.84,.16,.96);
@@ -428,31 +429,46 @@ function cloudOpacity(row){
   const medianH=medianHeight===null?0:clamp((medianHeight-300)/12000,0,1);
   return clamp(.10+height*.34+medianH*.24+coldness*.18+medianCold*.10+score*.08,0,1);
 }
+function coldCoreColor(coldC){
+  const t=piecewise(-coldC,[[0,0],[25,.08],[40,.22],[50,.42],[60,.64],[70,.82],[80,1]]);
+  const palette=[[0,[210,218,226]],[.2,[166,196,238]],[.4,[92,174,224]],[.58,[70,201,151]],[.74,[223,212,74]],[.88,[238,137,68]],[1,[205,67,92]]];
+  for(let i=1;i<palette.length;i++){
+    if(t<=palette[i][0]){
+      const a=palette[i-1],b=palette[i],q=(t-a[0])/Math.max(.001,b[0]-a[0]);
+      return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*q));
+    }
+  }
+  return palette.at(-1)[1];
+}
 function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
-  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,.24);
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.32:.28);
   if(clear)ctx.clearRect(0,0,c.width,c.height);
   const pts=(rows||[]).map(r=>{
     const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
-    return {x:p.x*s.sx,y:p.y*s.sy,n:cloudOpacity(r)};
+    const cold=num(r.cloud_top_cold_c);
+    return {x:p.x*s.sx,y:p.y*s.sy,n:cloudOpacity(r),cold:cold===null?0:clamp((-cold-15)/70,0,1)};
   }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
   if(!pts.length)return;
   const img=ctx.createImageData(c.width,c.height);
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
-      let sw=0,sv=0;
+      let sw=0,sv=0,sc=0;
       for(const p of pts){
-        const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+8,w=1/d2;
-        sw+=w;sv+=w*p.n;
+        const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+10,w=1/d2;
+        sw+=w;sv+=w*p.n;sc+=w*p.cold;
       }
-      const v=sv/sw;
-      if(v<.08)continue;
+      const v=sv/sw,coldN=sc/sw;
+      if(v<.07)continue;
+      const density=clamp((v-.04)/.96,0,1);
+      const coldC=-(15+coldN*70);
+      const core=coldCoreColor(coldC);
+      const base=[214,222,230];
+      const coreMix=clamp((coldN-.28)*1.35,0,.92);
       const k=(y*c.width+x)*4;
-      const density=clamp((v-.05)/.95,0,1);
-      const shade=Math.round(188+58*Math.pow(density,.72));
-      img.data[k]=shade;
-      img.data[k+1]=Math.min(255,shade+7);
-      img.data[k+2]=Math.min(255,shade+14);
-      img.data[k+3]=Math.round(205*alphaScale*Math.pow(density,.82));
+      img.data[k]=Math.round(base[0]*(1-coreMix)+core[0]*coreMix);
+      img.data[k+1]=Math.round(base[1]*(1-coreMix)+core[1]*coreMix);
+      img.data[k+2]=Math.round(base[2]*(1-coreMix)+core[2]*coreMix);
+      img.data[k+3]=Math.round(218*alphaScale*Math.pow(density,.78));
     }
   }
   ctx.putImageData(img,0,0);
@@ -522,6 +538,25 @@ function isNearNowMarine(){
   const lead=num(f?.lead_hours);
   return lead===null||lead<=3;
 }
+function accumulation24Rows(){
+  const frames=ecmwfFrames().filter(f=>{
+    const lead=num(f.lead_hours);
+    return lead!==null&&lead>0&&lead<=24;
+  });
+  const sums=new Map();
+  for(const frame of frames){
+    for(const cell of frame.cells||[]){
+      const rain=validRange(cell.rain_mm,0,500);
+      if(rain===null)continue;
+      const key=(Number(cell.lat).toFixed(4))+"|"+(Number(cell.lon).toFixed(4));
+      const prev=sums.get(key)||{lat:Number(cell.lat),lon:Number(cell.lon),rain24_mm:0,steps:0};
+      prev.rain24_mm+=rain;prev.steps++;
+      sums.set(key,prev);
+    }
+  }
+  return [...sums.values()].map(r=>({...r,rain24_mm:Math.max(0,r.rain24_mm)}));
+}
+
 function activeRows(){
   if(state.layer==="storm"){
     const fs=cloudFrames();
@@ -550,6 +585,7 @@ function activeRows(){
       };
     });
   }
+  if(state.layer==="rain24")return accumulation24Rows();
   if(state.layer==="current")return marineCurrentRows().filter(r=>num(r.speed_kmh)!==null);
   if(state.layer==="waves"&&isNearNowMarine()&&marineWaveRows().length){
     return marineWaveRows().filter(r=>validWaveHs(r.wave_hs_m)!==null&&validWaveDir(r.wave_direction_deg)!==null);
@@ -565,11 +601,19 @@ function activeRows(){
   return genericRowsFromGEFS(gf,state.layer);
 }
 
+function applyPresentationScene(){
+  const mapEl=state.map?.getContainer();
+  if(!mapEl)return;
+  mapEl.dataset.weatherLayer=state.layer;
+}
 function renderField(){
   if(state.layer==="radar"){clearCanvas("fieldCanvas");clearCanvas("uncertaintyCanvas");return}
   const fieldCanvas=$("fieldCanvas");
-  fieldCanvas.style.filter=state.layer==="storm"?"blur(5px)":"none";
-  fieldCanvas.style.opacity=state.layer==="storm"?"0.88":"1";
+  fieldCanvas.style.filter=state.layer==="storm"?"blur(2.8px) saturate(1.08)"
+    :state.layer==="rain"?"blur(1px) saturate(1.18)"
+    :state.layer==="rain24"?"blur(.7px) saturate(1.12)"
+    :"none";
+  fieldCanvas.style.opacity=state.layer==="storm"?"0.94":"1";
   const rows=activeRows();
   state.currentRows=rows;
   state.currentFrame=state.layer==="storm"
@@ -584,7 +628,8 @@ function renderField(){
   }
 
   const alpha=state.layer==="wind"?.72
-    :state.layer==="rain"?.82
+    :state.layer==="rain"?.84
+    :state.layer==="rain24"?.88
     :state.layer==="waves"?.70
     :state.layer==="current"?.68
     :.68;
@@ -945,6 +990,11 @@ function regionalForecastRow(){
   return best;
 }
 function updateConfidence(){
+  if(state.layer==="rain24"){
+    $("modelName").textContent="ECMWF 24H";
+    $("modelRun").textContent=state.ecmwf?.run_time?localStamp(state.ecmwf.run_time):"-";
+    return;
+  }
   if(state.layer==="current"){
     $("confidenceLabel").textContent="Copernicus near-now";
     $("trendLabel").textContent="SURFACE CURRENT";
@@ -970,6 +1020,7 @@ function renderScale(){
   const cfg={
     wind:{g:"linear-gradient(90deg,#3f53ab,#3580c5,#36b3ba,#41c370,#dcc541,#e87d3d,#ca4259)",l:["0","10","20","30","40+"]},
     rain:{g:"linear-gradient(90deg,#3652a4,#367cc5,#34afcf,#39c984,#dfd444,#ec823d,#cd425d)",l:["0","1","3","8","15+"]},
+    rain24:{g:"linear-gradient(90deg,#eef6ff,#b9dbf5,#63add7,#48c477,#d6d93d,#f0a23e,#e35b52,#a93e84)",l:["0","5","10","20","35","55","80+"]},
     waves:{g:"linear-gradient(90deg,#374c99,#3474bd,#36a7c8,#45c59b,#d8bd44,#ca4767)",l:["0",".5","1","1.5","2+"]},
     current:{g:"linear-gradient(90deg,#3058a1,#2a89be,#28b8bc,#43c991,#e1c242,#dc5c48)",l:["0",".5","1","2","3+"]},
     storm:{g:"linear-gradient(90deg,#374991,#4268b8,#6d5cbe,#b04daa,#e56950,#be345b)",l:["0","25","50","75","100"]},
@@ -1002,6 +1053,10 @@ function updateReadout(){
     $("readoutSource").textContent=control!==null?"JOTRIP WEATHER · ECMWF CONTROL":(activeECMWFFrame()?"ECMWF · SPATIAL":"GEFS · RAW P50");
     $("readoutValue").textContent=fmt(control??row?.rain_mm,1);$("readoutUnit").textContent="mm";
     $("readoutMeta").textContent="Mưa trong bước thời gian đang chọn";
+  }else if(state.layer==="rain24"){
+    $("readoutSource").textContent="ECMWF · NEXT 24H ACCUMULATION";
+    $("readoutValue").textContent=fmt(row?.rain24_mm,1);$("readoutUnit").textContent="mm";
+    $("readoutMeta").textContent="Dự báo tích lũy 24 giờ tới · không phải quan trắc 24h";
   }else if(state.layer==="waves"){
     const near=isNearNowMarine()&&marineWaveRows().length;
     $("readoutSource").textContent=near?"COPERNICUS · WAVE NEAR-NOW":"ECMWF WAVE · MOST LIKELY";
@@ -1024,7 +1079,12 @@ function configureTimeline(){
   const slider=$("timeSlider");
   $("playBtn").disabled=false;
   slider.disabled=false;
-  if(state.layer==="current"){
+  if(state.layer==="rain24"){
+    slider.min=0;slider.max=0;slider.step=1;slider.value=0;slider.disabled=true;
+    $("playBtn").disabled=true;
+    $("timelineTicks").innerHTML='<span>NOW</span><span>+24H</span>';
+    $("timeLabel").textContent="NEXT 24H";
+  }else if(state.layer==="current"){
     slider.min=0;slider.max=0;slider.step=1;slider.value=0;slider.disabled=true;
     $("playBtn").disabled=true;
     $("timelineTicks").innerHTML='<span>NEAR-NOW</span>';
@@ -1090,6 +1150,7 @@ function togglePlay(){
 
 async function selectLayer(layer){
   state.layer=layer;
+  applyPresentationScene();
   $("probe").classList.add("hidden");
   document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("active",b.dataset.layer===layer));
   clearRadar();stopParticles();stopTimer();
@@ -1101,7 +1162,7 @@ async function selectLayer(layer){
       togglePlay();
     }catch(e){console.warn(e)}
   }else{
-    if(layer==="current")state.frameIndex=0;
+    if(layer==="current"||layer==="rain24")state.frameIndex=0;
     else if(layer!=="storm")selectNearestNowFrame();
     else state.frameIndex=Math.max(0,cloudFrames().length-1);
     configureTimeline();
@@ -1111,6 +1172,7 @@ async function selectLayer(layer){
 }
 
 function renderAll(redrawTimeline=true){
+  applyPresentationScene();
   renderField();
   renderUncertainty();
   stopParticles();
@@ -1162,6 +1224,7 @@ function flagMetric(lat,lon){
     return {value:fmt(control??row?.wind_kmh,0),unit:"km/h",sub:"Gió từ "+directionText(row?.wind_direction_deg)};
   }
   if(state.layer==="rain")return {value:fmt(row?.rain_mm,1),unit:"mm",sub:"Rain"};
+  if(state.layer==="rain24")return {value:fmt(row?.rain24_mm,1),unit:"mm",sub:"ECMWF · next 24h"};
   if(state.layer==="waves")return {value:fmt(validWaveHs(row?.wave_hs_m),1),unit:"m",sub:"Sóng từ "+directionText(row?.wave_direction_deg)};
   if(state.layer==="current")return {value:fmt(row?.speed_kmh,2),unit:"km/h",sub:"Chảy về "+directionText(row?.direction_toward_deg)};
   return {value:fmt(row?.convective_score,0),unit:"/100",sub:"Cloud"};
@@ -1386,7 +1449,7 @@ function bind(){
 }
 
 async function start(){
-  initMap();bind();setCrosshair(true);await loadAll();
+  initMap();bind();setCrosshair(true);applyPresentationScene();await loadAll();
   setInterval(async()=>{
     const [nowcast,marine,critical,forecast]=await Promise.all([optional(URLS.nowcast),optional(URLS.marine),optional(URLS.critical),optional(URLS.forecast)]);
     if(nowcast)state.nowcast=nowcast;if(marine)state.marine=marine;if(critical)state.critical=critical;if(forecast)state.forecast=forecast;

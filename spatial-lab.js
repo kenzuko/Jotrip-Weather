@@ -357,6 +357,81 @@ function spatialSupportRadius(pts){
   }
   return median(nearest)*.92;
 }
+function bandedScalar(layer,v){
+  if(layer==="rain"){
+    const stops=[0,.08,.20,.36,.53,.68,.84,1];
+    let b=0;
+    for(let i=1;i<stops.length;i++){if(v>=stops[i])b=i}
+    return stops[b];
+  }
+  if(layer==="rain24"){
+    const stops=[0,.08,.20,.34,.50,.66,.82,1];
+    let b=0;
+    for(let i=1;i<stops.length;i++){if(v>=stops[i])b=i}
+    return stops[b];
+  }
+  return v;
+}
+function deterministic01(a,b,salt=0){
+  const x=Math.sin((a*12.9898+b*78.233+salt*37.719))*43758.5453;
+  return x-Math.floor(x);
+}
+function drawVectorTexture(rows,kind){
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),rect=c.getBoundingClientRect();
+  if(!c.width||!c.height||!rect.width||!rect.height)return;
+  const dprX=c.width/rect.width,dprY=c.height/rect.height;
+  const vectors=vectorRows(rows,kind);
+  if(!vectors.length)return;
+  const pv=vectors.map(r=>{
+    const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
+    return {x:p.x*dprX,y:p.y*dprY,u:r.u,v:r.v,mag:r.mag};
+  }).filter(v=>Number.isFinite(v.x)&&Number.isFinite(v.y));
+  if(!pv.length)return;
+
+  const marine=kind==="waves"||kind==="current";
+  const support=marine?spatialSupportRadius(pv):Infinity;
+  const support2=support*support+20;
+  const step=kind==="waves"?13:kind==="current"?12:11;
+  const len=kind==="waves"?7:kind==="current"?8:10;
+
+  ctx.save();
+  ctx.lineCap="round";
+  ctx.globalCompositeOperation="soft-light";
+  ctx.lineWidth=kind==="waves"?0.85:0.75;
+
+  let salt=kind==="waves"?7:kind==="current"?13:3;
+  for(let y=step/2;y<c.height;y+=step){
+    for(let x=step/2;x<c.width;x+=step){
+      const jx=(deterministic01(x,y,salt)-.5)*step*.8;
+      const jy=(deterministic01(y,x,salt+1)-.5)*step*.8;
+      const p={x:x+jx,y:y+jy};
+      const n=interpolatedVectorAt(p,pv);
+      if(!n)continue;
+      if(marine&&n.near2>support2)continue;
+      const m=Math.max(.0001,Math.hypot(n.u,n.v));
+      const ux=n.u/m,uy=-n.v/m;
+      const strength=kind==="wind"
+        ?clamp((n.mag||0)/12,.16,.72)
+        :kind==="waves"
+          ?clamp((n.mag||0)/2,.15,.62)
+          :clamp((n.mag||0)*2.2,.12,.55);
+      const l=len*(.65+strength*.7);
+      ctx.strokeStyle="rgba(255,255,255,"+(0.07+strength*.12).toFixed(3)+")";
+      ctx.beginPath();
+      ctx.moveTo(p.x-ux*l*.45,p.y-uy*l*.45);
+      ctx.lineTo(p.x+ux*l*.55,p.y+uy*l*.55);
+      ctx.stroke();
+
+      ctx.strokeStyle="rgba(8,27,37,"+(0.035+strength*.055).toFixed(3)+")";
+      ctx.beginPath();
+      ctx.moveTo(p.x-ux*l*.30-uy*.6,p.y-uy*l*.30+ux*.6);
+      ctx.lineTo(p.x+ux*l*.45-uy*.6,p.y+uy*l*.45+ux*.6);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 function drawIDW(rows,layer,alpha=.76){
   const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.50:.46);
   ctx.clearRect(0,0,c.width,c.height);
@@ -373,6 +448,7 @@ function drawIDW(rows,layer,alpha=.76){
   const field=new Float32Array(total);
   field.fill(-1);
 
+  // Continuous physical interpolation first. Styling happens afterwards.
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
       let sw=0,sv=0,near2=Infinity;
@@ -389,59 +465,48 @@ function drawIDW(rows,layer,alpha=.76){
   const img=ctx.createImageData(c.width,c.height);
   const idx=(x,y)=>Math.max(0,Math.min(c.height-1,y))*c.width+Math.max(0,Math.min(c.width-1,x));
   const sample=(x,y,fallback)=>{
-    const v=field[idx(x,y)];
-    return v>=0?v:fallback;
-  };
-  const broad=(x,y,v)=>{
-    let sum=0,n=0;
-    for(const [dx,dy] of [[-5,0],[5,0],[0,-5],[0,5],[-3,-3],[3,-3],[-3,3],[3,3]]){
-      const q=sample(x+dx,y+dy,v);
-      sum+=q;n++;
-    }
-    return n?sum/n:v;
+    const q=field[idx(x,y)];
+    return q>=0?q:fallback;
   };
 
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
-      const pos=y*c.width+x,v=field[pos];
-      if(v<0)continue;
+      const pos=y*c.width+x,raw=field[pos];
+      if(raw<0)continue;
 
-      // Multi-scale, data-derived relief. This changes luminance only.
-      const l2=sample(x-2,y,v),r2=sample(x+2,y,v);
-      const u2=sample(x,y-2,v),d2=sample(x,y+2,v);
-      const gx=(r2-l2)*.5,gy=(d2-u2)*.5;
-      const grad=Math.hypot(gx,gy);
+      const l=sample(x-2,y,raw),r=sample(x+2,y,raw);
+      const u=sample(x,y-2,raw),d=sample(x,y+2,raw);
+      const gx=(r-l)*.5,gy=(d-u)*.5,grad=Math.hypot(gx,gy);
 
-      // Hillshade-like directional light from NW.
-      const nx=-gx*8.5,ny=-gy*8.5,nz=1;
-      const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
-      const lx=-.58,ly=-.42,lz=.69;
-      const hill=(nx*inv*lx+ny*inv*ly+nz*inv*lz);
-      const hillShade=clamp(.78+hill*.34,.68,1.20);
+      let visual=raw;
+      let shade=1;
 
-      // Local prominence: cores are lifted, surrounding troughs are shaded.
-      const b=broad(x,y,v);
-      const prominence=clamp((v-b)*3.6,-.12,.14);
-      const coreLift=Math.pow(clamp(v,0,1),1.55)*.10;
+      if(layer==="rain"||layer==="rain24"){
+        // Weather-map patches: classify physical intensity into isohyet bands.
+        visual=bandedScalar(layer,raw);
+        const edge=clamp(grad*4.0,0,.14);
+        shade=clamp(1+edge,.90,1.14);
+      }else{
+        // Vector/scalar marine fields stay continuous, with restrained relief.
+        const nx=-gx*7.5,ny=-gy*7.5,nz=1;
+        const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
+        const hill=nx*inv*(-.58)+ny*inv*(-.42)+nz*inv*.69;
+        shade=clamp(.84+hill*.24+Math.pow(raw,1.7)*.08,.72,1.18);
+      }
 
-      // Soft data contour catches the eye without inventing structure.
-      const contourStep=layer==="rain24"?.11:layer==="rain"?.12:.10;
-      const phase=(v/contourStep)%1;
-      const edge=Math.min(phase,1-phase);
-      const contour=edge<.055?(1-edge/.055)*.055:0;
-
-      const shade=clamp(
-        hillShade + prominence + coreLift + contour + Math.min(.055,grad*.7),
-        .62,1.28
-      );
-      const rgb=colorAt(layer,v),k=pos*4;
+      const rgb=colorAt(layer,visual),k=pos*4;
       img.data[k]=Math.round(clamp(rgb[0]*shade,0,255));
       img.data[k+1]=Math.round(clamp(rgb[1]*shade,0,255));
       img.data[k+2]=Math.round(clamp(rgb[2]*shade,0,255));
-      img.data[k+3]=Math.round(255*fieldAlpha(layer,v,alpha));
+      img.data[k+3]=Math.round(255*fieldAlpha(layer,raw,alpha));
     }
   }
   ctx.putImageData(img,0,0);
+
+  // Static texture is derived from the actual vector field, not random weather detail.
+  if(layer==="wind")drawVectorTexture(rows,"wind");
+  if(layer==="waves")drawVectorTexture(rows,"waves");
+  if(layer==="current")drawVectorTexture(rows,"current");
 }
 
 function cloudOpacity(row){
@@ -523,10 +588,12 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
       const l=sample(densityField,x-2,y,v),r=sample(densityField,x+2,y,v);
       const u=sample(densityField,x,y-2,v),d=sample(densityField,x,y+2,v);
       const gx=(r-l)*.5,gy=(d-u)*.5;
+      const lap=(l+r+u+d)-4*v;
       const nx=-gx*9,ny=-gy*9,nz=1;
       const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
       const hill=nx*inv*(-.58)+ny*inv*(-.42)+nz*inv*.69;
-      const relief=clamp(.78+hill*.36+Math.pow(density,1.6)*.12,.64,1.25);
+      const edgeLift=clamp(Math.abs(lap)*2.8,0,.10);
+      const relief=clamp(.78+hill*.36+Math.pow(density,1.6)*.12+edgeLift,.62,1.27);
 
       const coldC=-(15+coldN*70);
       const core=coldCoreColor(coldC);

@@ -474,7 +474,7 @@ function coldCoreColor(coldC){
   return palette.at(-1)[1];
 }
 function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
-  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.32:.28);
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.40:.36);
   if(clear)ctx.clearRect(0,0,c.width,c.height);
   const pts=(rows||[]).map(r=>{
     const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
@@ -482,7 +482,12 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
     return {x:p.x*s.sx,y:p.y*s.sy,n:cloudOpacity(r),cold:cold===null?0:clamp((-cold-15)/70,0,1)};
   }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
   if(!pts.length)return;
-  const img=ctx.createImageData(c.width,c.height);
+
+  const total=c.width*c.height;
+  const densityField=new Float32Array(total);
+  const coldField=new Float32Array(total);
+  densityField.fill(-1);coldField.fill(0);
+
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
       let sw=0,sv=0,sc=0;
@@ -490,18 +495,48 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
         const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+10,w=1/d2;
         sw+=w;sv+=w*p.n;sc+=w*p.cold;
       }
-      const v=sv/sw,coldN=sc/sw;
+      if(!sw)continue;
+      densityField[y*c.width+x]=sv/sw;
+      coldField[y*c.width+x]=sc/sw;
+    }
+  }
+
+  const img=ctx.createImageData(c.width,c.height);
+  const idx=(x,y)=>Math.max(0,Math.min(c.height-1,y))*c.width+Math.max(0,Math.min(c.width-1,x));
+  const sample=(arr,x,y,fallback)=>{
+    const v=arr[idx(x,y)];
+    return Number.isFinite(v)&&v>=0?v:fallback;
+  };
+
+  for(let y=0;y<c.height;y++){
+    for(let x=0;x<c.width;x++){
+      const pos=y*c.width+x,v=densityField[pos];
       if(v<.07)continue;
       const density=clamp((v-.04)/.96,0,1);
+      const coldN=coldField[pos];
+
+      // Data-derived cloud relief: denser cloud tops catch light,
+      // their down-gradient side becomes subtly shaded.
+      const l=sample(densityField,x-2,y,v),r=sample(densityField,x+2,y,v);
+      const u=sample(densityField,x,y-2,v),d=sample(densityField,x,y+2,v);
+      const gx=(r-l)*.5,gy=(d-u)*.5;
+      const nx=-gx*9,ny=-gy*9,nz=1;
+      const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
+      const hill=nx*inv*(-.58)+ny*inv*(-.42)+nz*inv*.69;
+      const relief=clamp(.78+hill*.36+Math.pow(density,1.6)*.12,.64,1.25);
+
       const coldC=-(15+coldN*70);
       const core=coldCoreColor(coldC);
       const base=[214,222,230];
       const coreMix=clamp((coldN-.28)*1.35,0,.92);
-      const k=(y*c.width+x)*4;
-      img.data[k]=Math.round(base[0]*(1-coreMix)+core[0]*coreMix);
-      img.data[k+1]=Math.round(base[1]*(1-coreMix)+core[1]*coreMix);
-      img.data[k+2]=Math.round(base[2]*(1-coreMix)+core[2]*coreMix);
-      img.data[k+3]=Math.round(218*alphaScale*Math.pow(density,.78));
+      const k=pos*4;
+      const rr=base[0]*(1-coreMix)+core[0]*coreMix;
+      const gg=base[1]*(1-coreMix)+core[1]*coreMix;
+      const bb=base[2]*(1-coreMix)+core[2]*coreMix;
+      img.data[k]=Math.round(clamp(rr*relief,0,255));
+      img.data[k+1]=Math.round(clamp(gg*relief,0,255));
+      img.data[k+2]=Math.round(clamp(bb*relief,0,255));
+      img.data[k+3]=Math.round(226*alphaScale*Math.pow(density,.76));
     }
   }
   ctx.putImageData(img,0,0);

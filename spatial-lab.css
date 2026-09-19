@@ -491,3 +491,9 @@ button{cursor:pointer}
 .map[data-weather-layer="rain24"] #fieldCanvas{
   filter:saturate(1.14) contrast(1.08)!important;
 }
+
+
+/* V6.1 cloud relief override */
+.map[data-weather-layer="storm"] #fieldCanvas{
+  filter:blur(.9px) saturate(1.12) contrast(1.12)!important;
+}

@@ -416,3 +416,45 @@ button{cursor:pointer}
   .map-crosshair span{left:8px;top:8px;width:10px;height:10px}
   .map-crosshair i{left:11px;top:11px}
 }
+
+
+/* V6 presentation-first scenes - isolated to spatial-lab only */
+.layer[data-layer="rain24"].active{background:#5aaed6;color:#fff;border-color:#5aaed6}
+.map[data-weather-layer="wind"] .leaflet-tile-pane{
+  filter:grayscale(.35) saturate(.55) brightness(.68) contrast(1.08)!important;
+}
+.map[data-weather-layer="rain"] .leaflet-tile-pane{
+  filter:grayscale(.55) saturate(.42) brightness(.73) contrast(1.04)!important;
+}
+.map[data-weather-layer="rain24"] .leaflet-tile-pane{
+  filter:grayscale(.28) saturate(.58) brightness(.88) contrast(1.02)!important;
+}
+.map[data-weather-layer="storm"] .leaflet-tile-pane{
+  filter:grayscale(1) saturate(.15) brightness(.42) contrast(1.14)!important;
+}
+.map[data-weather-layer="radar"] .leaflet-tile-pane{
+  filter:grayscale(.82) saturate(.25) brightness(.56) contrast(1.10)!important;
+}
+.map[data-weather-layer="waves"] .leaflet-tile-pane,
+.map[data-weather-layer="current"] .leaflet-tile-pane{
+  filter:grayscale(.48) saturate(.45) brightness(.64) contrast(1.08)!important;
+}
+.map[data-weather-layer="storm"] .leaflet-weatherLabels-pane{opacity:.72!important}
+.map[data-weather-layer="rain"] .leaflet-weatherLabels-pane,
+.map[data-weather-layer="radar"] .leaflet-weatherLabels-pane{opacity:.78!important}
+.map[data-weather-layer="rain24"] .leaflet-weatherLabels-pane{opacity:.90!important}
+.map[data-weather-layer="wind"] .leaflet-weatherLabels-pane,
+.map[data-weather-layer="waves"] .leaflet-weatherLabels-pane,
+.map[data-weather-layer="current"] .leaflet-weatherLabels-pane{opacity:.84!important}
+
+/* Weather data must dominate the scene, map remains only geographic context. */
+.map[data-weather-layer="rain"] #fieldCanvas,
+.map[data-weather-layer="rain24"] #fieldCanvas{opacity:1!important}
+.map[data-weather-layer="storm"] #fieldCanvas{opacity:.96!important}
+.map[data-weather-layer="radar"] .leaflet-radar-pane{mix-blend-mode:normal}
+
+@media(max-width:760px){
+  .layerbar{justify-content:flex-start;padding-left:8px;padding-right:8px}
+  .layer{min-width:62px}
+  .layer[data-layer="rain24"]{min-width:72px}
+}

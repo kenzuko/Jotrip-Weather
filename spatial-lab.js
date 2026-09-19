@@ -279,21 +279,50 @@ function nearestAnchor(lat,lon){
 }
 
 const PALETTES={
-  wind:[[0,[57,58,164]],[.16,[50,91,190]],[.32,[41,151,202]],[.5,[48,193,153]],[.66,[83,198,87]],[.8,[231,205,57]],[.91,[238,132,52]],[1,[203,55,76]]],
-  rain:[[0,[39,46,126]],[.12,[45,82,179]],[.28,[38,145,211]],[.45,[35,194,190]],[.62,[55,202,113]],[.78,[232,216,62]],[.9,[237,127,49]],[1,[205,50,82]]],
-  waves:[[0,[46,53,143]],[.2,[43,105,186]],[.4,[36,162,203]],[.58,[45,196,164]],[.75,[92,198,93]],[.88,[229,190,59]],[1,[201,66,91]]],
-  current:[[0,[39,63,153]],[.18,[36,119,190]],[.38,[31,176,199]],[.58,[43,201,156]],[.76,[89,198,91]],[.9,[231,183,55]],[1,[213,77,65]]],
-  storm:[[0,[30,36,94]],[.22,[52,68,160]],[.42,[83,80,188]],[.62,[135,71,183]],[.78,[204,77,132]],[.9,[235,110,62]],[1,[191,48,74]]]
+  // Perceptual weather palette: subdued low-end, bright mid-range, warm high-end.
+  // Inspired by modern global weather maps, but tuned for JoTrip's Phu Quoc data.
+  wind:[[0,[66,72,152]],[.13,[55,99,182]],[.28,[49,151,200]],[.45,[57,190,167]],[.62,[112,199,109]],[.78,[216,205,88]],[.90,[235,148,69]],[1,[201,70,92]]],
+  rain:[[0,[48,60,139]],[.12,[48,94,185]],[.27,[42,151,207]],[.44,[44,191,183]],[.61,[87,199,118]],[.76,[215,211,79]],[.89,[236,142,65]],[1,[201,60,96]]],
+  waves:[[0,[59,69,150]],[.17,[52,109,188]],[.35,[46,157,202]],[.53,[55,190,174]],[.70,[111,198,116]],[.86,[217,198,83]],[1,[208,83,100]]],
+  current:[[0,[52,78,154]],[.17,[43,123,190]],[.35,[37,171,198]],[.54,[48,197,166]],[.72,[104,198,111]],[.88,[220,191,76]],[1,[213,91,77]]],
+  storm:[[0,[48,57,91]],[.25,[78,91,125]],[.48,[123,133,158]],[.68,[170,177,192]],[.84,[213,218,226]],[1,[248,250,252]]]
 };
 function colorAt(name,t){
   const p=PALETTES[name]||PALETTES.wind;t=clamp(t,0,1);
   for(let i=1;i<p.length;i++){
     if(t<=p[i][0]){
       const a=p[i-1],b=p[i],q=(t-a[0])/Math.max(.0001,b[0]-a[0]);
-      return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*q));
+      const smooth=q*q*(3-2*q);
+      return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*smooth));
     }
   }
   return p[p.length-1][1];
+}
+function piecewise(value,stops){
+  const v=num(value);
+  if(v===null)return 0;
+  if(v<=stops[0][0])return stops[0][1];
+  for(let i=1;i<stops.length;i++){
+    if(v<=stops[i][0]){
+      const a=stops[i-1],b=stops[i],q=(v-a[0])/Math.max(.0001,b[0]-a[0]);
+      const smooth=q*q*(3-2*q);
+      return a[1]+(b[1]-a[1])*smooth;
+    }
+  }
+  return stops[stops.length-1][1];
+}
+function fieldTransfer(row,layer){
+  if(layer==="wind")return piecewise(row.wind_kmh,[[0,.03],[4,.10],[8,.22],[14,.37],[22,.53],[30,.68],[40,.82],[55,1]]);
+  if(layer==="rain")return piecewise(row.rain_mm,[[0,0],[.2,.08],[1,.20],[3,.36],[7,.53],[12,.68],[22,.84],[40,1]]);
+  if(layer==="waves")return piecewise(validWaveHs(row.wave_hs_m),[[0,.03],[.25,.12],[.5,.27],[.8,.43],[1.2,.59],[1.8,.75],[2.8,.9],[4,1]]);
+  if(layer==="current")return piecewise(row.speed_kmh,[[0,.03],[.15,.12],[.35,.27],[.65,.43],[1,.58],[1.5,.73],[2.2,.88],[3,1]]);
+  return piecewise(row.convective_score,[[0,0],[20,.14],[40,.32],[60,.52],[75,.70],[90,.87],[100,1]]);
+}
+function fieldAlpha(layer,t,base){
+  if(layer==="rain")return base*clamp((t-.02)*1.35,.04,.96);
+  if(layer==="wind")return base*clamp(.42+t*.72,.42,.96);
+  if(layer==="waves"||layer==="current")return base*clamp(.36+t*.76,.36,.94);
+  return base*clamp(.16+t*.84,.16,.96);
 }
 function canvasSize(c,scale=.30){
   const r=c.getBoundingClientRect();
@@ -306,13 +335,7 @@ function clearCanvas(id){
   const c=$(id),ctx=c.getContext("2d");
   ctx.clearRect(0,0,c.width,c.height);
 }
-function fieldNorm(row,layer){
-  if(layer==="wind")return clamp((num(row.wind_kmh)??0)/45,0,1);
-  if(layer==="rain")return clamp((num(row.rain_mm)??0)/12,0,1);
-  if(layer==="waves")return clamp((validWaveHs(row.wave_hs_m)??0)/2.5,0,1);
-  if(layer==="current")return clamp((num(row.speed_kmh)??0)/3.0,0,1);
-  return clamp((num(row.convective_score)??0)/100,0,1);
-}
+function fieldNorm(row,layer){return clamp(fieldTransfer(row,layer),0,1)}
 function median(values){
   if(!values.length)return 0;
   const a=[...values].sort((x,y)=>x-y),m=Math.floor(a.length/2);
@@ -333,31 +356,55 @@ function spatialSupportRadius(pts){
   return median(nearest)*.92;
 }
 function drawIDW(rows,layer,alpha=.76){
-  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,.30);
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.36:.34);
   ctx.clearRect(0,0,c.width,c.height);
   const pts=(rows||[]).map(r=>{
     const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
     return {x:p.x*s.sx,y:p.y*s.sy,n:fieldNorm(r,layer)};
   }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
   if(!pts.length)return;
+
   const marine=layer==="waves"||layer==="current";
   const support=marine?spatialSupportRadius(pts):Infinity;
   const support2=support*support;
-  const img=ctx.createImageData(c.width,c.height);
+  const total=c.width*c.height;
+  const field=new Float32Array(total);
+  field.fill(-1);
+
+  // Pass 1: continuous scalar field. IDW stays faithful to native cells;
+  // interpolation is display-only and never increases model resolution.
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
       let sw=0,sv=0,near2=Infinity;
       for(const p of pts){
-        const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+3,w=1/d2;
+        const dx=x-p.x,dy=y-p.y,d2=dx*dx+dy*dy+4,w=1/d2;
         near2=Math.min(near2,d2);
         sw+=w;sv+=w*p.n;
       }
       if(marine&&near2>support2)continue;
-      const v=sv/sw,rgb=colorAt(layer,v),k=(y*c.width+x)*4;
-      let localAlpha=alpha;
-      if(layer==="rain")localAlpha*=clamp(.08+v*1.6,.08,1);
-      if(layer==="storm")localAlpha*=clamp(.18+v*1.15,.18,1);
-      img.data[k]=rgb[0];img.data[k+1]=rgb[1];img.data[k+2]=rgb[2];img.data[k+3]=Math.round(255*localAlpha);
+      field[y*c.width+x]=sw?sv/sw:0;
+    }
+  }
+
+  // Pass 2: perceptual colour + very subtle relief from local scalar gradient.
+  // Relief changes luminance only, never the underlying value.
+  const img=ctx.createImageData(c.width,c.height);
+  const idx=(x,y)=>Math.max(0,Math.min(c.height-1,y))*c.width+Math.max(0,Math.min(c.width-1,x));
+  for(let y=0;y<c.height;y++){
+    for(let x=0;x<c.width;x++){
+      const pos=y*c.width+x,v=field[pos];
+      if(v<0)continue;
+      const left=field[idx(x-1,y)],right=field[idx(x+1,y)],up=field[idx(x,y-1)],down=field[idx(x,y+1)];
+      const gx=(right>=0?right:v)-(left>=0?left:v);
+      const gy=(down>=0?down:v)-(up>=0?up:v);
+      const slope=Math.min(.12,Math.hypot(gx,gy)*1.9);
+      const light=(-gx*.68-gy*.42);
+      const shade=clamp(1+light*1.55+slope*.20,.84,1.14);
+      const rgb=colorAt(layer,v),k=pos*4;
+      img.data[k]=Math.round(clamp(rgb[0]*shade,0,255));
+      img.data[k+1]=Math.round(clamp(rgb[1]*shade,0,255));
+      img.data[k+2]=Math.round(clamp(rgb[2]*shade,0,255));
+      img.data[k+3]=Math.round(255*fieldAlpha(layer,v,alpha));
     }
   }
   ctx.putImageData(img,0,0);
@@ -400,11 +447,12 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
       const v=sv/sw;
       if(v<.08)continue;
       const k=(y*c.width+x)*4;
-      const shade=Math.round(210+35*v);
+      const density=clamp((v-.05)/.95,0,1);
+      const shade=Math.round(188+58*Math.pow(density,.72));
       img.data[k]=shade;
-      img.data[k+1]=Math.min(255,shade+6);
-      img.data[k+2]=Math.min(255,shade+12);
-      img.data[k+3]=Math.round(185*alphaScale*clamp((v-.05)/.95,0,1));
+      img.data[k+1]=Math.min(255,shade+7);
+      img.data[k+2]=Math.min(255,shade+14);
+      img.data[k+3]=Math.round(205*alphaScale*Math.pow(density,.82));
     }
   }
   ctx.putImageData(img,0,0);

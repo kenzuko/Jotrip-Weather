@@ -3,6 +3,8 @@
 
 const URLS={
   production:[
+    "/weather/dashboard-data.json",
+    "./data/dashboard-data.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Weather/main/data/dashboard-data.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/dashboard-data.json"
   ],

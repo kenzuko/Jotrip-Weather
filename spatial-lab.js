@@ -283,6 +283,7 @@ const PALETTES={
   // Inspired by modern global weather maps, but tuned for JoTrip's Phu Quoc data.
   wind:[[0,[66,72,152]],[.13,[55,99,182]],[.28,[49,151,200]],[.45,[57,190,167]],[.62,[112,199,109]],[.78,[216,205,88]],[.90,[235,148,69]],[1,[201,70,92]]],
   rain:[[0,[48,60,139]],[.12,[48,94,185]],[.27,[42,151,207]],[.44,[44,191,183]],[.61,[87,199,118]],[.76,[215,211,79]],[.89,[236,142,65]],[1,[201,60,96]]],
+  rain24:[[0,[226,240,252]],[.10,[180,219,244]],[.24,[102,177,217]],[.42,[68,196,121]],[.58,[185,211,74]],[.74,[235,204,67]],[.88,[239,132,61]],[1,[173,57,122]]],
   waves:[[0,[59,69,150]],[.17,[52,109,188]],[.35,[46,157,202]],[.53,[55,190,174]],[.70,[111,198,116]],[.86,[217,198,83]],[1,[208,83,100]]],
   current:[[0,[52,78,154]],[.17,[43,123,190]],[.35,[37,171,198]],[.54,[48,197,166]],[.72,[104,198,111]],[.88,[220,191,76]],[1,[213,91,77]]],
   storm:[[0,[48,57,91]],[.25,[78,91,125]],[.48,[123,133,158]],[.68,[170,177,192]],[.84,[213,218,226]],[1,[248,250,252]]]
@@ -1190,6 +1191,11 @@ function renderAll(redrawTimeline=true){
 }
 
 function updateModelBadge(){
+  if(state.layer==="rain24"){
+    $("modelName").textContent="ECMWF 24H";
+    $("modelRun").textContent=state.ecmwf?.run_time?localStamp(state.ecmwf.run_time):"-";
+    return;
+  }
   if(state.layer==="storm"){
     $("modelName").textContent="HIMAWARI";$("modelRun").textContent=state.nowcast?.sampled_time?localStamp(state.nowcast.sampled_time):"-";return;
   }
@@ -1328,6 +1334,12 @@ function showMapProbe(lat,lon){
     ["GEFS p95",fmt(ens?.rain?.q95,1)+" mm"],
     ["P ≥5",ens?.rain?.prob==null?"-":Math.round(ens.rain.prob*100)+"%"],
     ["Spread",fmt(ens?.rain?.spread,1)+" mm"]
+  );
+  else if(state.layer==="rain24")items.push(
+    ["ECMWF next 24h",fmt(row?.rain24_mm,1)+" mm"],
+    ["Loại dữ liệu","Forecast accumulation"],
+    ["Actual 24h","Chưa có grid quan trắc liên tục"],
+    ["Lưu ý","Không nội suy VRain thành raster actual"]
   );
   else if(state.layer==="waves")items.push(["Hs",fmt(validWaveHs(row?.wave_hs_m),1)+" m"],["Sóng từ",directionWithDegrees(row?.wave_direction_deg)],["Chu kỳ",fmt(validWavePeriod(row?.wave_period_s??row?.wave_mean_period_s??row?.wave_peak_period_s),1)+" s"],["Hmax anchor",fmt(m.wave_hmax_m,1)+" m"]);
   else if(state.layer==="current")items.push(["Dòng",fmt(row?.speed_kmh,2)+" km/h"],["Chảy về",directionWithDegrees(row?.direction_toward_deg)],["U",fmt(row?.u_ms,3)+" m/s"],["V",fmt(row?.v_ms,3)+" m/s"]);

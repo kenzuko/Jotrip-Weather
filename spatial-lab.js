@@ -474,7 +474,10 @@ function coldCoreColor(coldC){
   return palette.at(-1)[1];
 }
 function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
-  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.40:.36);
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),rect=c.getBoundingClientRect();
+  const s=clear||!c.width||!c.height
+    ?canvasSize(c,innerWidth<760?.40:.36)
+    :{sx:c.width/Math.max(1,rect.width),sy:c.height/Math.max(1,rect.height)};
   if(clear)ctx.clearRect(0,0,c.width,c.height);
   const pts=(rows||[]).map(r=>{
     const p=state.map.latLngToContainerPoint([r.lat,r.lon]);

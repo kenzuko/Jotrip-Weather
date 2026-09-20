@@ -315,7 +315,8 @@ function initMap(){
     maxBoundsViscosity:.28,
     preferCanvas:true
   });
-  state.map.setView([10.18,104.00],EMBED?8.85:9.15);
+  const windyOverviewZoom=EMBED?(innerWidth>=980?9.18:innerWidth>=700?9.00:8.62):9.15;
+  state.map.setView([10.19,103.94],windyOverviewZoom);
 
   // Windy-style render stack:
   // basemap geometry -> weather canvases -> labels -> JoTrip markers/flag.
@@ -440,10 +441,19 @@ function fieldTransfer(row,layer){
   return piecewise(row.convective_score,[[0,0],[20,.14],[40,.32],[60,.52],[75,.70],[90,.87],[100,1]]);
 }
 function fieldAlpha(layer,t,base){
-  if(layer==="rain"||layer==="rain24")return base*clamp((t-.02)*1.35,.04,.96);
-  if(layer==="wind")return base*clamp(.42+t*.72,.42,.96);
-  if(layer==="waves"||layer==="current")return base*clamp(.36+t*.76,.36,.94);
-  return base*clamp(.16+t*.84,.16,.96);
+  // Keep the basemap visible at low intensity, then let stronger weather become
+  // progressively denser. This is presentation only; it does not alter values.
+  if(layer==="rain"||layer==="rain24"){
+    const q=clamp((t-.015)/.985,0,1);
+    return base*clamp(.03+Math.pow(q,.72)*.97,.03,1);
+  }
+  if(layer==="wind"){
+    return base*clamp(.20+Math.pow(t,.88)*.78,.20,.98);
+  }
+  if(layer==="waves"||layer==="current"){
+    return base*clamp(.18+Math.pow(t,.90)*.80,.18,.98);
+  }
+  return base*clamp(.08+Math.pow(t,.78)*.90,.08,.98);
 }
 function canvasSize(c,scale=.30){
   const r=c.getBoundingClientRect();
@@ -600,14 +610,15 @@ function drawIDW(rows,layer,alpha=.76){
       let shade=1;
 
       if(["rain","rain24","wind","waves","current"].includes(layer)){
-        // Windy-style readable zones: color is banded, relief still follows the
-        // continuous physical field so the map keeps depth instead of flat blobs.
-        visual=bandedScalar(layer,raw);
-        const nx=-gx*8.2,ny=-gy*8.2,nz=1;
+        // Continuous field like a modern weather map: the nonlinear transfer
+        // already separates weak/medium/strong values, so do not quantize into
+        // rectangular color bands. Relief gives mass and depth without hiding roads.
+        visual=raw;
+        const nx=-gx*9.4,ny=-gy*9.4,nz=1;
         const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
-        const hill=nx*inv*(-.58)+ny*inv*(-.42)+nz*inv*.69;
-        const edge=clamp(grad*(layer.startsWith("rain")?4.6:3.4),0,.16);
-        shade=clamp(.84+hill*.22+Math.pow(raw,1.55)*.12+edge,.70,1.22);
+        const hill=nx*inv*(-.62)+ny*inv*(-.38)+nz*inv*.69;
+        const edge=clamp(grad*(layer.startsWith("rain")?5.4:3.8),0,.18);
+        shade=clamp(.80+hill*.25+Math.pow(raw,1.45)*.15+edge,.66,1.28);
       }else{
         const nx=-gx*7.5,ny=-gy*7.5,nz=1;
         const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
@@ -923,7 +934,11 @@ function renderField(){
     :state.layer==="waves"?"saturate(1.20) contrast(1.10)"
     :state.layer==="current"?"saturate(1.18) contrast(1.10)"
     :"none";
-  fieldCanvas.style.opacity=state.layer==="storm"?"0.84":state.layer==="rain"?"0.88":"0.78";
+  fieldCanvas.style.opacity=state.layer==="storm"?"0.78"
+    :state.layer==="rain"?"0.76"
+    :state.layer==="rain24"?"0.72"
+    :state.layer==="wind"?"0.66"
+    :"0.68";
   const rows=activeRows();
   state.currentRows=rows;
   state.currentFrame=state.layer==="storm"
@@ -937,12 +952,12 @@ function renderField(){
     return;
   }
 
-  const alpha=state.layer==="wind"?.68
-    :state.layer==="rain"?.82
-    :state.layer==="rain24"?.84
-    :state.layer==="waves"?.70
-    :state.layer==="current"?.68
-    :.74;
+  const alpha=state.layer==="wind"?.72
+    :state.layer==="rain"?.94
+    :state.layer==="rain24"?.88
+    :state.layer==="waves"?.76
+    :state.layer==="current"?.72
+    :.78;
   drawIDW(rows,state.layer,alpha);
 
 }
@@ -1532,7 +1547,7 @@ function chooseInitialLiveLayer(){
   const maxConv=Math.max(0,...points.map(([,p])=>num(p.nowcast?.convective_score??p.local?.convection_score)||0));
   const maxLocalRain=Math.max(0,...points.map(([,p])=>num(p.local?.rain_rate_mm_h)||0));
   if(fieldRain||gaugeRain||(maxConv>=70&&maxLocalRain>=.3))return "rain";
-  if(maxConv>=85)return "storm";
+  if(maxConv>=68)return "storm";
   return "wind";
 }
 
@@ -1846,7 +1861,10 @@ function bind(){
   $("riskBtn").addEventListener("click",()=>{state.risk=!state.risk;$("riskBtn").classList.toggle("active",state.risk);renderRisk()});
   $("actualBtn").addEventListener("click",()=>{state.actual=!state.actual;$("actualBtn").classList.toggle("active",state.actual);renderActual()});
   $("crosshairBtn").addEventListener("click",()=>setCrosshair(!state.crosshair));
-  $("recenterBtn").addEventListener("click",()=>state.map.setView([10.18,104.00],EMBED?8.85:9.15,{animate:true}));
+  $("recenterBtn").addEventListener("click",()=>{
+    const z=EMBED?(innerWidth>=980?9.18:innerWidth>=700?9.00:8.62):9.15;
+    state.map.setView([10.19,103.94],z,{animate:true});
+  });
   $("probeClose").addEventListener("click",()=>$("probe").classList.add("hidden"));
   $("playBtn").addEventListener("click",togglePlay);
   $("timeSlider").addEventListener("input",e=>{
@@ -1863,7 +1881,11 @@ function bind(){
 }
 
 async function start(){
-  if(EMBED)document.body.classList.add("embed-mode");
+  if(EMBED){
+    document.body.classList.add("embed-mode");
+    state.risk=false;
+    state.actual=false;
+  }
   initMap();bind();setCrosshair(true);applyPresentationScene();await loadAll();
   setInterval(async()=>{
     const [nowcast,marine,critical,forecast,current,feedback]=await Promise.all([

@@ -1,18 +1,16 @@
 {
   "ok": false,
   "stage": "probe",
-  "status": "GULF FIELD · 6 phút trước",
-  "perf": "FPS 14 · LOAD -- · PACK 217KB",
+  "status": "GULF FIELD · 8 phút trước",
+  "perf": "FPS 34 · LOAD -- · PACK 217KB",
   "time": "22:00 20-09",
   "probe": "Chạm bản đồ để đọc gió",
   "mapCanvasCount": 1,
   "errorVisible": true,
-  "errorText": "Particle renderer không tải được, nhưng basemap và scalar wind field vẫn giữ nguyên. luma.gl - multiple versions detected: see console log",
+  "errorText": "Particle renderer không tải được, nhưng basemap và scalar wind field vẫn giữ nguyên. The requested module '/@luma.gl/core@9.2.6/es2022/core.mjs' does not provide an export named 'PresentationContext'",
   "pageErrors": [],
   "consoleErrors": [
-    "luma.gl: Found luma.gl 9.2.6 while initialzing 9.4.2",
-    "luma.gl: 'yarn why @luma.gl/core' can help identify the source of the conflict",
-    "[Gulf Wind Lab] particle renderer failed Error: luma.gl - multiple versions detected: see console log\n    at new r (https://esm.sh/@luma.gl/core@9.4.2/es2022/core.mjs:3:2746)\n    at https://esm.sh/@luma.gl/core@9.4.2/es2022/core.mjs:3:4378"
+    "[Gulf Wind Lab] particle renderer failed SyntaxError: The requested module '/@luma.gl/core@9.2.6/es2022/core.mjs' does not provide an export named 'PresentationContext'"
   ],
   "failure": "Error: Probe did not respond to map click: Chạm bản đồ để đọc gió\n    at file:///home/runner/work/Jotrip-Weather/Jotrip-Weather/gulf-wind-lab-smoke.mjs:82:11"
 }

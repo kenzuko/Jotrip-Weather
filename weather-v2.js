@@ -587,7 +587,10 @@ function renderCurrent(){
     const nowCtx=rainImm!==null&&rainImm>=55?nowcastPlainText(n,rainImm):"";
     rainCtx.innerHTML=[actualCtx,nowCtx].filter(Boolean).map(x=>'<span class="ctx-line">'+x+'</span>').join("");
   }
-  $("convectiveNow").textContent=num(n.convective_score??l.convection_score)===null?"-":Math.round(num(n.convective_score??l.convection_score));
+  const cloudNow=cloudStateLabel(n);
+  $("convectiveNow").textContent=cloudNow.label==="Chưa đủ dữ liệu mây"?"-":
+    (num(n.convective_score)>=75?"MÂY RẤT CAO":num(n.convective_score)>=50?"ĐANG PHÁT TRIỂN":num(n.convective_score)>=25?"CÓ MÂY ĐÁNG CHÚ Ý":"ÍT TÍN HIỆU");
+  if($("convectiveMeta"))$("convectiveMeta").textContent=cloudNow.detail||"Himawari · chưa đủ chi tiết";
   setMetric("waveNow",l.wave_hs_m??m.wave_hs_m,2);setBadge("marineClass",l.marine_class||"MODEL_ONLY");
   setMetric("hmaxNow",m.wave_hmax_m,2);
   setMetric("periodNow",m.period_s,1);
@@ -882,9 +885,16 @@ function renderCloudMotionTable(){
 function renderMapConvective(){
   const n=effectiveNowcast();
   const score=$("mapConvectiveScore"),cloud=$("mapCloudTop"),cool=$("mapCooling");
-  if(score)score.textContent=num(n.convective_score)===null?"-":fmt(n.convective_score,0)+"/100";
-  if(cloud)cloud.textContent=num(n.cloud_top_cold_c)===null?"-":fmt(n.cloud_top_cold_c,1)+"°C";
-  if(cool)cool.textContent=num(n.cooling_c_per_20m)===null?"-":fmt(n.cooling_c_per_20m,1)+"°C";
+  const state=cloudStateLabel(n),temp=num(n.cloud_top_cold_c),delta=num(n.cooling_c_per_20m);
+  if(score)score.textContent=state.label;
+  if(cloud)cloud.textContent=temp===null?"-":fmt(temp,1)+"°C"+(temp<=-60?" · rất lạnh":temp<=-45?" · lạnh":"");
+  if(cool){
+    if(delta===null)cool.textContent="-";
+    else if(delta<=-3)cool.textContent="Đang phát triển nhanh · "+fmt(delta,1)+"°C";
+    else if(delta<=-1)cool.textContent="Đang phát triển · "+fmt(delta,1)+"°C";
+    else if(delta>=2)cool.textContent="Đang chậm lại · +"+fmt(delta,1)+"°C";
+    else cool.textContent="Ít thay đổi · "+(delta>0?"+":"")+fmt(delta,1)+"°C";
+  }
 }
 
 function ensembleData(){

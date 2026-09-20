@@ -230,14 +230,30 @@ function localMetric(anchor,key){
   return num(map[key]);
 }
 function freshFieldReports(minutes=90){
-  const cutoff=Date.now()-minutes*60000;
-  return (state.fieldFeedback?.items||[]).filter(x=>{
-    const t=Date.parse(x.observed_at||"");
-    return Number.isFinite(t)&&t>=cutoff;
+  const cutoff=Date.now()-minutes*60000,remote=state.fieldFeedback?.items||[];
+  let local=[];
+  try{
+    const rows=JSON.parse(localStorage.getItem("pq_weather_field_feedback_v1")||"[]");
+    if(Array.isArray(rows))local=rows;
+  }catch{}
+  const seen=new Set(),out=[];
+  [...local,...remote].forEach(x=>{
+    const t=Date.parse(x?.observed_at||"");
+    if(!Number.isFinite(t)||t<cutoff)return;
+    const key=x.id||[x.point_id,x.observed_at,x.category,x.note].join("|");
+    if(seen.has(key))return;
+    seen.add(key);out.push(x);
   });
+  return out.sort((a,b)=>Date.parse(b.observed_at||0)-Date.parse(a.observed_at||0));
 }
 function recentFieldSignal(pointId,category){
-  return freshFieldReports().find(x=>x.point_id===pointId&&feedbackCategory(x.note)===category)||null;
+  return freshFieldReports().find(x=>{
+    const direct=String(x.category||"").toUpperCase();
+    const inferred=feedbackCategory(x.note)||
+      (x.rain_relation==="higher"?"RAIN_MORE":x.rain_relation==="lower"?"RAIN_LESS":
+       x.wind_relation==="higher"?"WIND_MORE":x.wind_relation==="lower"?"WIND_LESS":null);
+    return x.point_id===pointId&&(direct||inferred)===category;
+  })||null;
 }
 
 function parseTime(s){

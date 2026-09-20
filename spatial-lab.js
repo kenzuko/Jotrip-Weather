@@ -212,7 +212,11 @@ function overlayCurrentBundle(critical,bundle){
       name:g.station_name,lat:num(g.lat),lon:num(g.lon),
       accum_mm:num(g.accumulation_mm),increment_mm:num(g.increment_mm),
       increment_min:num(g.increment_window_minutes),rain_observed:g.rain_observed,
-      rain_intensity_mm_h:num(g.rain_intensity_mm_h),observed_at:g.observed_at,qc:g.qc
+      rain_intensity_mm_h:num(g.rain_intensity_mm_h),
+      recent_change_mm:num(g.recent_change_mm),
+      recent_change_min:num(g.recent_change_window_minutes),
+      rain_recently_observed:g.rain_recently_observed,
+      observed_at:g.observed_at,qc:g.qc
     }));
   }
   return critical;

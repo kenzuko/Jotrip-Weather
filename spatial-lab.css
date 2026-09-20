@@ -708,3 +708,158 @@ body.embed-mode .windy-flag-value small{font-size:7px}
 body.embed-mode .windy-flag-sub{font-size:6.5px;color:#d7e4ea;margin-top:2px}
 body.embed-mode .map-crosshair{opacity:.92}
 
+/* V6.6 - map-first / Windy-like readability
+   Geographic context must always remain visible. Weather becomes denser only
+   where the underlying value is stronger. */
+body.embed-mode .map .leaflet-tile-pane{
+  opacity:1!important;
+  filter:grayscale(.12) saturate(.82) brightness(1.03) contrast(1.08)!important;
+}
+body.embed-mode .leaflet-weatherLabels-pane{
+  opacity:.92!important;
+  filter:none!important;
+}
+body.embed-mode .leaflet-weatherLabels-pane .leaflet-tile{
+  filter:contrast(1.05) brightness(.98)!important;
+}
+body.embed-mode .leaflet-weatherContext-pane{opacity:0!important}
+
+/* Never let a second analytical surface wash out the primary layer. */
+body.embed-mode #uncertaintyCanvas{display:none!important}
+body.embed-mode #ensembleBtn,
+body.embed-mode #modelDiffBtn,
+body.embed-mode #riskBtn,
+body.embed-mode #actualBtn{display:none!important}
+
+/* The JS still computes per-pixel alpha by intensity. These global opacities
+   only set the overall visual weight of the active layer. */
+body.embed-mode .map[data-weather-layer="wind"] #fieldCanvas{opacity:.66!important}
+body.embed-mode .map[data-weather-layer="rain"] #fieldCanvas{opacity:.76!important}
+body.embed-mode .map[data-weather-layer="rain24"] #fieldCanvas{opacity:.72!important}
+body.embed-mode .map[data-weather-layer="storm"] #fieldCanvas{opacity:.76!important}
+body.embed-mode .map[data-weather-layer="waves"] #fieldCanvas{opacity:.68!important}
+body.embed-mode .map[data-weather-layer="current"] #fieldCanvas{opacity:.66!important}
+body.embed-mode #flowCanvas{
+  opacity:.78!important;
+  filter:drop-shadow(0 0 .8px rgba(0,0,0,.34))!important;
+}
+
+/* Only the picker belongs on the map. No station/point badges in the embedded view. */
+body.embed-mode .risk-label,
+body.embed-mode .risk-dot,
+body.embed-mode .actual-label,
+body.embed-mode .actual-pin{display:none!important}
+
+/* Windy-style translucent timeline: map remains visible underneath. */
+body.embed-mode .timeline{
+  left:10px;
+  right:10px;
+  width:auto;
+  bottom:47px;
+  padding:4px 7px 3px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;
+  background:rgba(18,24,29,.46)!important;
+  box-shadow:0 4px 14px rgba(0,0,0,.12);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+body.embed-mode .timeline-head{
+  min-height:24px;
+  gap:6px;
+}
+body.embed-mode .play{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:rgba(255,255,255,.92);
+  color:#17394a;
+  box-shadow:0 2px 8px rgba(0,0,0,.16);
+}
+body.embed-mode .timeline-head b{
+  font-size:7.5px;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+body.embed-mode .timeline-head span{
+  font-size:5.5px;
+  color:rgba(255,255,255,.72);
+}
+body.embed-mode #timeSlider{
+  height:12px;
+  background:transparent;
+}
+body.embed-mode #timeSlider::-webkit-slider-runnable-track{
+  height:3px;
+  border-radius:99px;
+  background:rgba(255,255,255,.52);
+}
+body.embed-mode #timeSlider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:14px;
+  height:14px;
+  margin-top:-5.5px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.94);
+  background:#efb52e;
+  box-shadow:0 2px 7px rgba(0,0,0,.28);
+}
+body.embed-mode #timeSlider::-moz-range-track{
+  height:3px;
+  border-radius:99px;
+  background:rgba(255,255,255,.52);
+}
+body.embed-mode #timeSlider::-moz-range-thumb{
+  width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:#efb52e;
+}
+body.embed-mode .timeline-ticks{
+  opacity:.58;
+  margin-top:0;
+}
+body.embed-mode .timeline-ticks span{font-size:4.8px;color:#fff}
+
+/* Layer bar floats over the map without becoming an opaque footer. */
+body.embed-mode .layerbar{
+  background:rgba(14,25,32,.42)!important;
+  border-top:1px solid rgba(255,255,255,.10);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+body.embed-mode .layer{
+  background:rgba(255,255,255,.08)!important;
+  border-color:rgba(255,255,255,.11)!important;
+  color:rgba(255,255,255,.90);
+}
+body.embed-mode .layer.active{
+  background:rgba(255,255,255,.92)!important;
+  color:#153d52!important;
+  box-shadow:0 3px 12px rgba(0,0,0,.12)!important;
+}
+
+/* Keep picker compact and readable, but never cover the geography. */
+body.embed-mode .readout{
+  top:41px;
+  min-width:118px;
+  max-width:154px;
+  padding:6px 8px;
+  background:rgba(14,27,35,.68)!important;
+  border-color:rgba(255,255,255,.08)!important;
+  box-shadow:0 4px 14px rgba(0,0,0,.18)!important;
+}
+body.embed-mode .readout>small{font-size:5.2px}
+body.embed-mode .readout-main strong{font-size:21px}
+body.embed-mode .readout-main span{font-size:6.5px}
+body.embed-mode .readout>p{font-size:6px;line-height:1.22}
+body.embed-mode .right-controls{top:40px}
+
+/* Map itself should dominate the card. */
+body.embed-mode .brand-logo{width:43px}
+body.embed-mode .status-pill{height:22px;font-size:5.7px;padding:0 7px}
+body.embed-mode .leaflet-control-attribution{opacity:.42;font-size:6px}
+
+@media(max-width:760px){
+  body.embed-mode .timeline{left:7px;right:7px;bottom:46px}
+  body.embed-mode .readout{min-width:112px;max-width:146px}
+  body.embed-mode .readout-main strong{font-size:20px}
+}
+

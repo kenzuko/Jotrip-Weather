@@ -245,8 +245,8 @@ function pointRisk(p){
   const windProb=Math.max(0,...rows.map(x=>num(x.wind?.prob)).filter(v=>v!==null));
   const rainProb=Math.max(0,...rows.map(x=>num(x.rain?.prob)).filter(v=>v!==null));
   let level=0,reasons=[];
-  if(conv!==null&&conv>=75){level=Math.max(level,2);reasons.push("đối lưu cao")}
-  else if(conv!==null&&conv>=60){level=Math.max(level,1);reasons.push("đối lưu tăng")}
+  if(conv!==null&&conv>=75){level=Math.max(level,2);reasons.push("mây phát triển rất cao")}
+  else if(conv!==null&&conv>=60){level=Math.max(level,1);reasons.push("mây đang phát triển")}
   if(imminence!==null&&imminence>=75){level=Math.max(level,2);reasons.push("mưa cục bộ có thể tăng nhanh")}
   else if(imminence!==null&&imminence>=55){level=Math.max(level,1);reasons.push("mưa ngắn hạn cần theo dõi")}
   if(gust!==null&&gust>=39){level=Math.max(level,3);reasons.push("gió giật mạnh")}
@@ -410,7 +410,7 @@ function summary(p){
   if(rain!==null)bits.push(rain>=3?"Ước tính mưa hiện tại đáng chú ý":rain>.2?"Ước tính có mưa nhẹ hoặc rải rác":"Ước tính mưa hiện tại thấp");
   if(imminence!==null&&imminence>=75)bits.push("mưa cục bộ có thể tăng nhanh trong 0-60 phút");
   else if(imminence!==null&&imminence>=55)bits.push("mưa ngắn hạn cần theo dõi");
-  if(conv!==null&&conv>=70)bits.push("mây đối lưu đang hoạt động");
+  if(conv!==null&&conv>=70)bits.push("có cụm mây rất cao, dễ kèm mưa dông");
   if(wind!==null)bits.push("gió khoảng "+fmt(wind,0)+" km/h");
   if(wave!==null)bits.push("Hs nền khoảng "+fmt(wave,1)+" m");
   return bits.length?bits.join(" · ")+".":"Chưa đủ dữ liệu địa phương để tóm tắt.";
@@ -649,17 +649,42 @@ function effectiveNowcastFor(id){
   };
 }
 function effectiveNowcast(){return effectiveNowcastFor(current)}
-function cloudStateLabel(score){
-  score=num(score);
-  if(score===null)return "Chưa đủ dữ liệu";
-  if(score>=85)return "Đối lưu mạnh";
-  if(score>=70)return "Đối lưu cao";
-  if(score>=50)return "Mây đang phát triển";
-  if(score>=25)return "Có tín hiệu mây";
-  return "Ít đối lưu";
+function cloudStateLabel(n){
+  const score=num(n?.convective_score),top=num(n?.cloud_top_high_m),temp=num(n?.cloud_top_cold_c),cool=num(n?.cooling_c_per_20m);
+  if(score===null)return {label:"Chưa đủ dữ liệu mây",detail:""};
+  let label="",detail="";
+  if(score>=75&&top!==null&&top>=12000){
+    if(cool!==null&&cool<=-3){
+      label="Cụm mây rất cao, đang phát triển nhanh";
+      detail="Nguy cơ mưa dông tăng";
+    }else if(cool!==null&&cool<=-1){
+      label="Cụm mây rất cao, đang phát triển";
+      detail="Có thể kèm mưa dông";
+    }else if(cool!==null&&cool>=1.5){
+      label="Cụm mây rất cao, đang chậm lại";
+      detail="Vẫn có thể còn mưa cục bộ";
+    }else{
+      label="Cụm mây rất cao";
+      detail="Có khả năng gây mưa dông";
+    }
+  }else if(score>=50){
+    label="Mây cao đang phát triển";
+    detail="Có khả năng mưa cục bộ";
+  }else if(score>=25){
+    label="Có cụm mây đáng chú ý";
+    detail="Nên theo dõi thêm";
+  }else{
+    label="Chưa thấy cụm mây dông rõ";
+    detail="Tín hiệu vệ tinh hiện thấp";
+  }
+  const tech=[];
+  if(top!==null)tech.push("đỉnh ~"+fmt(top/1000,1)+" km");
+  if(temp!==null)tech.push(fmt(temp,0)+"°C");
+  if(tech.length)detail+=(detail?" · ":"")+tech.join(" · ");
+  return {label,detail};
 }
 function motionConfidenceLabel(v){
-  return ({MEDIUM_HIGH:"Khá",MEDIUM:"Vừa",LOW:"Thấp"}[String(v||"").toUpperCase()]||"Chưa rõ");
+  return ({MEDIUM_HIGH:"Khá rõ",MEDIUM:"Tạm rõ",LOW:"Chưa chắc"}[String(v||"").toUpperCase()]||"Chưa đủ dữ liệu");
 }
 function motionSourceText(m){
   if(!m)return "Chưa track được";
@@ -668,16 +693,25 @@ function motionSourceText(m){
   return [sector,near].filter(Boolean).join(" · ")||"Chưa rõ";
 }
 function motionHeadingText(m){
-  if(!m||!m.motion_heading)return "Chưa đủ 2 ảnh";
-  return "Về "+m.motion_heading+(num(m.motion_speed_kmh)!==null?" · "+fmt(m.motion_speed_kmh,0)+" km/h":"");
+  if(!m)return "Chưa đủ dữ liệu";
+  if(!m.motion_heading)return "Hướng chưa ổn định";
+  const speed=num(m.motion_speed_kmh);
+  return "Về "+m.motion_heading+(speed!==null?" · "+fmt(speed,0)+" km/h":" · tốc độ chưa chắc");
 }
 function motionEtaText(m){
   if(!m)return "Chưa tính được";
-  const st=String(m.status||"").toUpperCase(),eta=num(m.eta_minutes);
+  const st=String(m.status||"").toUpperCase(),eta=num(m.eta_minutes),dist=num(m.distance_to_target_km),speed=num(m.motion_speed_kmh);
   if(st==="NEARBY"||eta===0)return "Đang ở gần";
   if(st==="APPROACHING"&&eta!==null)return "~"+Math.max(1,Math.round(eta))+" phút";
-  if(st==="MOVING_AWAY")return "Đang rời xa";
-  if(st==="NO_TRACKABLE_CONVECTIVE_CLOUD")return "Không có cụm rõ";
+  if(st==="APPROACHING"&&dist!==null&&speed!==null&&speed>0){
+    const rough=dist/speed*60;
+    if(rough>180)return "Đang hướng vào nhưng còn xa (>3 giờ)";
+    return "~"+Math.max(1,Math.round(rough))+" phút";
+  }
+  if(st==="APPROACHING")return "Đang hướng vào, chưa đủ tốc độ để tính";
+  if(st==="MOVING_AWAY")return "Đang rời xa khu vực";
+  if(st==="NO_TRACKABLE_CONVECTIVE_CLOUD")return "Chưa có cụm mây rõ";
+  if(st==="TRACKED")return "Chưa thấy hướng thẳng vào khu vực";
   return "Chưa đủ để tính";
 }
 function nowcastPlainText(n,rainImm){
@@ -699,6 +733,7 @@ function renderCloudMotionTable(){
     const p=critical.points[id]||{},n=effectiveNowcastFor(id),m=n.cloud_motion||{};
     return {
       name:p.name||id,
+      nowcast:n,
       score:num(n.convective_score),
       motion:m,
       sampled:n.sampled_time
@@ -706,17 +741,17 @@ function renderCloudMotionTable(){
   });
   const corridor=fullNowcast?.corridor_motion?.ha_tien;
   if(corridor){
-    rows.push({name:"Hà Tiên - hành lang mây",score:num(corridor.max_convective_score),motion:corridor,sampled:fullNowcast.sampled_time,corridor:true});
+    rows.push({name:"Hà Tiên - hành lang mây",nowcast:{convective_score:num(corridor.max_convective_score),cloud_motion:corridor},score:num(corridor.max_convective_score),motion:corridor,sampled:fullNowcast.sampled_time,corridor:true});
   }
   if(!rows.length){
     body.innerHTML='<tr><td colspan="6">Chưa có dữ liệu chuyển động mây.</td></tr>';
     return;
   }
   body.innerHTML=rows.map(r=>{
-    const m=r.motion||{},eta=motionEtaText(m);
+    const m=r.motion||{},eta=motionEtaText(m),cloud=cloudStateLabel(r.nowcast||{convective_score:r.score});
     return '<tr>'+
       '<td><b>'+esc(r.name)+'</b></td>'+
-      '<td><b>'+esc(cloudStateLabel(r.score))+'</b><small>'+(r.score===null?'-':fmt(r.score,0)+'/100')+'</small></td>'+
+      '<td><b>'+esc(cloud.label)+'</b><small>'+esc(cloud.detail)+'</small></td>'+
       '<td>'+esc(motionSourceText(m))+'</td>'+
       '<td>'+esc(motionHeadingText(m))+'</td>'+
       '<td><b>'+esc(eta)+'</b></td>'+
@@ -859,8 +894,8 @@ function renderQuickAlert(){
     when="0-60P";
   }else if(strongestNow&&strongestNow.score>=70){
     cls="alert";
-    headline="Đối lưu đang hoạt động mạnh - cần theo dõi ngắn hạn";
-    detail=strongestNow.name+" · chỉ số đối lưu "+fmt(strongestNow.score,0)+"/100 · ưu tiên radar/Himawari và quan trắc thực địa.";
+    headline="Cụm mây rất cao đang hoạt động - cần theo dõi ngắn hạn";
+    detail=strongestNow.name+" · tín hiệu mây phát triển "+fmt(strongestNow.score,0)+"/100 · ưu tiên Himawari và quan trắc thực địa.";
     when="0-3H";
   }else if(candidates.length){
     const x=candidates[0];
@@ -874,8 +909,8 @@ function renderQuickAlert(){
     when="+"+fmt(x.hoursAhead,0)+"H";
   }else if(strongestNow&&strongestNow.score>=50){
     cls="watch";
-    headline="Đối lưu có tín hiệu phát triển";
-    detail=strongestNow.name+" · chỉ số đối lưu "+fmt(strongestNow.score,0)+"/100 · chưa đủ để nâng mức cảnh báo.";
+    headline="Mây đang có dấu hiệu phát triển";
+    detail=strongestNow.name+" · tín hiệu mây "+fmt(strongestNow.score,0)+"/100 · tiếp tục theo dõi diễn biến ngắn hạn.";
     when="0-3H";
   }
 
@@ -993,7 +1028,7 @@ const INTRADAY_META={
   rain:{title:"Mưa 72 giờ",unit:"mm/h",note:"Estimated Now và VRain ACTUAL được giữ riêng. GEFS 6h được quy đổi về mm/h bình quân và nội suy để hiển thị 1h/2h; đây là diễn tiến trình bày, không phải quan trắc từng giờ."},
   temperature:{title:"Nhiệt độ 72 giờ",unit:"°C",note:"Estimated Now + ensemble q50/q90. Hiển thị 1h trong ngày đầu, 2h ở ngày 2-3; các điểm giữa mốc nguồn được nội suy để dễ đọc."},
   wave:{title:"Sóng Hs 72 giờ",unit:"m",note:"MODEL_ONLY. Hiển thị 1h ngày đầu, 2h ngày 2-3 bằng nội suy giữa mốc mô hình. Point thiếu chuỗi trực tiếp dùng nearest marine reference và ghi rõ nguồn."},
-  convective:{title:"Đối lưu gần hiện tại",unit:"/100",note:"Đối lưu là proxy Himawari/Local Now. Không kéo giả tới 72 giờ vì nowcast đối lưu không đáng tin ở chân trời đó."},
+  convective:{title:"Mức phát triển mây gần hiện tại",unit:"/100",note:"Chỉ số này dùng độ lạnh/độ cao đỉnh mây và xu hướng phát triển từ Himawari. Không phải xác suất mưa hay sét và không kéo giả tới 72 giờ."},
   tide:{title:"Triều 72 giờ",unit:"m",note:"Triều mô hình giữ chuỗi theo giờ để nhìn chính xác hơn thời điểm nước cao/thấp. Các mốc Cao/Thấp được đánh trực tiếp trên đồ thị."}
 };
 const H72=72*3600000;
@@ -1111,9 +1146,9 @@ function renderIntradaySignal(){
   const n=effectiveNowcast(),score=num(n.convective_score),g=nearestRainGauge();
   if(score===null){el.textContent="";el.className="intraday-signal";return}
   const dry=g&&(g.rain_observed===false||num(g.accum_mm)===0);
-  let level="calm",label="Đối lưu thấp";
-  if(score>=85){level="strong";label="Mây đối lưu mạnh"}
-  else if(score>=70){level="watch";label="Mây đối lưu đáng chú ý"}
+  let level="calm",label="Chưa thấy cụm mây mạnh";
+  if(score>=85){level="strong";label="Cụm mây rất cao - nguy cơ mưa dông"}
+  else if(score>=70){level="watch";label="Cụm mây rất cao - cần theo dõi"}
   else if(score>=50){level="watch";label="Mây đang phát triển"}
   el.className="intraday-signal "+level;
   el.textContent=label+" · "+Math.round(score)+"/100"+(dry?" · VRain gần nhất chưa mưa":"");

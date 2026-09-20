@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b2637">
+  <title>JoTrip WeatherGL V8 Preview</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="./weather-gl-v8.css?v=1">
+</head>
+<body>
+  <div id="app">
+    <div id="map" aria-label="JoTrip WeatherGL map"></div>
+
+    <header class="hud topbar">
+      <div class="brand">
+        <img src="./jotrip-logo-wordmark.svg" alt="JoTrip">
+        <div>
+          <strong>WeatherGL</strong>
+          <span>V8 PREVIEW · ENGINE DATA</span>
+        </div>
+      </div>
+      <div id="freshness" class="freshness">Đang tải engine…</div>
+    </header>
+
+    <div class="camera-switch" role="group" aria-label="Camera">
+      <button id="gulfBtn" class="active" type="button">Vịnh</button>
+      <button id="islandBtn" type="button">Đảo</button>
+    </div>
+
+    <section id="probe" class="hud probe">
+      <div class="probe-kicker">JOTRIP ENGINE</div>
+      <div id="probeValue" class="probe-value">Chạm bản đồ để xem số</div>
+      <div id="probeMeta" class="probe-meta">GPU field · không nội suy thành dữ liệu mới</div>
+    </section>
+
+    <div id="coverageNote" class="hud coverage-note">
+      Preview đang dùng lưới ECMWF hiện tại quanh Phú Quốc. Camera đã mở ra Vịnh để kiểm tra hướng V8.
+    </div>
+
+    <nav class="hud layerbar" aria-label="Weather layers">
+      <button data-layer="wind" class="active" type="button"><span>↗</span>Gió</button>
+      <button data-layer="rain" type="button"><span>☂</span>Mưa</button>
+      <button data-layer="waves" type="button"><span>≈</span>Sóng</button>
+      <button data-layer="current" type="button"><span>⇢</span>Dòng</button>
+      <button data-layer="cloud" type="button"><span>☁</span>Himawari</button>
+    </nav>
+
+    <footer class="hud timeline">
+      <button id="playBtn" type="button" aria-label="Play">▶</button>
+      <div class="time-main">
+        <div class="time-row">
+          <strong id="timeLabel">--:--</strong>
+          <span id="sourceLabel">ECMWF</span>
+        </div>
+        <input id="timeSlider" type="range" min="0" max="1" value="0" step="1" aria-label="Forecast time">
+        <div class="time-scale"><span>Hiện tại</span><span>+72h</span><span>+10d</span></div>
+      </div>
+    </footer>
+
+    <div id="cloudLock" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <button id="closeCloudLock" class="close" type="button">×</button>
+        <div class="probe-kicker">HIMAWARI</div>
+        <h2>Chưa render lớp IR trong preview này</h2>
+        <p>Đang khóa lại georeference và phạm vi Vịnh trước. Không đưa một lớp vệ tinh lên bản đồ nếu vị trí Phú Quốc chưa được kiểm chứng đúng.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="./weather-gl-v8.js?v=1"></script>
+</body>
+</html>

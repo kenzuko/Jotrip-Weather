@@ -597,9 +597,9 @@ function renderCurrent(){
 function renderActual(){
   const a=critical.actual||{},v=a.vvpq||{},g=a.rain_gauges||[],cards=[];
   if(current==="rach_gia"){
-    cards.push('<article class="actual-card"><header><b>Rạch Giá</b><em class="badge model">MODEL ONLY</em></header><strong>Chưa có ACTUAL live</strong><small>Chỉ hiển thị các nguồn có feed số đang hoạt động. Dữ liệu hiện tại dùng model + Himawari/AQI/triều có feed; không dùng VVPQ/VRain Phú Quốc.</small></article>');
+    cards.push('<article class="actual-card"><header><b>Rạch Giá</b><em class="badge model">MÔ HÌNH</em></header><strong>Chưa có số đo trực tiếp đang hoạt động</strong><small>Hiện chỉ dùng mô hình cùng Himawari, AQI và triều ở những nguồn có dữ liệu. Không kéo VVPQ/VRain Phú Quốc sang Rạch Giá.</small></article>');
     $("actualStrip").innerHTML=cards.join("");
-    $("actualState").textContent="Không có nguồn ACTUAL live đã kết nối";
+    $("actualState").textContent="Chưa có nguồn đo trực tiếp đang hoạt động";
     return;
   }
   cards.push('<article class="actual-card"><header><b>VVPQ</b><em class="badge actual">ĐO THỰC</em></header><strong>'+fmt(v.temperature_c,1)+'°C</strong><small>Gió '+fmt(v.wind_kmh,1)+' km/h · '+(v.weather?esc(v.weather)+' · ':'')+ageText(v.observed_at)+'</small></article>');
@@ -1217,10 +1217,10 @@ function renderHealth(){
 
 
 const INTRADAY_META={
-  wind:{title:"Gió 72 giờ",unit:"km/h",note:"Estimated Now gần hiện tại, GEFS q50/q90 đến +72h. Điểm hiển thị mỗi 1h trong 24h đầu và 2h ở ngày 2-3 bằng nội suy trình bày; không tăng độ phân giải mô hình."},
-  rain:{title:"Mưa 72 giờ",unit:"mm/h",note:"Estimated Now và VRain ACTUAL được giữ riêng. GEFS 6h được quy đổi về mm/h bình quân và nội suy để hiển thị 1h/2h; đây là diễn tiến trình bày, không phải quan trắc từng giờ."},
-  temperature:{title:"Nhiệt độ 72 giờ",unit:"°C",note:"Estimated Now + ensemble q50/q90. Hiển thị 1h trong ngày đầu, 2h ở ngày 2-3; các điểm giữa mốc nguồn được nội suy để dễ đọc."},
-  wave:{title:"Sóng Hs 72 giờ",unit:"m",note:"MODEL_ONLY. Hiển thị 1h ngày đầu, 2h ngày 2-3 bằng nội suy giữa mốc mô hình. Point thiếu chuỗi trực tiếp dùng nearest marine reference và ghi rõ nguồn."},
+  wind:{title:"Gió 72 giờ",unit:"km/h",note:"Ước tính hiện tại được nối với dự báo tổ hợp GEFS q50/q90 tới +72 giờ. 24 giờ đầu hiển thị theo từng giờ, ngày 2-3 theo mỗi 2 giờ bằng nội suy để dễ đọc; không làm tăng độ phân giải thật của mô hình."},
+  rain:{title:"Mưa 72 giờ",unit:"mm/h",note:"Ước tính hiện tại và số đo VRain được giữ riêng. GEFS theo mốc 6 giờ được quy đổi về cường độ trung bình rồi nội suy để hiển thị theo 1 giờ/2 giờ; đây là cách trình bày diễn biến, không phải số đo từng giờ."},
+  temperature:{title:"Nhiệt độ 72 giờ",unit:"°C",note:"Ước tính hiện tại + dự báo tổ hợp q50/q90. Ngày đầu hiển thị mỗi giờ, ngày 2-3 mỗi 2 giờ; các điểm giữa mốc nguồn được nội suy để dễ đọc."},
+  wave:{title:"Sóng Hs 72 giờ",unit:"m",note:"Phần 72 giờ là dữ liệu mô hình. Ngày đầu hiển thị mỗi giờ, ngày 2-3 mỗi 2 giờ bằng nội suy giữa các mốc. Điểm thiếu chuỗi trực tiếp sẽ dùng điểm biển tham chiếu gần nhất và ghi rõ nguồn."},
   convective:{title:"Mức phát triển mây gần hiện tại",unit:"/100",note:"Chỉ số này dùng độ lạnh/độ cao đỉnh mây và xu hướng phát triển từ Himawari. Không phải xác suất mưa hay sét và không kéo giả tới 72 giờ."},
   tide:{title:"Triều 72 giờ",unit:"m",note:"Triều mô hình giữ chuỗi theo giờ để nhìn chính xác hơn thời điểm nước cao/thấp. Các mốc Cao/Thấp được đánh trực tiếp trên đồ thị."}
 };
@@ -1497,7 +1497,7 @@ function renderIntradayChart(){
     const bars=[...data.history,...data.forecast];
     bars.forEach((r,i)=>{
       const xx=x(r.time),yy=y(r.value),base=y(0),bw=r.kind==="forecast"?13:9;
-      const label=r.kind==="forecast"?"Forecast q50":"Estimated Now",tip=intradayTip(r,label,intradayLayer),key="r"+i;
+      const label=r.kind==="forecast"?"Dự báo q50":"Ước tính hiện tại",tip=intradayTip(r,label,intradayLayer),key="r"+i;
       out+='<rect x="'+(xx-bw/2).toFixed(1)+'" y="'+Math.min(yy,base).toFixed(1)+'" width="'+bw+'" height="'+Math.max(2,Math.abs(base-yy)).toFixed(1)+'" rx="2" class="chart-bar '+(r.kind==="forecast"?"forecast":"")+'" data-key="'+key+'"/>';
       if(num(r.high)!==null){
         const hy=y(r.high);
@@ -1518,7 +1518,7 @@ function renderIntradayChart(){
       out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="3.8" class="chart-point" data-key="'+key+'"/>'+renderHit(r,key,label);
     });
     data.forecast.forEach((r,i)=>{
-      const key="f"+i,label=intradayLayer==="tide"?"Triều mô hình":intradayLayer==="wave"?"Sóng MODEL_ONLY":r.model_only?"Model fallback":"Forecast q50";
+      const key="f"+i,label=intradayLayer==="tide"?"Triều mô hình":intradayLayer==="wave"?"Sóng mô hình":r.model_only?"Mô hình dự phòng":"Dự báo q50";
       out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="4" class="chart-point forecast" data-key="'+key+'"/>'+renderHit(r,key,label);
     });
     if(intradayLayer==="tide"){
@@ -1544,16 +1544,16 @@ function renderIntradayChart(){
 
   const focus=data.history[data.history.length-1]||data.actual[data.actual.length-1]||data.forecast[0];
   if(focus){
-    const label=focus.kind==="actual"?"VVPQ ACTUAL":focus.kind==="forecast_model"?"Model fallback":focus.kind==="forecast"?"Forecast q50":intradayLayer==="wave"?"Mô hình":"Estimated Now";
+    const label=focus.kind==="actual"?"VVPQ đo thực":focus.kind==="forecast_model"?"Mô hình dự phòng":focus.kind==="forecast"?"Dự báo q50":intradayLayer==="wave"?"Mô hình":"Ước tính hiện tại";
     setIntradayFocus(intradayTip(focus,label,intradayLayer));
   }
 
   const legends=[];
   if(["wind","rain","temperature"].includes(intradayLayer)){
-    legends.push('<span><i></i>Estimated Now</span><span><i class="forecast"></i>Forecast q50</span><span><i class="q90"></i>Biên q90</span>');
+    legends.push('<span><i></i>Ước tính hiện tại</span><span><i class="forecast"></i>Dự báo q50</span><span><i class="q90"></i>Biên q90</span>');
     if(data.actual.length)legends.push('<span><i class="actual"></i>VVPQ ACTUAL</span>');
   }else if(intradayLayer==="convective")legends.push('<span><i></i>Himawari proxy / Local Now</span>');
-  else if(intradayLayer==="wave")legends.push('<span><i></i>Local Now</span><span><i class="forecast"></i>MODEL_ONLY 72h</span><span><i class="q90"></i>Hmax</span>');
+  else if(intradayLayer==="wave")legends.push('<span><i></i>Hiện tại</span><span><i class="forecast"></i>Mô hình 72 giờ</span><span><i class="q90"></i>Hmax</span>');
   else legends.push('<span><i class="forecast"></i>Triều mô hình</span>');
   $("intradayLegend").innerHTML=legends.join("");
   $("intradayMeta").textContent="0-24h: 1 giờ · 24-72h: 2 giờ · UTC+7 · chạm điểm để xem số";

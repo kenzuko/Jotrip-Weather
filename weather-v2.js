@@ -1567,6 +1567,19 @@ async function renderJoTripMap(){
       marker.bindPopup(mapPopup(id,p));
     });
 
+    // Direct VRain gauges stay visually separate from JoTrip Estimated Now.
+    (critical?.actual?.rain_gauges||[]).forEach(g=>{
+      const lat=num(g.lat),lon=num(g.lon);if(lat===null||lon===null)return;
+      const rate=num(g.rain_intensity_mm_h),raining=g.rain_observed===true;
+      L.circleMarker([lat,lon],{
+        radius:5,weight:2,color:"#ffffff",fillColor:raining?"#168bd0":"#8ba5b4",fillOpacity:.98
+      }).addTo(jotripMap)
+        .bindTooltip("VRain · "+esc(g.name||"trạm mưa"),{direction:"right"})
+        .bindPopup('<div class="jotrip-map-popup"><b>VRain · '+esc(g.name||"trạm mưa")+'</b><span>'+
+          (raining&&rate!==null?("Đang mưa ~"+fmt(rate,1)+" mm/h"):"Hiện chưa ghi nhận mưa")+
+          '</span><small>Quan trắc thực tế · '+esc(ageText(g.observed_at))+'</small></div>');
+    });
+
     // Hà Tiên comparison anchor - satellite corridor only, never fake local weather.
     const ht=[10.3831,104.487534],htm=fullNowcast?.corridor_motion?.ha_tien||null;
     bounds.push(ht);
@@ -1597,6 +1610,13 @@ async function renderJoTripMap(){
 
     if(bounds.length)jotripMap.fitBounds(bounds,{padding:[24,24],maxZoom:10});
     else jotripMap.setView([10.20,104.05],9);
+    const legend=L.control({position:"bottomleft"});
+    legend.onAdd=()=>{
+      const d=L.DomUtil.create("div","jotrip-map-legend");
+      d.innerHTML='<b>JoTrip Intelligence</b><span><i class="lg-point"></i>Điểm phân tích</span><span><i class="lg-rain"></i>VRain đo thực</span><span><i class="lg-cloud"></i>Cụm mây Himawari</span>';
+      return d;
+    };
+    legend.addTo(jotripMap);
     setTimeout(()=>jotripMap?.invalidateSize(),80);
     if(state){state.textContent="LIVE";state.className="badge actual"}
     if(note)note.textContent="JoTrip Intelligence · màu điểm phản ánh mưa/gió hiện tại; vòng tím là cụm mây Himawari. Chỉ vẽ đường tới điểm khi quỹ đạo đủ ổn định và dự kiến thật sự đi qua khu vực.";

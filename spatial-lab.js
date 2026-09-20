@@ -462,19 +462,17 @@ function spatialSupportRadius(pts){
   return median(nearest)*.92;
 }
 function bandedScalar(layer,v){
-  if(layer==="rain"){
-    const stops=[0,.08,.20,.36,.53,.68,.84,1];
-    let b=0;
-    for(let i=1;i<stops.length;i++){if(v>=stops[i])b=i}
-    return stops[b];
-  }
-  if(layer==="rain24"){
-    const stops=[0,.08,.20,.34,.50,.66,.82,1];
-    let b=0;
-    for(let i=1;i<stops.length;i++){if(v>=stops[i])b=i}
-    return stops[b];
-  }
-  return v;
+  const bands={
+    rain:[0,.08,.20,.36,.53,.68,.84,1],
+    rain24:[0,.08,.20,.34,.50,.66,.82,1],
+    wind:[.03,.10,.22,.37,.53,.68,.82,1],
+    waves:[.03,.12,.27,.43,.59,.75,.90,1],
+    current:[.03,.12,.27,.43,.58,.73,.88,1]
+  }[layer];
+  if(!bands)return v;
+  let b=0;
+  for(let i=1;i<bands.length;i++){if(v>=bands[i])b=i}
+  return bands[b];
 }
 function deterministic01(a,b,salt=0){
   const x=Math.sin((a*12.9898+b*78.233+salt*37.719))*43758.5453;
@@ -585,13 +583,16 @@ function drawIDW(rows,layer,alpha=.76){
       let visual=raw;
       let shade=1;
 
-      if(layer==="rain"||layer==="rain24"){
-        // Weather-map patches: classify physical intensity into isohyet bands.
+      if(["rain","rain24","wind","waves","current"].includes(layer)){
+        // Windy-style readable zones: color is banded, relief still follows the
+        // continuous physical field so the map keeps depth instead of flat blobs.
         visual=bandedScalar(layer,raw);
-        const edge=clamp(grad*4.0,0,.14);
-        shade=clamp(1+edge,.90,1.14);
+        const nx=-gx*8.2,ny=-gy*8.2,nz=1;
+        const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
+        const hill=nx*inv*(-.58)+ny*inv*(-.42)+nz*inv*.69;
+        const edge=clamp(grad*(layer.startsWith("rain")?4.6:3.4),0,.16);
+        shade=clamp(.84+hill*.22+Math.pow(raw,1.55)*.12+edge,.70,1.22);
       }else{
-        // Vector/scalar marine fields stay continuous, with restrained relief.
         const nx=-gx*7.5,ny=-gy*7.5,nz=1;
         const inv=1/Math.max(.001,Math.hypot(nx,ny,nz));
         const hill=nx*inv*(-.58)+ny*inv*(-.42)+nz*inv*.69;
@@ -851,9 +852,12 @@ function applyPresentationScene(){
 function renderField(){
   if(state.layer==="radar"){clearCanvas("fieldCanvas");clearCanvas("uncertaintyCanvas");return}
   const fieldCanvas=$("fieldCanvas");
-  fieldCanvas.style.filter=state.layer==="storm"?"blur(2.8px) saturate(1.08)"
-    :state.layer==="rain"?"blur(1px) saturate(1.18)"
-    :state.layer==="rain24"?"blur(.7px) saturate(1.12)"
+  fieldCanvas.style.filter=state.layer==="storm"?"blur(2.2px) saturate(1.16) contrast(1.10)"
+    :state.layer==="rain"?"blur(.6px) saturate(1.28) contrast(1.13)"
+    :state.layer==="rain24"?"blur(.5px) saturate(1.22) contrast(1.10)"
+    :state.layer==="wind"?"saturate(1.22) contrast(1.12)"
+    :state.layer==="waves"?"saturate(1.20) contrast(1.10)"
+    :state.layer==="current"?"saturate(1.18) contrast(1.10)"
     :"none";
   fieldCanvas.style.opacity=state.layer==="storm"?"0.94":"1";
   const rows=activeRows();
@@ -1133,7 +1137,8 @@ function renderRisk(){
     const selected=id===state.selected.anchor;
     const severe=id===worst&&r.level>=3;
     const zoomed=zoom>=12&&r.level>=2;
-    if(selected||severe||zoomed){
+    const major=["duong_dong","ganh_dau","an_thoi"].includes(id)&&zoom<=11.3;
+    if(selected||severe||zoomed||major){
       const li=L.divIcon({className:"",html:'<div class="risk-label">'+esc(cfg.name)+' · '+riskLabel(r.level)+'</div>',iconSize:[118,20],iconAnchor:[59,-9]});
       L.marker([cfg.lat,cfg.lon],{icon:li,interactive:false,zIndexOffset:850}).addTo(state.riskLayer);
     }

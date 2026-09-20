@@ -1920,6 +1920,14 @@ async function feedback(kind,button){
     WIND_LESS:"Gió yếu hơn",
     THUNDER:"Có dông"
   };
+  const legacy={
+    MATCH:{verdict:"accurate",wind_relation:"about",wave_relation:"about",rain_relation:"about"},
+    RAIN_MORE:{verdict:"wrong",wind_relation:"unknown",wave_relation:"unknown",rain_relation:"higher"},
+    RAIN_LESS:{verdict:"wrong",wind_relation:"unknown",wave_relation:"unknown",rain_relation:"lower"},
+    WIND_MORE:{verdict:"wrong",wind_relation:"higher",wave_relation:"unknown",rain_relation:"unknown"},
+    WIND_LESS:{verdict:"wrong",wind_relation:"lower",wave_relation:"unknown",rain_relation:"unknown"},
+    THUNDER:{verdict:"close",wind_relation:"unknown",wave_relation:"unknown",rain_relation:"unknown"}
+  }[kind]||{verdict:"close",wind_relation:"unknown",wave_relation:"unknown",rain_relation:"unknown"};
   const item={
     schema_version:"1.2",
     id:(globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()),
@@ -1928,6 +1936,11 @@ async function feedback(kind,button){
     point_name:p.name||feedbackPoint,
     category:kind,
     category_label:labels[kind]||kind,
+    verdict:legacy.verdict,
+    wind_relation:legacy.wind_relation,
+    wave_relation:legacy.wave_relation,
+    rain_relation:legacy.rain_relation,
+    evidence_type:"field_observation",
     evidence_class:"FIELD_FEEDBACK_UNVERIFIED",
     accepted_as_ground_truth:false,
     engine:critical?.source_state?.local_engine||"PQ_LOCAL_NOW_V2",

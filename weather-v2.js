@@ -23,6 +23,11 @@ const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Numbe
 const fmt=(v,d=1)=>{v=num(v);return v===null?"-":Number(v.toFixed(d)).toString()};
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 const defer=(fn,ms=600)=>setTimeout(()=>{"requestIdleCallback" in window?requestIdleCallback(()=>fn(),{timeout:900}):fn()},ms);
+function isoUTC7(value=Date.now()){
+  const d=value instanceof Date?value:new Date(value);
+  if(Number.isNaN(d.getTime()))return null;
+  return new Date(d.getTime()+7*3600000).toISOString().replace("Z","+07:00");
+}
 
 let critical=null;
 let current="duong_dong";
@@ -870,7 +875,7 @@ async function feedback(kind,button){
   const item={
     schema_version:"1.2",
     id:(globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()),
-    observed_at:new Date().toISOString(),
+    observed_at:isoUTC7(),
     point_id:feedbackPoint,
     point_name:p.name||feedbackPoint,
     category:kind,

@@ -1,8 +1,8 @@
 {
   "ok": true,
   "stage": "done",
-  "status": "GULF FIELD · CARTO · CUBIC · POC2-CARTO-CUBIC · 51 phút trước",
-  "perf": "FPS -- · LOAD -- · PACK --",
+  "status": "GULF FIELD · CARTO · CUBIC · POC3-CARTO-CUBIC-FLOW · 52 phút trước",
+  "perf": "FPS 11 · LOAD 0.4s · PACK 217KB",
   "time": "22:00 20-09",
   "probe": "8.8 km/h",
   "mapCanvasCount": 1,

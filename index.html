@@ -121,6 +121,31 @@
     </article>
   </section>
 
+  <section class="panel cloud-nowcast-panel" aria-label="Mây đối lưu và hướng di chuyển">
+    <div class="panel-head">
+      <div><span class="eyebrow">NOWCAST 0-60 PHÚT</span><h2>Mây đang ở đâu và đi hướng nào?</h2></div>
+      <small id="cloudMotionAge">Himawari · đang tải chuyển động mây</small>
+    </div>
+    <div class="cloud-table-shell">
+      <table class="cloud-nowcast-table">
+        <thead>
+          <tr>
+            <th>Khu vực</th>
+            <th>Tình trạng mây</th>
+            <th>Mây đang ở phía</th>
+            <th>Hướng di chuyển</th>
+            <th>Ước tính tới điểm</th>
+            <th>Tin cậy track</th>
+          </tr>
+        </thead>
+        <tbody id="cloudMotionRows">
+          <tr><td colspan="6"><span class="inline-loader">Đang đọc hai ảnh Himawari liên tiếp...</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <small class="panel-foot">ETA là ngoại suy chuyển động cụm mây đối lưu từ ảnh vệ tinh liên tiếp, không phải cam kết thời điểm bắt đầu mưa. Số mm/h hiện tại và quan trắc VRain vẫn được giữ riêng.</small>
+  </section>
+
   <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ">
     <div class="panel-head intraday-head">
       <div><span class="eyebrow">DIỄN BIẾN 72 GIỜ</span><h2 id="intradayTitle">Gió 72 giờ</h2></div>
@@ -150,6 +175,7 @@
     <summary>Các con số phía trên nghĩa là gì?</summary>
     <div class="number-guide-grid">
       <span><b>Mưa mm/h</b> - cường độ mưa ước tính tại thời điểm hiện tại. % tin cậy cho biết mức chắc chắn của phép ước tính, không phải xác suất sẽ có mưa.</span>
+      <span><b>Nowcast 0-60 phút</b> - tín hiệu ngắn hạn từ mây đối lưu, tốc độ phát triển, hướng di chuyển, model và ensemble. Mức CAO không có nghĩa là 82% xác suất mưa.</span>
       <span><b>Gió giật</b> - giá trị dự báo gió giật của mô hình, khác với gió trung bình tại chỗ.</span>
       <span><b>Hs</b> - chiều cao sóng có ý nghĩa, dùng mô tả trạng thái biển nền. Đây không phải con sóng lớn nhất.</span>
       <span><b>Hmax</b> - chiều cao sóng lớn dùng để nhìn phần rủi ro của trạng thái biển. Khi chưa có giá trị trực tiếp, hệ thống dùng ước tính thống kê và ghi rõ nguồn.</span>

@@ -848,13 +848,15 @@ function renderHealth(){
 
 
 const INTRADAY_META={
-  wind:{title:"Gió trong ngày",unit:"km/h",note:"Đường liền là Estimated Now đã lưu trong ngày. Đường đứt là GEFS q50; vùng mờ là q50→q90. Chấm xanh là VVPQ ACTUAL khi đang xem Dương Đông."},
-  rain:{title:"Mưa trong ngày",unit:"mm/h",note:"Estimated Now dùng mm/h tại điểm. Forecast GEFS là lượng 6 giờ được quy đổi thành tốc độ bình quân mm/h để đặt chung trục; VRain thực tế vẫn được hiển thị riêng ở khối quan trắc."},
-  temperature:{title:"Nhiệt độ trong ngày",unit:"°C",note:"Đường liền là Estimated Now. Đường đứt là ensemble q50; vùng mờ lên q90. VVPQ ACTUAL chỉ được chồng khi xem Dương Đông."},
-  wave:{title:"Sóng Hs trong ngày",unit:"m",note:"Hs trong layer này là MODEL_ONLY/Local Now đã lưu theo thời gian. Không coi đây là quan trắc sóng thực địa."},
-  convective:{title:"Đối lưu trong ngày",unit:"/100",note:"Chỉ số đối lưu là proxy từ Himawari/Local Now, dùng để theo dõi xu hướng phát triển mây đối lưu. Đây không phải quan trắc sét."},
-  tide:{title:"Triều trong ngày",unit:"m",note:"Triều là dữ liệu mô hình. Không dùng thay mực nước hải đồ/cảng."}
+  wind:{title:"Gió 72 giờ",unit:"km/h",note:"Hiển thị Estimated Now gần hiện tại, GEFS q50 trong 72 giờ tới và biên q90. VVPQ ACTUAL chỉ chồng lên Dương Đông để kiểm chứng."},
+  rain:{title:"Mưa 72 giờ",unit:"mm/h",note:"Estimated Now dùng mm/h tại điểm. GEFS là lượng 6 giờ được quy đổi về mm/h bình quân để so trên cùng trục; VRain ACTUAL vẫn giữ riêng ở phần quan trắc."},
+  temperature:{title:"Nhiệt độ 72 giờ",unit:"°C",note:"Estimated Now gần hiện tại + ensemble q50/q90 trong 72 giờ tới. VVPQ ACTUAL chỉ chồng lên Dương Đông."},
+  wave:{title:"Sóng Hs 72 giờ",unit:"m",note:"Chuỗi sóng 72 giờ dùng dữ liệu MODEL_ONLY compact. Point không có chuỗi biển trực tiếp sẽ không được nội suy giả."},
+  convective:{title:"Đối lưu gần hiện tại",unit:"/100",note:"Đối lưu là proxy Himawari/Local Now. Không kéo giả tới 72 giờ vì nowcast đối lưu không đáng tin ở chân trời đó."},
+  tide:{title:"Triều 72 giờ",unit:"m",note:"Triều mô hình trong 72 giờ tới. Không dùng thay mực nước hải đồ/cảng."}
 };
+const H72=72*3600000;
+const H1=3600000;
 function localClock(iso){
   const d=new Date(iso);if(!Number.isFinite(d.getTime()))return null;
   const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(d);
@@ -866,6 +868,16 @@ function localDayKey(iso){
   const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(d);
   const g=t=>parts.find(x=>x.type===t)?.value||"";
   return g("year")+"-"+g("month")+"-"+g("day");
+}
+function localTickLabel(ms){
+  const d=new Date(ms);
+  const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Ho_Chi_Minh",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(d);
+  const g=t=>p.find(x=>x.type===t)?.value||"";
+  return {date:g("day")+"/"+g("month"),time:g("hour")+":"+g("minute")};
+}
+function localMidnightMs(ms){
+  const offset=7*H1,day=24*H1;
+  return Math.floor((ms+offset)/day)*day-offset;
 }
 function intradayHistory(){
   const rows=currentBundle?.today_series?.points?.[current];
@@ -889,39 +901,67 @@ function intradayActual(){
 function intradayForecast(){
   return Array.isArray(point().ensemble?.rows)?point().ensemble.rows:[];
 }
+function waveForecast72(){
+  return Array.isArray(currentBundle?.model_72h?.points?.[current])?currentBundle.model_72h.points[current]:[];
+}
 function chartDataset(layer){
-  const today=currentBundle?.today_series?.date||localDayKey(new Date().toISOString());
-  const now=Date.now();
+  const now=Date.now(),start=now-H1,end=now+H72;
   let history=[],forecast=[],actual=[];
-  const hist=intradayHistory().filter(r=>localDayKey(r.time)===today);
-  const ens=intradayForecast().filter(r=>localDayKey(r.valid_time)===today&&Date.parse(r.valid_time)>=now-15*60*1000);
+  const hist=intradayHistory().filter(r=>{
+    const t=Date.parse(r.time);return Number.isFinite(t)&&t>=start&&t<=now+15*60*1000;
+  });
+  const ens=intradayForecast().filter(r=>{
+    const t=Date.parse(r.valid_time);return Number.isFinite(t)&&t>=now-15*60*1000&&t<=end;
+  });
 
   if(layer==="wind"){
     history=hist.map(r=>({time:r.time,value:num(r.wind_kmh),kind:"estimated"})).filter(r=>r.value!==null);
     forecast=ens.map(r=>({time:r.valid_time,value:num(r.wind?.q50),high:num(r.wind?.q90),kind:"forecast"})).filter(r=>r.value!==null);
-    actual=intradayActual().filter(r=>localDayKey(r.time)===today).map(r=>({time:r.time,value:num(r.wind_kmh),kind:"actual",source:"VVPQ"})).filter(r=>r.value!==null);
+    actual=intradayActual().filter(r=>{const t=Date.parse(r.time);return Number.isFinite(t)&&t>=start&&t<=now+15*60*1000}).map(r=>({time:r.time,value:num(r.wind_kmh),kind:"actual",source:"VVPQ"})).filter(r=>r.value!==null);
   }else if(layer==="rain"){
     history=hist.map(r=>({time:r.time,value:num(r.rain_rate_mm_h),kind:"estimated"})).filter(r=>r.value!==null);
     forecast=ens.map(r=>({time:r.valid_time,value:num(r.rain?.q50)===null?null:num(r.rain.q50)/6,high:num(r.rain?.q90)===null?null:num(r.rain.q90)/6,kind:"forecast"})).filter(r=>r.value!==null);
   }else if(layer==="temperature"){
     history=hist.map(r=>({time:r.time,value:num(r.temperature_c),kind:"estimated"})).filter(r=>r.value!==null);
     forecast=ens.map(r=>({time:r.valid_time,value:num(r.temperature?.q50),high:num(r.temperature?.q90),kind:"forecast"})).filter(r=>r.value!==null);
-    actual=intradayActual().filter(r=>localDayKey(r.time)===today).map(r=>({time:r.time,value:num(r.temperature_c),kind:"actual",source:"VVPQ"})).filter(r=>r.value!==null);
+    actual=intradayActual().filter(r=>{const t=Date.parse(r.time);return Number.isFinite(t)&&t>=start&&t<=now+15*60*1000}).map(r=>({time:r.time,value:num(r.temperature_c),kind:"actual",source:"VVPQ"})).filter(r=>r.value!==null);
   }else if(layer==="wave"){
     history=hist.map(r=>({time:r.time,value:num(r.wave_hs_m),kind:"model"})).filter(r=>r.value!==null);
+    forecast=waveForecast72().filter(r=>{const t=Date.parse(r.time);return Number.isFinite(t)&&t>=now-15*60*1000&&t<=end}).map(r=>({time:r.time,value:num(r.wave_hs_m),high:num(r.wave_hmax_m),kind:"forecast",period_s:num(r.period_s)})).filter(r=>r.value!==null);
   }else if(layer==="convective"){
     history=hist.map(r=>({time:r.time,value:num(r.convective_score),kind:"remote"})).filter(r=>r.value!==null);
   }else if(layer==="tide"){
     const t=effectiveTide();
-    history=(t.series||[]).filter(r=>localDayKey(r.time_iso)===today).map(r=>({time:r.time_iso,value:num(r.height_m),kind:"model"})).filter(r=>r.value!==null);
+    forecast=(t.series||[]).filter(r=>{const tt=Date.parse(r.time_iso);return Number.isFinite(tt)&&tt>=now-H1&&tt<=end}).map(r=>({time:r.time_iso,value:num(r.height_m),kind:"forecast"})).filter(r=>r.value!==null);
   }
   const sort=rows=>rows.sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
-  return {history:sort(history),forecast:sort(forecast),actual:sort(actual),today};
+  return {history:sort(history),forecast:sort(forecast),actual:sort(actual),start,end};
 }
 function chartValueText(layer,v){
   if(num(v)===null)return "-";
   const d=layer==="temperature"?1:layer==="wind"||layer==="convective"?0:2;
   return fmt(v,d)+" "+INTRADAY_META[layer].unit;
+}
+function intradayTip(r,label,layer){
+  const payload={
+    time:localTime(r.time),
+    label,
+    value:chartValueText(layer,r.value),
+    high:num(r.high)!==null?chartValueText(layer,r.high):null,
+    period:num(r.period_s)!==null?fmt(r.period_s,1)+" s":null
+  };
+  return encodeURIComponent(JSON.stringify(payload));
+}
+function setIntradayFocus(encoded){
+  const box=$("intradayFocus");if(!box)return;
+  try{
+    const p=typeof encoded==="string"?JSON.parse(decodeURIComponent(encoded)):encoded;
+    box.innerHTML='<b>'+esc(p.time||"-")+'</b><span>'+esc(p.label||"")+' · '+esc(p.value||"-")+'</span>'+
+      (p.high?'<small>Biên q90 / Hmax: '+esc(p.high)+'</small>':'')+
+      (p.period?'<small>Chu kỳ sóng: '+esc(p.period)+'</small>':'');
+  }catch{
+    box.textContent="Chạm vào một điểm để xem số liệu.";
+  }
 }
 function renderIntradayChart(){
   const svg=$("intradayChart");if(!svg||!critical)return;
@@ -933,77 +973,109 @@ function renderIntradayChart(){
   const data=chartDataset(intradayLayer);
   const all=[...data.history,...data.forecast,...data.actual];
   if(!all.length){
-    svg.innerHTML='<text x="360" y="118" text-anchor="middle" class="chart-empty">Chưa đủ dữ liệu cho layer này.</text>';
+    svg.setAttribute("viewBox","0 0 960 270");
+    svg.innerHTML='<text x="480" y="135" text-anchor="middle" class="chart-empty">Chưa đủ chuỗi 72 giờ cho layer này tại point đang chọn.</text>';
     $("intradayLegend").innerHTML="";
     $("intradayFocus").textContent="Chưa có chuỗi dữ liệu phù hợp.";
+    $("intradayMeta").textContent="72 giờ tới · Giờ Phú Quốc UTC+7";
     return;
   }
 
-  const W=720,H=235,L=46,R=16,T=18,B=34,CW=W-L-R,CH=H-T-B;
+  const W=960,H=270,L=54,R=20,T=22,B=48,CW=W-L-R,CH=H-T-B;
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
   const values=all.flatMap(r=>[r.value,r.high]).filter(v=>num(v)!==null).map(Number);
   let ymin=Math.min(...values),ymax=Math.max(...values);
   if(["wind","rain","wave","convective"].includes(intradayLayer))ymin=0;
   if(intradayLayer==="convective")ymax=100;
   else if(intradayLayer==="temperature"){ymin=Math.floor(ymin-1);ymax=Math.ceil(ymax+1)}
   else if(intradayLayer==="tide"){const pad=Math.max(.05,(ymax-ymin)*.14);ymin-=pad;ymax+=pad}
-  else ymax=Math.max(ymin+.1,ymax*1.16+.05);
+  else ymax=Math.max(ymin+.1,ymax*1.14+.05);
   if(ymax<=ymin)ymax=ymin+1;
 
-  const x=time=>L+clamp(localClock(time)??0,0,24)/24*CW;
+  const x=time=>{
+    const tt=Date.parse(time);if(!Number.isFinite(tt))return L;
+    return L+clamp((tt-data.start)/(data.end-data.start),0,1)*CW;
+  };
+  const xMs=tt=>L+clamp((tt-data.start)/(data.end-data.start),0,1)*CW;
   const y=value=>T+(ymax-Number(value))/(ymax-ymin)*CH;
-  const tip=(r,label)=>encodeURIComponent(localTime(r.time)+" · "+label+" "+chartValueText(intradayLayer,r.value)+(num(r.high)!==null?" · q90 "+chartValueText(intradayLayer,r.high):""));
   const poly=rows=>rows.map(r=>x(r.time).toFixed(1)+","+y(r.value).toFixed(1)).join(" ");
   let out="";
 
   for(let i=0;i<=4;i++){
     const yy=T+i*CH/4,val=ymax-i*(ymax-ymin)/4;
     out+='<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+yy.toFixed(1)+'" class="chart-grid"/>';
-    out+='<text x="'+(L-7)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" class="chart-axis-label">'+esc(fmt(val,intradayLayer==="wind"||intradayLayer==="convective"?0:1))+'</text>';
+    out+='<text x="'+(L-8)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" class="chart-axis-label">'+esc(fmt(val,intradayLayer==="wind"||intradayLayer==="convective"?0:1))+'</text>';
   }
-  [0,6,12,18,24].forEach(hour=>{
-    const xx=L+hour/24*CW;
-    out+='<text x="'+xx.toFixed(1)+'" y="'+(H-9)+'" text-anchor="'+(hour===0?"start":hour===24?"end":"middle")+'" class="chart-axis-label">'+String(hour).padStart(2,"0")+':00</text>';
-  });
+
+  const firstMidnight=localMidnightMs(data.start);
+  for(let t=firstMidnight;t<=data.end+12*H1;t+=12*H1){
+    if(t<data.start-30*60*1000)continue;
+    const xx=xMs(t),lab=localTickLabel(t);
+    if(t% (24*H1)===((17*H1)%(24*H1))){} // no-op; local-midnight markers handled by offset-derived base
+    out+='<line x1="'+xx.toFixed(1)+'" y1="'+T+'" x2="'+xx.toFixed(1)+'" y2="'+(H-B)+'" class="chart-time-grid"/>';
+    out+='<text x="'+xx.toFixed(1)+'" y="'+(H-25)+'" text-anchor="middle" class="chart-axis-date">'+esc(lab.date)+'</text>';
+    out+='<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" class="chart-axis-label">'+esc(lab.time)+'</text>';
+  }
+
+  const renderHit=(r,key,label)=>{
+    const xx=x(r.time),yy=y(r.value),tip=intradayTip(r,label,intradayLayer);
+    return '<circle cx="'+xx.toFixed(1)+'" cy="'+yy.toFixed(1)+'" r="11" class="chart-hit" data-tip="'+tip+'" data-key="'+key+'"/>';
+  };
 
   if(intradayLayer==="rain"){
     const bars=[...data.history,...data.forecast];
-    bars.forEach(r=>{
-      const xx=x(r.time),yy=y(r.value),base=y(0),bw=r.kind==="forecast"?11:7;
-      out+='<rect x="'+(xx-bw/2).toFixed(1)+'" y="'+Math.min(yy,base).toFixed(1)+'" width="'+bw+'" height="'+Math.max(2,Math.abs(base-yy)).toFixed(1)+'" rx="2" class="chart-bar '+(r.kind==="forecast"?"forecast":"")+'" data-tip="'+tip(r,r.kind==="forecast"?"Forecast q50":"Estimated Now")+'"/>';
+    bars.forEach((r,i)=>{
+      const xx=x(r.time),yy=y(r.value),base=y(0),bw=r.kind==="forecast"?13:9;
+      const label=r.kind==="forecast"?"Forecast q50":"Estimated Now",tip=intradayTip(r,label,intradayLayer),key="r"+i;
+      out+='<rect x="'+(xx-bw/2).toFixed(1)+'" y="'+Math.min(yy,base).toFixed(1)+'" width="'+bw+'" height="'+Math.max(2,Math.abs(base-yy)).toFixed(1)+'" rx="2" class="chart-bar '+(r.kind==="forecast"?"forecast":"")+'" data-key="'+key+'"/>';
       if(num(r.high)!==null){
         const hy=y(r.high);
-        out+='<line x1="'+(xx-6).toFixed(1)+'" y1="'+hy.toFixed(1)+'" x2="'+(xx+6).toFixed(1)+'" y2="'+hy.toFixed(1)+'" class="chart-q90-cap"/>';
+        out+='<line x1="'+(xx-7).toFixed(1)+'" y1="'+hy.toFixed(1)+'" x2="'+(xx+7).toFixed(1)+'" y2="'+hy.toFixed(1)+'" class="chart-q90-cap"/>';
       }
+      out+='<rect x="'+(xx-12).toFixed(1)+'" y="'+T+'" width="24" height="'+CH+'" class="chart-hit-rect" data-tip="'+tip+'" data-key="'+key+'"/>';
     });
   }else{
-    if(data.forecast.length>1){
+    if(data.forecast.length>1&&data.forecast.some(r=>num(r.high)!==null)){
       const upper=data.forecast.map(r=>({time:r.time,value:num(r.high)??r.value}));
       const polygon=[...upper,...[...data.forecast].reverse()].map(r=>x(r.time).toFixed(1)+","+y(r.value).toFixed(1)).join(" ");
       out+='<polygon points="'+polygon+'" class="chart-band"/>';
     }
     if(data.history.length>1)out+='<polyline points="'+poly(data.history)+'" class="chart-history"/>';
     if(data.forecast.length>1)out+='<polyline points="'+poly(data.forecast)+'" class="chart-forecast"/>';
-    data.history.forEach(r=>out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="3.3" class="chart-point" data-tip="'+tip(r,intradayLayer==="wave"||intradayLayer==="tide"?"Mô hình":"Estimated Now")+'"/>');
-    data.forecast.forEach(r=>out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="3.5" class="chart-point forecast" data-tip="'+tip(r,"Forecast q50")+'"/>');
-    data.actual.forEach(r=>out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="4.1" class="chart-actual" data-tip="'+tip(r,(r.source||"ACTUAL")+' ACTUAL')+'"/>');
+    data.history.forEach((r,i)=>{
+      const key="h"+i,label=intradayLayer==="wave"?"Mô hình":"Estimated Now";
+      out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="3.8" class="chart-point" data-key="'+key+'"/>'+renderHit(r,key,label);
+    });
+    data.forecast.forEach((r,i)=>{
+      const key="f"+i,label=intradayLayer==="tide"?"Triều mô hình":intradayLayer==="wave"?"Sóng MODEL_ONLY":"Forecast q50";
+      out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="4" class="chart-point forecast" data-key="'+key+'"/>'+renderHit(r,key,label);
+    });
+    data.actual.forEach((r,i)=>{
+      const key="a"+i,label=(r.source||"ACTUAL")+" ACTUAL";
+      out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="4.8" class="chart-actual" data-key="'+key+'"/>'+renderHit(r,key,label);
+    });
   }
 
-  const nowHour=localClock(new Date().toISOString()),nowX=L+clamp(nowHour??0,0,24)/24*CW;
+  const nowX=xMs(Date.now());
   out+='<line x1="'+nowX.toFixed(1)+'" y1="'+T+'" x2="'+nowX.toFixed(1)+'" y2="'+(H-B)+'" class="chart-now"/>';
-  out+='<text x="'+Math.min(W-R-18,nowX+4).toFixed(1)+'" y="'+(T+10)+'" class="chart-now-label">NOW</text>';
+  out+='<text x="'+Math.min(W-R-24,nowX+5).toFixed(1)+'" y="'+(T+11)+'" class="chart-now-label">NOW</text>';
   svg.innerHTML=out;
 
-  const newest=data.history[data.history.length-1]||data.forecast[0]||data.actual[data.actual.length-1];
-  if(newest)$("intradayFocus").textContent=localTime(newest.time)+" · "+chartValueText(intradayLayer,newest.value);
+  const focus=data.history[data.history.length-1]||data.actual[data.actual.length-1]||data.forecast[0];
+  if(focus){
+    const label=focus.kind==="actual"?"VVPQ ACTUAL":focus.kind==="forecast"?"Forecast q50":intradayLayer==="wave"?"Mô hình":"Estimated Now";
+    setIntradayFocus(intradayTip(focus,label,intradayLayer));
+  }
 
   const legends=[];
   if(["wind","rain","temperature"].includes(intradayLayer)){
     legends.push('<span><i></i>Estimated Now</span><span><i class="forecast"></i>Forecast q50</span><span><i class="q90"></i>Biên q90</span>');
     if(data.actual.length)legends.push('<span><i class="actual"></i>VVPQ ACTUAL</span>');
   }else if(intradayLayer==="convective")legends.push('<span><i></i>Himawari proxy / Local Now</span>');
-  else legends.push('<span><i></i>Mô hình / Local Now</span>');
+  else if(intradayLayer==="wave")legends.push('<span><i></i>Local Now</span><span><i class="forecast"></i>MODEL_ONLY 72h</span><span><i class="q90"></i>Hmax</span>');
+  else legends.push('<span><i class="forecast"></i>Triều mô hình</span>');
   $("intradayLegend").innerHTML=legends.join("");
-  $("intradayMeta").textContent=(currentBundle?.today_series?.cadence_minutes?"Lịch sử "+currentBundle.today_series.cadence_minutes+" phút · ":"")+"Giờ Phú Quốc UTC+7";
+  $("intradayMeta").textContent="72 giờ tới · Giờ Phú Quốc UTC+7 · chạm điểm để xem số";
 }
 
 function renderAll(){

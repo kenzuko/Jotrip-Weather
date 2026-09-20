@@ -4,7 +4,7 @@ const ORIGINS=[
 ];
 const ALLOWED=new Set(['dashboard-data.json','nowcast.json','air-quality.json','tide.json']);
 const MAX_AGE={'dashboard-data.json':300,'nowcast.json':300,'air-quality.json':900,'tide.json':1800};
-const POINTS=new Set(['an_thoi','duong_dong','ganh_dau','rach_gia']);
+const POINTS=new Set(['an_thoi','duong_dong','ganh_dau','cua_can','bai_thom','ham_ninh','bai_sao','rach_gia']);
 const VERDICTS=new Set(['accurate','close','wrong']);
 const RELATIONS=new Set(['lower','about','higher','unknown']);
 const EVIDENCE=new Set(['on_sea','on_land','instrument','field_observation']);
@@ -47,25 +47,53 @@ function normalizeFeedback(payload){
   if(!payload||typeof payload!=='object')throw new Error('invalid_payload');
   const id=cleanText(payload.id,100);
   const pointId=cleanText(payload.point_id,40);
-  const verdict=cleanText(payload.verdict,20);
-  const wind=RELATIONS.has(payload.wind_relation)?payload.wind_relation:'unknown';
-  const wave=RELATIONS.has(payload.wave_relation)?payload.wave_relation:'unknown';
-  const rain=RELATIONS.has(payload.rain_relation)?payload.rain_relation:'unknown';
+
+  // V2 compact field-feedback buttons use category names. Convert them into
+  // the stable relational schema used by D1 without treating them as calibrated
+  // ground truth.
+  const category=cleanText(payload.category,30).toUpperCase();
+  const categoryMap={
+    MATCH:{verdict:'accurate',wind:'about',wave:'about',rain:'about'},
+    RAIN_MORE:{verdict:'wrong',wind:'unknown',wave:'unknown',rain:'higher'},
+    RAIN_LESS:{verdict:'wrong',wind:'unknown',wave:'unknown',rain:'lower'},
+    WIND_MORE:{verdict:'wrong',wind:'higher',wave:'unknown',rain:'unknown'},
+    WIND_LESS:{verdict:'wrong',wind:'lower',wave:'unknown',rain:'unknown'},
+    THUNDER:{verdict:'close',wind:'unknown',wave:'unknown',rain:'unknown'}
+  };
+  const mapped=categoryMap[category]||null;
+
+  const verdict=VERDICTS.has(payload.verdict)?payload.verdict:(mapped?.verdict||'');
+  const wind=RELATIONS.has(payload.wind_relation)?payload.wind_relation:(mapped?.wind||'unknown');
+  const wave=RELATIONS.has(payload.wave_relation)?payload.wave_relation:(mapped?.wave||'unknown');
+  const rain=RELATIONS.has(payload.rain_relation)?payload.rain_relation:(mapped?.rain||'unknown');
   const evidence=EVIDENCE.has(payload.evidence_type)?payload.evidence_type:'field_observation';
   if(!id||!POINTS.has(pointId)||!VERDICTS.has(verdict))throw new Error('invalid_feedback_fields');
+
   const observed=new Date(payload.observed_at||Date.now());
   if(Number.isNaN(observed.getTime()))throw new Error('invalid_observed_at');
   const now=Date.now();
   if(observed.getTime()>now+15*60*1000||observed.getTime()<now-7*24*60*60*1000)throw new Error('observed_at_out_of_range');
-  const forecast=payload.forecast&&typeof payload.forecast==='object'?{
-    temperature_c:finiteOrNull(payload.forecast.temperature_c),
-    wind_kmh:finiteOrNull(payload.forecast.wind_kmh),
-    gust_kmh:finiteOrNull(payload.forecast.gust_kmh),
-    wave_hs_m:finiteOrNull(payload.forecast.wave_hs_m),
-    wave_hmax_m:finiteOrNull(payload.forecast.wave_hmax_m),
-    rain_3h_mm:finiteOrNull(payload.forecast.rain_3h_mm),
-    current_kmh:finiteOrNull(payload.forecast.current_kmh)
-  }:{};
+
+  const compactEstimate=payload.estimate&&typeof payload.estimate==='object'?payload.estimate:null;
+  const legacyForecast=payload.forecast&&typeof payload.forecast==='object'?payload.forecast:null;
+  const raw=legacyForecast||compactEstimate||{};
+  const forecast={
+    temperature_c:finiteOrNull(raw.temperature_c),
+    wind_kmh:finiteOrNull(raw.wind_kmh),
+    gust_kmh:finiteOrNull(raw.gust_kmh),
+    wave_hs_m:finiteOrNull(raw.wave_hs_m),
+    wave_hmax_m:finiteOrNull(raw.wave_hmax_m),
+    rain_3h_mm:finiteOrNull(raw.rain_3h_mm),
+    rain_rate_mm_h:finiteOrNull(raw.rain_rate_mm_h),
+    current_kmh:finiteOrNull(raw.current_kmh)
+  };
+  const categoryLabel=cleanText(payload.category_label,80);
+  const noteParts=[];
+  if(category)noteParts.push('category='+category);
+  if(categoryLabel)noteParts.push(categoryLabel);
+  const freeNote=cleanText(payload.note,500);
+  if(freeNote)noteParts.push(freeNote);
+
   return {
     id,
     observed_at:isoUTC7(observed),
@@ -76,15 +104,16 @@ function normalizeFeedback(payload){
     wave_relation:wave,
     rain_relation:rain,
     evidence_type:evidence,
-    note:cleanText(payload.note,500),
+    note:noteParts.join(' · ').slice(0,500),
     snapshot_id:cleanText(payload.snapshot_id,120),
     forecast_generated_at:normalizeIsoString(cleanText(payload.forecast_generated_at,80)),
     source_cycles:normalizeTimestamps(payload.source_cycles&&typeof payload.source_cycles==='object'?payload.source_cycles:{}),
     forecast,
-    ui_version:cleanText(payload.ui_version,60),
+    ui_version:cleanText(payload.ui_version,60)||cleanText(payload.schema_version,20),
     calibration_eligible:0
   };
 }
+
 async function fetchText(url,ms=2400){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),ms);
   try{
@@ -107,6 +136,30 @@ async function storeFeedback(env,entry){
     ).run();
   return {ok:true,id:entry.id,stored_at:createdAt,calibration_eligible:false};
 }
+async function recentFeedback(env,minutes=90,limit=30){
+  if(!env.WEATHER_FEEDBACK)return {ok:false,store:'D1_NOT_BOUND',items:[]};
+  const mins=Math.max(5,Math.min(360,Number(minutes)||90));
+  const max=Math.max(1,Math.min(100,Number(limit)||30));
+  const since=new Date(Date.now()-mins*60*1000).toISOString();
+  const result=await env.WEATHER_FEEDBACK.prepare(`SELECT id,created_at,observed_at,point_id,point_name,verdict,wind_relation,wave_relation,rain_relation,evidence_type,note,forecast_json,ui_version,calibration_eligible
+    FROM weather_feedback
+    WHERE observed_at >= ?
+    ORDER BY observed_at DESC
+    LIMIT ?`).bind(since,max).all();
+  const items=(result.results||[]).map(row=>{
+    let forecast={};
+    try{forecast=JSON.parse(row.forecast_json||'{}')}catch{}
+    return {
+      id:row.id,created_at:row.created_at,observed_at:row.observed_at,
+      point_id:row.point_id,point_name:row.point_name,verdict:row.verdict,
+      wind_relation:row.wind_relation,wave_relation:row.wave_relation,rain_relation:row.rain_relation,
+      evidence_type:row.evidence_type,note:row.note||'',forecast,
+      ui_version:row.ui_version,calibration_eligible:Boolean(row.calibration_eligible)
+    };
+  });
+  return {ok:true,minutes:mins,count:items.length,items};
+}
+
 export default {
   async fetch(request,env,ctx){
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
@@ -114,6 +167,16 @@ export default {
     if(url.pathname==='/health')return Response.json({ok:true,service:'jotrip-weather-live'},{headers:{...cors,'cache-control':'no-store'}});
     if(url.pathname==='/feedback/health'){
       return Response.json({ok:true,store:env.WEATHER_FEEDBACK?'D1_READY':'D1_NOT_BOUND'},{headers:{...cors,'cache-control':'no-store'}});
+    }
+    if(url.pathname==='/feedback/recent'){
+      if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405,headers:cors});
+      try{
+        const data=await recentFeedback(env,url.searchParams.get('minutes'),url.searchParams.get('limit'));
+        const response=Response.json(data,{headers:{...cors,'cache-control':'no-store'}});
+        return request.method==='HEAD'?new Response(null,{status:200,headers:response.headers}):response;
+      }catch(error){
+        return Response.json({ok:false,error:String(error?.message||error),items:[]},{status:500,headers:{...cors,'cache-control':'no-store'}});
+      }
     }
     if(url.pathname==='/feedback'){
       if(request.method!=='POST')return new Response('Method not allowed',{status:405,headers:cors});

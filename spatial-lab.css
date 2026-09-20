@@ -1115,3 +1115,100 @@ body.embed-mode .leaflet-control-attribution{
   body.embed-mode .readout{max-width:148px}
   body.embed-mode .scale{bottom:90px;width:min(205px,58%)}
 }
+
+
+/* V6.9 - traveller-first embedded map
+   One primary layer, minimal chrome, layer-specific visual grammar. */
+.scale-title{
+  display:block;
+  margin:0 0 3px;
+  color:#fff;
+  font-size:6px;
+  line-height:1.1;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-shadow:0 1px 3px rgba(0,0,0,.35);
+}
+
+/* In the embedded card the six layer buttons are text-first and perfectly equal. */
+body.embed-mode .layerbar{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+}
+body.embed-mode .layer i{display:none!important}
+body.embed-mode .layer{
+  height:32px;
+  font-size:7.2px;
+  font-weight:850;
+  letter-spacing:0;
+}
+body.embed-mode .layer[data-layer="rain24"]{min-width:0!important}
+
+/* Keep the timeline readable but visually subordinate to the map. */
+body.embed-mode #confidenceLabel,
+body.embed-mode #trendLabel{display:none!important}
+body.embed-mode .timeline-head{
+  grid-template-columns:auto minmax(0,1fr)!important;
+}
+body.embed-mode .timeline{
+  background:rgba(10,24,31,.24)!important;
+  border-color:rgba(255,255,255,.08)!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.06)!important;
+}
+body.embed-mode .timeline-ticks{opacity:.40}
+
+/* Branding identifies JoTrip without becoming another card over the weather. */
+body.embed-mode .brand-logo{
+  width:41px!important;
+  opacity:.90;
+}
+body.embed-mode .status-pill{
+  background:rgba(250,253,253,.44)!important;
+  border-color:rgba(255,255,255,.30)!important;
+}
+
+/* Wind and current are vector fields: motion is the message, not a decorative wash. */
+body.embed-mode .map[data-weather-layer="wind"] #fieldCanvas,
+body.embed-mode .map[data-weather-layer="current"] #fieldCanvas{
+  opacity:0!important;
+}
+
+/* Waves retain only a faint Hs context under clearly visible direction marks. */
+body.embed-mode .map[data-weather-layer="waves"] #fieldCanvas{
+  opacity:.25!important;
+}
+
+/* Rain is allowed to use colour because position/intensity is the quantity itself. */
+body.embed-mode .map[data-weather-layer="rain"] #fieldCanvas{opacity:.88!important}
+body.embed-mode .map[data-weather-layer="rain24"] #fieldCanvas{opacity:.62!important}
+
+/* Himawari is rendered as cloud mass, with the basemap still readable. */
+body.embed-mode .map[data-weather-layer="storm"] #fieldCanvas{opacity:.64!important}
+
+/* Scalar legend must explain the colour - never leave a naked decorative gradient. */
+body.embed-mode .scale{
+  width:min(235px,61%);
+  padding:6px 8px 5px;
+  background:rgba(10,27,35,.42);
+  border:1px solid rgba(255,255,255,.08);
+}
+body.embed-mode .scale-title{font-size:5.8px}
+body.embed-mode .scale-labels{font-size:5.2px}
+
+/* Contextual rain switch is the only secondary mode control. */
+body.embed-mode .context-modes{
+  background:rgba(248,252,253,.45);
+  border-color:rgba(255,255,255,.28);
+}
+body.embed-mode .context-modes button{font-size:6.8px}
+
+/* One recenter control is enough in traveller view. */
+body.embed-mode #recenterBtn{
+  background:rgba(248,252,253,.48);
+  border-color:rgba(255,255,255,.30);
+  box-shadow:0 3px 10px rgba(8,31,42,.07);
+}
+
+@media(max-width:420px){
+  body.embed-mode .layer{font-size:6.8px;height:31px}
+  body.embed-mode .scale{width:min(220px,64%)}
+}

@@ -423,6 +423,17 @@ function nearestRainGauge(){
     .filter(g=>g.distance_km!==null)
     .sort((a,b)=>a.distance_km-b.distance_km)[0]||null;
 }
+function colocatedRainActual(maxDistanceKm=1.5,maxAgeMinutes=25){
+  const g=nearestRainGauge();if(!g||num(g.distance_km)===null||g.distance_km>maxDistanceKm||g.qc!=="PASS")return null;
+  const age=(Date.now()-Date.parse(g.observed_at||""))/60000;
+  if(!Number.isFinite(age)||age<0||age>maxAgeMinutes)return null;
+  let rate=null,state="";
+  if(g.rain_observed===false||num(g.accum_mm)===0){rate=0;state="KHÔNG MƯA"}
+  else if(num(g.rain_intensity_mm_h)!==null){rate=num(g.rain_intensity_mm_h);state=rate>0?"CÓ MƯA":"KHÔNG MƯA"}
+  else if(num(g.increment_mm)!==null&&num(g.increment_min)>0){rate=num(g.increment_mm)*60/num(g.increment_min);state=rate>0?"CÓ MƯA":"KHÔNG MƯA"}
+  if(rate===null)return null;
+  return {...g,rate_mm_h:rate,state,age_minutes:age};
+}
 function rainActualContext(){
   const g=nearestRainGauge();if(!g)return "";
   let state="";
@@ -452,10 +463,20 @@ function renderCurrent(){
   const l=localPoint(),m=modelPoint(),n=effectiveNowcast();
   setMetric("windNow",l.wind_kmh??m.wind_kmh,1);setBadge("windClass",l.wind_class||"MODEL_ONLY");
   setMetric("gustNow",m.gust_kmh,1);
-  setMetric("rainNow",l.rain_rate_mm_h,2);
-  $("rainConfidence").textContent=num(l.rain_confidence)===null?"-":Math.round(l.rain_confidence*100);
-  setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
-  const rainCtx=$("rainActualContext");if(rainCtx)rainCtx.innerHTML=rainActualContext();
+  const rainActual=colocatedRainActual();
+  const rainMeta=$("rainMeta"),rainCtx=$("rainActualContext");
+  if(rainActual){
+    setMetric("rainNow",rainActual.rate_mm_h,2);
+    setBadge("rainClass","ACTUAL","ĐO THỰC");
+    if(rainMeta)rainMeta.textContent="mm/h · VRain đo thực";
+    if(rainCtx)rainCtx.textContent=(rainActual.name||"VRain")+" · "+rainActual.state+" · "+ageText(rainActual.observed_at);
+  }else{
+    setMetric("rainNow",l.rain_rate_mm_h,2);
+    $("rainConfidence").textContent=num(l.rain_confidence)===null?"-":Math.round(l.rain_confidence*100);
+    setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
+    if(rainMeta)rainMeta.innerHTML='mm/h · <span id="rainConfidence">'+(num(l.rain_confidence)===null?"-":Math.round(l.rain_confidence*100))+'</span>% tin cậy';
+    if(rainCtx)rainCtx.innerHTML=rainActualContext();
+  }
   $("convectiveNow").textContent=num(n.convective_score??l.convection_score)===null?"-":Math.round(num(n.convective_score??l.convection_score));
   setMetric("waveNow",l.wave_hs_m??m.wave_hs_m,2);setBadge("marineClass",l.marine_class||"MODEL_ONLY");
   setMetric("hmaxNow",m.wave_hmax_m,2);

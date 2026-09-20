@@ -1767,7 +1767,7 @@ async function renderJoTripMap(){
     return;
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
-  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260921-01&embed=1"></iframe>';
+  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260921-02&embed=1"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}

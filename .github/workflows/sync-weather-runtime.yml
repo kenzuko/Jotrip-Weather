@@ -39,11 +39,259 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
-          from datetime import datetime
+          from datetime import datetime, timezone, timedelta
+          import re
 
           tmp=Path('/tmp/weather-mirror')
           out=Path('data')
           out.mkdir(exist_ok=True)
+          UTC7=timezone(timedelta(hours=7))
+          ISO_INSTANT=re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|z|[+-]\d{2}:?\d{2})              if not v: return None
+              try: return datetime.fromisoformat(str(v).replace('Z','+00:00'))
+              except Exception: return None
+
+          def existing(name):
+              p=out/name
+              if not p.exists(): return None
+              try: return json.loads(p.read_text(encoding='utf-8'))
+              except Exception: return None
+
+          def write(name,payload):
+              (out/name).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+"\n",encoding='utf-8')
+
+          dashboard=json.loads((tmp/'dashboard-data.json').read_text(encoding='utf-8'))
+          old=existing('dashboard-data.json')
+          valid=(dashboard.get('report_status')=='LIVE' and isinstance(dashboard.get('points'),dict) and bool(dashboard['points']) and dt(dashboard.get('generated_at')))
+          monotonic=(not old or not dt(old.get('generated_at')) or dt(dashboard.get('generated_at')) >= dt(old.get('generated_at')))
+          if valid and monotonic:
+              dashboard=normalize_timestamps(dashboard)
+              write('dashboard-data.json',dashboard)
+          elif not old:
+              raise SystemExit('Refusing to create dashboard mirror from invalid payload')
+          else:
+              dashboard=old
+              print('Keeping last-good dashboard mirror')
+
+          for name in ('nowcast.json','air-quality.json','tide.json'):
+              payload=json.loads((tmp/name).read_text(encoding='utf-8'))
+              oldp=existing(name)
+              valid=payload.get('status')=='POINT_NUMERIC_READY'
+              new_ts=dt(payload.get('generated_at') or payload.get('sampled_time'))
+              old_ts=dt((oldp or {}).get('generated_at') or (oldp or {}).get('sampled_time'))
+              monotonic=(not old_ts or not new_ts or new_ts>=old_ts)
+              if valid and monotonic:
+                  payload=normalize_timestamps(payload)
+                  write(name,payload)
+              elif not oldp:
+                  raise SystemExit(f'Refusing to create {name} mirror from invalid payload')
+              else:
+                  print(f'Keeping last-good {name} mirror')
+
+          # Seed the first paint with a validated last-good dashboard snapshot.
+          dashboard=json.loads((out/'dashboard-data.json').read_text(encoding='utf-8'))
+          js=(
+              "// Generated from validated Weather mirror. Do not hand-edit bootstrap payload.\n"
+              "window.JOTRIP_WEATHER_LIVE_API_URL = 'https://jotrip-weather-live.kenzuko.workers.dev';\n"
+              "window.JOTRIP_WEATHER_BOOTSTRAP = "
+              + json.dumps(dashboard,ensure_ascii=False,separators=(',',':'))
+              + ";\n"
+          )
+          Path('weather-live-config.js').write_text(js,encoding='utf-8')
+          PY
+
+      - name: Validate mirrored runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, re
+          from datetime import datetime, timedelta
+
+          ISO_INSTANT=re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|z|[+-]\d{2}:?\d{2})              p=json.load(open('data/'+f,encoding='utf-8'))
+              if f=='dashboard-data.json':
+                  assert p['report_status']=='LIVE'
+                  assert p.get('points')
+              else:
+                  assert p['status']=='POINT_NUMERIC_READY'
+              assert_utc7(p)
+          text=open('weather-live-config.js',encoding='utf-8').read()
+          assert 'JOTRIP_WEATHER_BOOTSTRAP' in text
+          assert 'jotrip-weather-live.kenzuko.workers.dev' in text
+          assert not re.search(r'\d{4}-\d{2}-\d{2}T[^"\s]*(?:Z|\+00:00)',text), 'bootstrap still contains UTC timestamp'
+          print('mirror OK · all runtime timestamps UTC+7')
+          PY
+
+      - name: Commit mirror only when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'jotrip-weather-mirror'
+          git config user.email 'jotrip-weather-mirror@users.noreply.github.com'
+          git add data weather-live-config.js
+          if git diff --cached --quiet; then
+            echo 'Mirror unchanged'
+            exit 0
+          fi
+          git commit -m 'chore: refresh Weather runtime mirror [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main
+)
+
+          def localize_timestamp(v):
+              if not isinstance(v,str) or not ISO_INSTANT.fullmatch(v):
+                  return v
+              try:
+                  return datetime.fromisoformat(v.replace('Z','+00:00').replace('z','+00:00')).astimezone(UTC7).isoformat()
+              except Exception:
+                  return v
+
+          def normalize_timestamps(v):
+              if isinstance(v,dict):
+                  return {k:normalize_timestamps(x) for k,x in v.items()}
+              if isinstance(v,list):
+                  return [normalize_timestamps(x) for x in v]
+              return localize_timestamp(v)
+
+          def dt(v):
+              if not v: return None
+              try: return datetime.fromisoformat(str(v).replace('Z','+00:00'))
+              except Exception: return None
+
+          def existing(name):
+              p=out/name
+              if not p.exists(): return None
+              try: return json.loads(p.read_text(encoding='utf-8'))
+              except Exception: return None
+
+          def write(name,payload):
+              (out/name).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+"\n",encoding='utf-8')
+
+          dashboard=json.loads((tmp/'dashboard-data.json').read_text(encoding='utf-8'))
+          old=existing('dashboard-data.json')
+          valid=(dashboard.get('report_status')=='LIVE' and isinstance(dashboard.get('points'),dict) and bool(dashboard['points']) and dt(dashboard.get('generated_at')))
+          monotonic=(not old or not dt(old.get('generated_at')) or dt(dashboard.get('generated_at')) >= dt(old.get('generated_at')))
+          if valid and monotonic:
+              write('dashboard-data.json',dashboard)
+          elif not old:
+              raise SystemExit('Refusing to create dashboard mirror from invalid payload')
+          else:
+              dashboard=old
+              print('Keeping last-good dashboard mirror')
+
+          for name in ('nowcast.json','air-quality.json','tide.json'):
+              payload=json.loads((tmp/name).read_text(encoding='utf-8'))
+              oldp=existing(name)
+              valid=payload.get('status')=='POINT_NUMERIC_READY'
+              new_ts=dt(payload.get('generated_at') or payload.get('sampled_time'))
+              old_ts=dt((oldp or {}).get('generated_at') or (oldp or {}).get('sampled_time'))
+              monotonic=(not old_ts or not new_ts or new_ts>=old_ts)
+              if valid and monotonic:
+                  write(name,payload)
+              elif not oldp:
+                  raise SystemExit(f'Refusing to create {name} mirror from invalid payload')
+              else:
+                  print(f'Keeping last-good {name} mirror')
+
+          # Seed the first paint with a validated last-good dashboard snapshot.
+          dashboard=json.loads((out/'dashboard-data.json').read_text(encoding='utf-8'))
+          js=(
+              "// Generated from validated Weather mirror. Do not hand-edit bootstrap payload.\n"
+              "window.JOTRIP_WEATHER_LIVE_API_URL = 'https://jotrip-weather-live.kenzuko.workers.dev';\n"
+              "window.JOTRIP_WEATHER_BOOTSTRAP = "
+              + json.dumps(dashboard,ensure_ascii=False,separators=(',',':'))
+              + ";\n"
+          )
+          Path('weather-live-config.js').write_text(js,encoding='utf-8')
+          PY
+
+      - name: Validate mirrored runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          for f in ('dashboard-data.json','nowcast.json','air-quality.json','tide.json'):
+              p=json.load(open('data/'+f,encoding='utf-8'))
+              if f=='dashboard-data.json':
+                  assert p['report_status']=='LIVE'
+                  assert p.get('points')
+              else:
+                  assert p['status']=='POINT_NUMERIC_READY'
+          text=open('weather-live-config.js',encoding='utf-8').read()
+          assert 'JOTRIP_WEATHER_BOOTSTRAP' in text
+          assert 'jotrip-weather-live.kenzuko.workers.dev' in text
+          print('mirror OK')
+          PY
+
+      - name: Commit mirror only when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'jotrip-weather-mirror'
+          git config user.email 'jotrip-weather-mirror@users.noreply.github.com'
+          git add data weather-live-config.js
+          if git diff --cached --quiet; then
+            echo 'Mirror unchanged'
+            exit 0
+          fi
+          git commit -m 'chore: refresh Weather runtime mirror [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main
+)
+          UTC7=timedelta(hours=7)
+
+          def assert_utc7(v,path='root'):
+              if isinstance(v,dict):
+                  for k,x in v.items(): assert_utc7(x,f'{path}.{k}')
+              elif isinstance(v,list):
+                  for i,x in enumerate(v): assert_utc7(x,f'{path}[{i}]')
+              elif isinstance(v,str) and ISO_INSTANT.fullmatch(v):
+                  d=datetime.fromisoformat(v.replace('Z','+00:00').replace('z','+00:00'))
+                  assert d.utcoffset()==UTC7, f'{path} is not UTC+7: {v}'
+
+          for f in ('dashboard-data.json','nowcast.json','air-quality.json','tide.json'):
+              p=json.load(open('data/'+f,encoding='utf-8'))
+              if f=='dashboard-data.json':
+                  assert p['report_status']=='LIVE'
+                  assert p.get('points')
+              else:
+                  assert p['status']=='POINT_NUMERIC_READY'
+          text=open('weather-live-config.js',encoding='utf-8').read()
+          assert 'JOTRIP_WEATHER_BOOTSTRAP' in text
+          assert 'jotrip-weather-live.kenzuko.workers.dev' in text
+          print('mirror OK')
+          PY
+
+      - name: Commit mirror only when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'jotrip-weather-mirror'
+          git config user.email 'jotrip-weather-mirror@users.noreply.github.com'
+          git add data weather-live-config.js
+          if git diff --cached --quiet; then
+            echo 'Mirror unchanged'
+            exit 0
+          fi
+          git commit -m 'chore: refresh Weather runtime mirror [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main
+)
+
+          def localize_timestamp(v):
+              if not isinstance(v,str) or not ISO_INSTANT.fullmatch(v):
+                  return v
+              try:
+                  return datetime.fromisoformat(v.replace('Z','+00:00').replace('z','+00:00')).astimezone(UTC7).isoformat()
+              except Exception:
+                  return v
+
+          def normalize_timestamps(v):
+              if isinstance(v,dict):
+                  return {k:normalize_timestamps(x) for k,x in v.items()}
+              if isinstance(v,list):
+                  return [normalize_timestamps(x) for x in v]
+              return localize_timestamp(v)
 
           def dt(v):
               if not v: return None

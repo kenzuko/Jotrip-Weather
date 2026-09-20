@@ -559,7 +559,8 @@ function drawIDW(rows,layer,alpha=.76){
   if(!pts.length)return;
 
   const marine=layer==="waves"||layer==="current";
-  const support=marine?spatialSupportRadius(pts):Infinity;
+  const supportBase=spatialSupportRadius(pts);
+  const support=Number.isFinite(supportBase)?supportBase*(marine?1.15:2.25):Infinity;
   const support2=support*support;
   const total=c.width*c.height;
   const field=new Float32Array(total);
@@ -574,7 +575,7 @@ function drawIDW(rows,layer,alpha=.76){
         near2=Math.min(near2,d2);
         sw+=w;sv+=w*p.n;
       }
-      if(marine&&near2>support2)continue;
+      if(near2>support2)continue;
       field[y*c.width+x]=sw?sv/sw:0;
     }
   }
@@ -944,12 +945,6 @@ function renderField(){
     :.74;
   drawIDW(rows,state.layer,alpha);
 
-  // Near-NOW Rain gets a subtle observed Himawari cloud context, similar to
-  // weather-map products that layer precipitation under current cloud cover.
-  // Never project a current satellite scan into future forecast frames.
-  if(rainGetsObservedCloudContext()){
-    drawCloudMass(latestCloudRows(),{clear:false,alphaScale:.34});
-  }
 }
 
 function drawUncertaintyField(rows,layer,kind="ensemble"){

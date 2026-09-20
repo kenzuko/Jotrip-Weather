@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod35">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod36">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod35"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod36"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -81,64 +81,6 @@
     <span class="inline-loader">Đang tải danh sách điểm...</span>
   </nav>
 
-  <section class="command-center" aria-label="Trung tâm theo dõi thời tiết">
-    <div class="command-center-head">
-      <div>
-        <span class="eyebrow">PHÚ QUỐC WEATHER INTELLIGENCE</span>
-        <h2>Tình hình toàn đảo</h2>
-      </div>
-      <span class="command-kicker">OBSERVE · ASSESS · FORECAST</span>
-    </div>
-
-    <div class="command-center-grid">
-      <div class="command-map">
-<section class="panel map-panel">
-    <div class="panel-head">
-      <div><span class="eyebrow">BẢN ĐỒ QUAN SÁT</span><h2>Thời tiết quanh Phú Quốc</h2></div>
-      <span id="mapState" class="badge deferred">CHƯA TẢI</span>
-    </div>
-    <div class="map-tabs">
-      <button class="active" data-map="jotrip">JoTrip Intelligence</button>
-      <button data-map="radar">Radar</button>
-      <button data-map="himawari">Himawari IR</button>
-      <button data-map="wind">Gió</button>
-      <button data-map="rain">Mưa dự báo</button>
-      <button data-map="waves">Sóng</button>
-    </div>
-    <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip Intelligence</b><span>Actual + Estimated Now + Himawari + gió + biển trên cùng một mặt bản đồ.</span></div></div>
-    <div id="mapNote" class="map-note">JoTrip Intelligence là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn được giữ nguyên để đối chiếu.</div>
-    <div id="mapConvective" class="map-convective">
-      <span><b>Mây phát triển Himawari</b><strong id="mapConvectiveScore">-</strong></span>
-      <span><b>Đỉnh mây lạnh nhất</b><strong id="mapCloudTop">-</strong></span>
-      <span><b>Biến thiên 20 phút</b><strong id="mapCooling">-</strong></span>
-      <small>Đây là phân tích từ ảnh vệ tinh cho khu vực đang chọn, không phải xác suất có mưa hoặc sét.</small>
-    </div>
-    <div class="map-source-links">
-      <a href="https://himawari8.nict.go.jp/" target="_blank" rel="noopener noreferrer">NICT Himawari ↗</a>
-      <a href="https://www.data.jma.go.jp/mscweb/data/himawari/" target="_blank" rel="noopener noreferrer">JMA Himawari ↗</a>
-      <a href="https://nchmf.gov.vn/KttvSiteE/vi-VN/1/image-ra-dar-r2.html" target="_blank" rel="noopener noreferrer">NCHMF Radar ↗</a>
-      <a href="https://www.windy.com/?10.20,104.00,8" target="_blank" rel="noopener noreferrer">Windy ↗</a>
-    </div>
-  </section>
-      </div>
-
-      <aside class="situation-rail" aria-label="Các nguy cơ cần theo dõi">
-        <div class="situation-title">
-          <span class="eyebrow">TÌNH HÌNH NHANH</span>
-          <h3>Cần chú ý</h3>
-        </div>
-        <div id="islandSummary" class="island-summary">Đang tổng hợp tình hình toàn đảo...</div>
-        <section id="hazardBoard" class="hazard-board" aria-label="Các nguy cơ cần theo dõi">
-          <article><span>Mưa lớn</span><b id="hazardRain">Đang tính</b><small id="hazardRainMeta">-</small></article>
-          <article><span>Mây phát triển - dông</span><b id="hazardStorm">Đang tính</b><small id="hazardStormMeta">-</small></article>
-          <article><span>Gió - biển</span><b id="hazardWind">Đang tính</b><small id="hazardWindMeta">-</small></article>
-          <article><span>Biến động 10 ngày</span><b id="hazardVolatility">Đang tính</b><small id="hazardVolatilityMeta">-</small></article>
-        </section>
-      </aside>
-    </div>
-  </section>
-
-
   <div class="section-intro">
     <div><span class="eyebrow">ĐANG XẢY RA</span><h2>Thời tiết tại điểm đang chọn</h2></div>
     <small>PQ Local Now kết hợp quan trắc và phân tích địa phương</small>
@@ -178,9 +120,67 @@
     </article>
   </section>
 
-  <section class="panel cloud-nowcast-panel" aria-label="Mây đối lưu và hướng di chuyển">
+  <section class="command-center" aria-label="Trung tâm theo dõi thời tiết">
+    <div class="command-center-head">
+      <div>
+        <span class="eyebrow">PHÚ QUỐC WEATHER INTELLIGENCE</span>
+        <h2>Tình hình toàn đảo</h2>
+      </div>
+      <span class="command-kicker">OBSERVE · ASSESS · FORECAST</span>
+    </div>
+
+    <div class="command-center-grid">
+      <div class="command-map">
+<section class="panel map-panel">
     <div class="panel-head">
-      <div><span class="eyebrow">NOWCAST 0-60 PHÚT</span><h2>Mây đang ở đâu và đi hướng nào?</h2></div>
+      <div><span class="eyebrow">BẢN ĐỒ JOTRIP</span><h2>Thời tiết toàn đảo theo không gian</h2></div>
+      <span id="mapState" class="badge deferred">CHƯA TẢI</span>
+    </div>
+    <div class="map-tabs">
+      <button class="active" data-map="jotrip">JoTrip Spatial</button>
+      <button data-map="radar">Radar</button>
+      <button data-map="himawari">Himawari IR</button>
+      <button data-map="wind">Gió</button>
+      <button data-map="rain">Mưa dự báo</button>
+      <button data-map="waves">Sóng</button>
+    </div>
+    <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip Intelligence</b><span>Actual + Estimated Now + Himawari + gió + biển trên cùng một mặt bản đồ.</span></div></div>
+    <div id="mapNote" class="map-note">JoTrip Intelligence là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn được giữ nguyên để đối chiếu.</div>
+    <div id="mapConvective" class="map-convective">
+      <span><b>Mây phát triển Himawari</b><strong id="mapConvectiveScore">-</strong></span>
+      <span><b>Đỉnh mây lạnh nhất</b><strong id="mapCloudTop">-</strong></span>
+      <span><b>Biến thiên 20 phút</b><strong id="mapCooling">-</strong></span>
+      <small>Đây là phân tích từ ảnh vệ tinh cho khu vực đang chọn, không phải xác suất có mưa hoặc sét.</small>
+    </div>
+    <div class="map-source-links">
+      <a href="https://himawari8.nict.go.jp/" target="_blank" rel="noopener noreferrer">NICT Himawari ↗</a>
+      <a href="https://www.data.jma.go.jp/mscweb/data/himawari/" target="_blank" rel="noopener noreferrer">JMA Himawari ↗</a>
+      <a href="https://nchmf.gov.vn/KttvSiteE/vi-VN/1/image-ra-dar-r2.html" target="_blank" rel="noopener noreferrer">NCHMF Radar ↗</a>
+      <a href="https://www.windy.com/?10.20,104.00,8" target="_blank" rel="noopener noreferrer">Windy ↗</a>
+    </div>
+  </section>
+      </div>
+
+      <aside class="situation-rail" aria-label="Các nguy cơ cần theo dõi">
+        <div class="situation-title">
+          <span class="eyebrow">TÌNH HÌNH NHANH</span>
+          <h3>Cần chú ý</h3>
+        </div>
+        <div id="islandSummary" class="island-summary">Đang tổng hợp tình hình toàn đảo...</div>
+        <section id="hazardBoard" class="hazard-board" aria-label="Các nguy cơ cần theo dõi">
+          <article><span>Mưa trên đảo</span><b id="hazardRain">Đang tính</b><small id="hazardRainMeta">-</small></article>
+          <article><span>Mây mưa 0-3 giờ</span><b id="hazardStorm">Đang tính</b><small id="hazardStormMeta">-</small></article>
+          <article><span>Gió & biển hiện tại</span><b id="hazardWind">Đang tính</b><small id="hazardWindMeta">-</small></article>
+          <article><span>12 giờ tới</span><b id="hazardVolatility">Đang tính</b><small id="hazardVolatilityMeta">-</small></article>
+        </section>
+      </aside>
+    </div>
+  </section>
+
+
+  <section class="panel cloud-nowcast-panel" aria-label="Mây và mưa ngắn hạn">
+    <div class="panel-head">
+      <div><span class="eyebrow">NOWCAST 0-3 GIỜ</span><h2>Mây & mưa sắp tới theo khu vực</h2></div>
       <small id="cloudMotionAge">Himawari · đang tải chuyển động mây</small>
     </div>
     <div class="cloud-table-shell">
@@ -200,7 +200,7 @@
         </tbody>
       </table>
     </div>
-    <small class="panel-foot">Hệ thống chỉ hiện giờ tới khi đường đi của cụm mây đủ ổn định và quỹ đạo ngoại suy thật sự cắt qua khu vực trong 3 giờ tới. Track yếu được giữ nội bộ và không dùng để phát ETA.</small>
+    <small class="panel-foot">Chỉ ghi giờ dự kiến khi hướng di chuyển của vùng mây đã đủ rõ. Nếu chưa đủ chắc, hệ thống chỉ mô tả vị trí mây và tiếp tục theo dõi, không tự đoán giờ tới.</small>
   </section>
 
   <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ">

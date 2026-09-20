@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#142d3b">
   <meta name="robots" content="noindex,nofollow">
-  <title>JoTrip Weather V6.2 - Phú Quốc Spatial Lab</title>
-  <meta name="description" content="JoTrip Weather 5.0 - bản đồ spatial weather, ensemble và quan trắc cho Phú Quốc.">
+  <title>JoTrip Weather - Bản đồ thời tiết Phú Quốc</title>
+  <meta name="description" content="Bản đồ thời tiết không gian Phú Quốc - gió, mưa, mây, sóng, dòng chảy, quan trắc và dự báo JoTrip.">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://a.basemaps.cartocdn.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="spatial-lab.css?v=20260919-62">
+  <link rel="stylesheet" href="spatial-lab.css?v=20260920-70">
 </head>
 <body>
 <div class="app">
@@ -23,7 +23,7 @@
   <header class="topbar">
     <div class="brand">
       <img class="brand-logo" alt="JoTrip" src="jotrip-logo-wordmark.svg">
-      <div class="brand-copy"><b>Weather</b><small>V6.2 · TEST LAB</small></div>
+      <div class="brand-copy"><b>Weather</b><small>PHÚ QUỐC · LIVE</small></div>
     </div>
     <div class="status-pill"><i></i><span id="dataStatus">ĐANG TẢI</span></div>
   </header>
@@ -40,16 +40,16 @@
 
   <nav class="right-controls" aria-label="Overlay">
     <button id="recenterBtn" class="tool" title="Về Phú Quốc">⌂</button>
-    <button id="crosshairBtn" class="toggle active" title="Khoá điểm chọn"><span>⌖</span><small>Picker</small></button>
-    <button id="ensembleBtn" class="toggle"><span>ENS</span><small>Uncertainty</small></button>
-    <button id="modelDiffBtn" class="toggle model-diff hidden" title="ECMWF vs ICON"><span>Δ</span><small>Models</small></button>
-    <button id="riskBtn" class="toggle active"><span>!</span><small>Risk</small></button>
-    <button id="actualBtn" class="toggle"><span>●</span><small>Actual</small></button>
+    <button id="crosshairBtn" class="toggle active" title="Chọn điểm trên bản đồ"><span>⌖</span><small>Điểm</small></button>
+    <button id="ensembleBtn" class="toggle"><span>ENS</span><small>Bất định</small></button>
+    <button id="modelDiffBtn" class="toggle model-diff hidden" title="So sánh ECMWF và ICON"><span>Δ</span><small>Mô hình</small></button>
+    <button id="riskBtn" class="toggle active"><span>!</span><small>Rủi ro</small></button>
+    <button id="actualBtn" class="toggle"><span>●</span><small>Đo thực</small></button>
   </nav>
 
   <section id="alertBar" class="alert-bar neutral">
     <span class="alert-icon">!</span>
-    <div><small>QUICK ALERT</small><b id="alertTitle">Đang tổng hợp...</b></div>
+    <div><small>TIN NHANH</small><b id="alertTitle">Đang tổng hợp...</b></div>
     <strong id="alertTime">LIVE</strong>
   </section>
 
@@ -65,7 +65,7 @@
     <div class="timeline-head">
       <button id="playBtn" class="play">▶</button>
       <b id="timeLabel">NOW</b>
-      <span id="confidenceLabel">Confidence --</span>
+      <span id="confidenceLabel">Tin cậy --</span>
       <span id="trendLabel">D0</span>
     </div>
     <input id="timeSlider" type="range" min="0" max="1" step="1" value="0">
@@ -73,12 +73,12 @@
   </section>
 
   <nav class="layerbar" aria-label="Lớp dữ liệu">
-    <button class="layer active" data-layer="wind"><i>↗</i><span>Wind</span></button>
-    <button class="layer" data-layer="rain"><i>☂</i><span>Rain</span></button>
-    <button class="layer" data-layer="rain24"><i>24</i><span>24h Rain</span></button>
-    <button class="layer" data-layer="waves"><i>≈</i><span>Waves</span></button>
-    <button class="layer" data-layer="current"><i>⇢</i><span>Current</span></button>
-    <button class="layer" data-layer="storm"><i>☁</i><span>Cloud</span></button>
+    <button class="layer active" data-layer="wind"><i>↗</i><span>Gió</span></button>
+    <button class="layer" data-layer="rain"><i>☂</i><span>Mưa</span></button>
+    <button class="layer" data-layer="rain24"><i>24</i><span>Mưa 24h</span></button>
+    <button class="layer" data-layer="waves"><i>≈</i><span>Sóng</span></button>
+    <button class="layer" data-layer="current"><i>⇢</i><span>Dòng</span></button>
+    <button class="layer" data-layer="storm"><i>☁</i><span>Mây</span></button>
     <button class="layer" data-layer="radar"><i>◉</i><span>Radar</span></button>
   </nav>
 
@@ -96,6 +96,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="weather-live-config.js"></script>
 <script src="weather-standalone-data.js"></script>
-<script src="spatial-lab.js?v=20260919-62"></script>
+<script src="spatial-lab.js?v=20260920-70"></script>
 </body>
 </html>

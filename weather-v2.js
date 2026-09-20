@@ -449,7 +449,7 @@ function renderHero(){
 }
 
 function renderCurrent(){
-  const l=localPoint(),m=modelPoint(),n=point().nowcast||{};
+  const l=localPoint(),m=modelPoint(),n=effectiveNowcast();
   setMetric("windNow",l.wind_kmh??m.wind_kmh,1);setBadge("windClass",l.wind_class||"MODEL_ONLY");
   setMetric("gustNow",m.gust_kmh,1);
   setMetric("rainNow",l.rain_rate_mm_h,2);

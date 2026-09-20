@@ -1193,10 +1193,12 @@ function playRadar(){
 function pointMetricLabel(id){
   const p=state.critical?.points?.[id]||{},l=p.local||{},m=p.model||{},lead=currentLeadHours();
   if(state.layer==="wind"){
+    if(lead<=3&&recentFieldSignal(id,"WIND_MORE"))return "thực địa báo gió mạnh hơn";
     const v=lead<=3?num(l.wind_kmh):productionMetric(id,"wind");
     return v===null?"":fmt(v,0)+" km/h";
   }
   if(state.layer==="rain"){
+    if(lead<=3&&recentFieldSignal(id,"RAIN_MORE"))return "thực địa báo mưa nhiều hơn";
     const v=lead<=3?num(l.rain_rate_mm_h):null;
     if(v!==null)return fmt(v,1)+" mm/h";
     const row=nearestRow(state.currentRows,POINTS[id]?.lat,POINTS[id]?.lon);

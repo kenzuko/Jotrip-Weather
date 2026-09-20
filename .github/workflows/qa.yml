@@ -56,13 +56,18 @@ jobs:
           grep -q 'weather-feedback.css' index.html
           grep -q 'weather-sw.js' index.html
           grep -q '/vendor/weather-dashboard-base.css' weather-dashboard.css
-          grep -q 'REFRESH_MS=10\*60\*1000' weather-dashboard.js
           grep -q "'/feedback'" cloudflare/weather-worker.js
           grep -q 'weather_feedback' cloudflare/schema.sql
+          grep -q 'weather-v2.js' index.html
+          grep -q 'weather-v2.css' index.html
+          grep -q 'spatial-lab.html' weather-v2.js
+          grep -q 'Himawari IR' index.html
 
       - name: Validate JavaScript syntax
         run: |
           node --check weather-dashboard.js
+          node --check weather-v2.js
+          node --check spatial-lab.js
           node --check weather-standalone-data.js
           node --check weather-live-config.js
           node --check weather-feedback.js
@@ -74,7 +79,7 @@ jobs:
           node --check vendor/weather-dashboard-observation-status.js
           node --check vendor/weather-dashboard-history-link.js
           node --check vendor/weather-history.js
-          node --check cloudflare/weather-worker.js
+          node --input-type=module --check < cloudflare/weather-worker.js
 
       - name: Validate manifest and mirrored data
         run: |

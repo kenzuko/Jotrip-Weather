@@ -341,8 +341,17 @@ function renderHazardBoard(){
     .filter(g=>freshEnough(g.observed_at,35))
     .map(g=>({...g,rate:num(g.rain_intensity_mm_h)}))
     .sort((a,b)=>(b.rate||0)-(a.rate||0));
+  const fieldRain=combinedRecentFeedback().find(x=>feedbackCategoryFromRecord(x)==="RAIN_MORE");
   const wetGauge=gauges.find(g=>g.rain_observed===true&&(g.rate||0)>0);
-  if(wetGauge){
+  if(fieldRain){
+    const nm=fieldRain.point_name||pointDisplayName(fieldRain.point_id);
+    setHazard(
+      "hazardRain",
+      nm+": thực địa báo mưa nhiều hơn ước tính",
+      "VRain là số đo tại từng vị trí trạm, không đại diện toàn khu vực. Hệ thống đang giữ cảnh báo sai lệch này để đối chiếu.",
+      3
+    );
+  }else if(wetGauge){
     const rate=wetGauge.rate||0;
     setHazard(
       "hazardRain",
@@ -480,10 +489,11 @@ function renderStatus(){
   $("confidenceNow").parentElement.title="Mức tin cậy của toàn bộ dữ liệu đang dùng, không phải xác suất dự báo chắc chắn đúng.";
   const summary=$("islandSummary");
   if(summary){
-    if(assessment.attention.length){
-      summary.innerHTML="<b>Cần chú ý:</b> "+assessment.attention.map(x=>esc(x.p.name)+" - "+esc(x.risk.reasons.slice(0,2).join(", "))).join(" · ")+"<small>Đánh giá thời tiết tham khảo. Hạn chế/cấm tàu thuyền vẫn theo thông báo chính thức.</small>";
+    const watches=buildQuickWatchEvents().slice(0,2);
+    if(watches.length){
+      summary.innerHTML="<b>Hiện cần chú ý:</b> "+watches.map(x=>esc(x.title)+(x.detail?" - "+esc(x.detail):"")).join("<br>")+"<small>Tin nhanh tự biến mất khi dữ liệu mới cho thấy tình huống đã qua.</small>";
     }else{
-      summary.innerHTML="<b>Toàn đảo:</b> chưa thấy lớp dữ liệu hiện có vượt ngưỡng theo dõi chính.<small>Tin cậy dữ liệu không đồng nghĩa dự báo chắc chắn đúng.</small>";
+      summary.innerHTML="<b>Toàn đảo:</b> hiện chưa thấy tình huống nào vượt ngưỡng theo dõi chính.<small>Hệ thống vẫn cập nhật mưa, gió, mây và biển theo từng chu kỳ.</small>";
     }
   }
   renderHazardBoard();
@@ -961,6 +971,34 @@ function pointDisplayName(id){return critical?.points?.[id]?.name||id.replaceAll
 function buildQuickWatchEvents(){
   const events=[];
   const now=Date.now();
+
+  // 0) Recent field reports are operational context only, never numeric ground truth.
+  const field=combinedRecentFeedback();
+  field.slice(0,8).forEach(x=>{
+    const cat=feedbackCategoryFromRecord(x),name=x.point_name||pointDisplayName(x.point_id);
+    if(cat==="RAIN_MORE"){
+      events.push({
+        key:"field-rain:"+x.id,severity:"alert",when:"PHẢN HỒI TẠI CHỖ",
+        title:name+": mưa đang nhiều hơn hệ thống ước tính",
+        detail:"Quan sát thực địa mới. Hệ thống giữ riêng phản hồi này và không tự biến nó thành số mm/h.",
+        sort:-2
+      });
+    }else if(cat==="WIND_MORE"){
+      events.push({
+        key:"field-wind:"+x.id,severity:"watch",when:"PHẢN HỒI TẠI CHỖ",
+        title:name+": gió đang mạnh hơn hệ thống ước tính",
+        detail:"Quan sát thực địa mới. Dùng để cảnh báo sai lệch và đối chiếu lại với nguồn đo/mô hình.",
+        sort:-1
+      });
+    }else if(cat==="THUNDER"){
+      events.push({
+        key:"field-thunder:"+x.id,severity:"watch",when:"PHẢN HỒI TẠI CHỖ",
+        title:name+": có dông được báo tại hiện trường",
+        detail:"Quan sát thực địa mới, đang đối chiếu với Himawari và các nguồn khác.",
+        sort:-1
+      });
+    }
+  });
 
   // 1) Direct rain observations: only fresh gauges with measurable current rain.
   (critical?.actual?.rain_gauges||[]).forEach(g=>{
@@ -1747,6 +1785,45 @@ function readFeedbackQueue(){
 function writeFeedbackQueue(q){
   localStorage.setItem(FEEDBACK_QUEUE_KEY,JSON.stringify((q||[]).slice(-100)));
 }
+function feedbackCategoryFromRecord(x){
+  const direct=String(x?.category||"").toUpperCase();
+  if(direct)return direct;
+  const m=String(x?.note||"").match(/category=([A-Z_]+)/);
+  if(m)return m[1];
+  if(x?.rain_relation==="higher")return "RAIN_MORE";
+  if(x?.rain_relation==="lower")return "RAIN_LESS";
+  if(x?.wind_relation==="higher")return "WIND_MORE";
+  if(x?.wind_relation==="lower")return "WIND_LESS";
+  return null;
+}
+function localFeedbackHistory(){
+  try{
+    const rows=JSON.parse(localStorage.getItem(FEEDBACK_HISTORY_KEY)||"[]");
+    return Array.isArray(rows)?rows:[];
+  }catch{return []}
+}
+function combinedRecentFeedback(minutes=90){
+  const cutoff=Date.now()-minutes*60000;
+  const remote=Array.isArray(recentFieldFeedback?.items)?recentFieldFeedback.items:[];
+  const local=localFeedbackHistory();
+  const seen=new Set(),rows=[];
+  [...local,...remote].forEach(x=>{
+    const t=Date.parse(x?.observed_at||"");
+    if(!Number.isFinite(t)||t<cutoff)return;
+    const key=x.id||[x.point_id,x.observed_at,feedbackCategoryFromRecord(x)].join("|");
+    if(seen.has(key))return;
+    seen.add(key);rows.push(x);
+  });
+  return rows.sort((a,b)=>Date.parse(b.observed_at||0)-Date.parse(a.observed_at||0));
+}
+function recentFeedbackFor(pointId,category){
+  return combinedRecentFeedback().find(x=>x.point_id===pointId&&feedbackCategoryFromRecord(x)===category)||null;
+}
+async function loadRecentFeedback(){
+  try{recentFieldFeedback=await getJSON(RECENT_FEEDBACK_ENDPOINT,60*1000)}
+  catch{recentFieldFeedback=null}
+  return recentFieldFeedback;
+}
 function saveFeedbackHistory(item){
   let h=[];
   try{h=JSON.parse(localStorage.getItem(FEEDBACK_HISTORY_KEY)||"[]")}catch{}
@@ -1903,7 +1980,7 @@ async function refreshLive(){
     renderAll();
     refreshActiveMap();
     lastLiveRefreshAt=Date.now();
-    const jobs=[loadTide(),loadAQI(),loadRegionalForecast()];
+    const jobs=[loadTide(),loadAQI(),loadRegionalForecast(),loadRecentFeedback()];
     if(!fullNowcast)jobs.push(loadNowcast());
     await Promise.allSettled(jobs);
   }catch(e){
@@ -1927,6 +2004,7 @@ async function boot(){
     defer(loadAQI,350);
     if(!fullNowcast)defer(loadNowcast,500);
     defer(loadRegionalForecast,700);
+    defer(loadRecentFeedback,900);
     setInterval(()=>{renderStatus();renderHero()},60000);
     setInterval(refreshLive,LIVE_REFRESH_MS);
     setInterval(()=>{if(mapLayer==="himawari"&&document.visibilityState==="visible")refreshActiveMap()},10*60*1000);

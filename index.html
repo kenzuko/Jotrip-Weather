@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod41">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod42">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod41"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod42"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -145,7 +145,7 @@
       <button data-map="waves">Sóng</button>
     </div>
     <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip</b><span>Số đo thực tế + ước tính hiện tại + mây Himawari + gió + biển trên cùng một bản đồ.</span></div></div>
-    <div id="mapNote" class="map-note">JoTrip Intelligence là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn được giữ nguyên để đối chiếu.</div>
+    <div id="mapNote" class="map-note">Bản đồ JoTrip là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn giữ nguyên để đối chiếu.</div>
     <div id="mapConvective" class="map-convective">
       <span><b>Trạng thái mây</b><strong id="mapConvectiveScore">-</strong></span>
       <span><b>Đỉnh mây</b><strong id="mapCloudTop">-</strong></span>
@@ -264,7 +264,7 @@
         <button type="button" data-feedback="WIND_LESS">Gió yếu hơn</button>
         <button type="button" data-feedback="THUNDER">Có dông</button>
       </div>
-      <small id="feedbackState">Không thu GPS · gửi về JoTrip qua Cloudflare D1; mất mạng sẽ tự xếp hàng và gửi lại.</small><div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
+      <small id="feedbackState">Không thu GPS · phản hồi được gửi về hệ thống JoTrip; nếu mất mạng, thiết bị sẽ lưu lại và tự gửi khi có kết nối.</small><div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
     </div>
 
     <div id="actualStrip" class="actual-strip"><div class="skeleton wide"></div></div>

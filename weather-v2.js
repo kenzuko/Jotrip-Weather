@@ -463,20 +463,12 @@ function renderCurrent(){
   const l=localPoint(),m=modelPoint(),n=effectiveNowcast();
   setMetric("windNow",l.wind_kmh??m.wind_kmh,1);setBadge("windClass",l.wind_class||"MODEL_ONLY");
   setMetric("gustNow",m.gust_kmh,1);
-  const rainActual=colocatedRainActual();
   const rainMeta=$("rainMeta"),rainCtx=$("rainActualContext");
-  if(rainActual){
-    setMetric("rainNow",rainActual.rate_mm_h,2);
-    setBadge("rainClass","ACTUAL","ĐO THỰC");
-    if(rainMeta)rainMeta.textContent="mm/h · VRain đo thực";
-    if(rainCtx)rainCtx.textContent=(rainActual.name||"VRain")+" · "+rainActual.state+" · "+ageText(rainActual.observed_at);
-  }else{
-    setMetric("rainNow",l.rain_rate_mm_h,2);
-    $("rainConfidence").textContent=num(l.rain_confidence)===null?"-":Math.round(l.rain_confidence*100);
-    setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
-    if(rainMeta)rainMeta.innerHTML='mm/h · <span id="rainConfidence">'+(num(l.rain_confidence)===null?"-":Math.round(l.rain_confidence*100))+'</span>% tin cậy';
-    if(rainCtx)rainCtx.innerHTML=rainActualContext();
-  }
+  setMetric("rainNow",l.rain_rate_mm_h,2);
+  const rainConf=num(l.rain_confidence);
+  setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
+  if(rainMeta)rainMeta.innerHTML='mm/h · <span id="rainConfidence">'+(rainConf===null?"-":Math.round(rainConf*100))+'</span>% tin cậy';
+  if(rainCtx)rainCtx.innerHTML=rainActualContext();
   $("convectiveNow").textContent=num(n.convective_score??l.convection_score)===null?"-":Math.round(num(n.convective_score??l.convection_score));
   setMetric("waveNow",l.wave_hs_m??m.wave_hs_m,2);setBadge("marineClass",l.marine_class||"MODEL_ONLY");
   setMetric("hmaxNow",m.wave_hmax_m,2);
@@ -869,12 +861,12 @@ function renderHealth(){
 
 
 const INTRADAY_META={
-  wind:{title:"Gió 72 giờ",unit:"km/h",note:"Hiển thị Estimated Now gần hiện tại, GEFS q50 trong 72 giờ tới và biên q90. VVPQ ACTUAL chỉ chồng lên Dương Đông để kiểm chứng."},
-  rain:{title:"Mưa 72 giờ",unit:"mm/h",note:"Estimated Now dùng mm/h tại điểm. GEFS là lượng 6 giờ được quy đổi về mm/h bình quân để so trên cùng trục; VRain ACTUAL vẫn giữ riêng ở phần quan trắc."},
-  temperature:{title:"Nhiệt độ 72 giờ",unit:"°C",note:"Estimated Now gần hiện tại + ensemble q50/q90 trong 72 giờ tới. VVPQ ACTUAL chỉ chồng lên Dương Đông."},
-  wave:{title:"Sóng Hs 72 giờ",unit:"m",note:"Chuỗi sóng 72 giờ dùng dữ liệu MODEL_ONLY compact. Point không có chuỗi biển trực tiếp sẽ không được nội suy giả."},
+  wind:{title:"Gió 72 giờ",unit:"km/h",note:"Estimated Now gần hiện tại, GEFS q50/q90 đến +72h. Điểm hiển thị mỗi 1h trong 24h đầu và 2h ở ngày 2-3 bằng nội suy trình bày; không tăng độ phân giải mô hình."},
+  rain:{title:"Mưa 72 giờ",unit:"mm/h",note:"Estimated Now và VRain ACTUAL được giữ riêng. GEFS 6h được quy đổi về mm/h bình quân và nội suy để hiển thị 1h/2h; đây là diễn tiến trình bày, không phải quan trắc từng giờ."},
+  temperature:{title:"Nhiệt độ 72 giờ",unit:"°C",note:"Estimated Now + ensemble q50/q90. Hiển thị 1h trong ngày đầu, 2h ở ngày 2-3; các điểm giữa mốc nguồn được nội suy để dễ đọc."},
+  wave:{title:"Sóng Hs 72 giờ",unit:"m",note:"MODEL_ONLY. Hiển thị 1h ngày đầu, 2h ngày 2-3 bằng nội suy giữa mốc mô hình. Point thiếu chuỗi trực tiếp dùng nearest marine reference và ghi rõ nguồn."},
   convective:{title:"Đối lưu gần hiện tại",unit:"/100",note:"Đối lưu là proxy Himawari/Local Now. Không kéo giả tới 72 giờ vì nowcast đối lưu không đáng tin ở chân trời đó."},
-  tide:{title:"Triều 72 giờ",unit:"m",note:"Triều mô hình trong 72 giờ tới. Không dùng thay mực nước hải đồ/cảng."}
+  tide:{title:"Triều 72 giờ",unit:"m",note:"Triều mô hình giữ chuỗi theo giờ để nhìn chính xác hơn thời điểm nước cao/thấp. Các mốc Cao/Thấp được đánh trực tiếp trên đồ thị."}
 };
 const H72=72*3600000;
 const H1=3600000;
@@ -925,6 +917,79 @@ function intradayForecast(){
 function waveForecast72(){
   return Array.isArray(currentBundle?.model_72h?.points?.[current])?currentBundle.model_72h.points[current]:[];
 }
+
+function forecastDisplayTargets(start,end){
+  const targets=[];
+  let t=Math.ceil(start/H1)*H1;
+  while(t<=end){
+    const hours=(t-start)/H1;
+    targets.push(t);
+    t+=hours<24?H1:2*H1;
+  }
+  return targets;
+}
+function interpolateRows(rows,start,end,anchor=null){
+  let src=rows.slice().filter(r=>Number.isFinite(Date.parse(r.time))&&num(r.value)!==null).sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
+  if(anchor&&num(anchor.value)!==null)src=[anchor,...src].sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
+  if(src.length<2)return src;
+  const out=[];
+  for(const t of forecastDisplayTargets(start,end)){
+    let lo=null,hi=null;
+    for(let i=0;i<src.length-1;i++){
+      const a=Date.parse(src[i].time),b=Date.parse(src[i+1].time);
+      if(t>=a&&t<=b){lo=src[i];hi=src[i+1];break}
+    }
+    if(!lo||!hi)continue;
+    const a=Date.parse(lo.time),b=Date.parse(hi.time),f=b===a?0:(t-a)/(b-a);
+    const lerp=(x,y)=>{
+      const nx=num(x),ny=num(y);
+      if(nx===null&&ny===null)return null;
+      if(nx===null)return ny;if(ny===null)return nx;
+      return nx+(ny-nx)*f;
+    };
+    const near=f<.5?lo:hi;
+    out.push({
+      ...near,
+      time:new Date(t).toISOString(),
+      value:lerp(lo.value,hi.value),
+      high:lerp(lo.high,hi.high),
+      period_s:lerp(lo.period_s,hi.period_s),
+      display_interpolated:true,
+      source_interval_hours:Math.round((b-a)/H1*10)/10
+    });
+  }
+  return out;
+}
+function tideExtrema(rows){
+  const out=[];
+  for(let i=1;i<rows.length-1;i++){
+    const a=num(rows[i-1].value),b=num(rows[i].value),d=num(rows[i+1].value);
+    if(a===null||b===null||d===null)continue;
+    if((b>a&&b>=d)||(b>=a&&b>d))out.push({...rows[i],extreme:"HIGH"});
+    else if((b<a&&b<=d)||(b<=a&&b<d))out.push({...rows[i],extreme:"LOW"});
+  }
+  const dedup=[];
+  for(const r of out){
+    const last=dedup[dedup.length-1];
+    if(last&&last.extreme===r.extreme&&Math.abs(Date.parse(r.time)-Date.parse(last.time))<3*H1){
+      if((r.extreme==="HIGH"&&r.value>last.value)||(r.extreme==="LOW"&&r.value<last.value))dedup[dedup.length-1]=r;
+    }else dedup.push(r);
+  }
+  return dedup;
+}
+function renderIntradaySignal(){
+  const el=$("intradaySignal");if(!el)return;
+  const n=effectiveNowcast(),score=num(n.convective_score),g=nearestRainGauge();
+  if(score===null){el.textContent="";el.className="intraday-signal";return}
+  const dry=g&&(g.rain_observed===false||num(g.accum_mm)===0);
+  let level="calm",label="Đối lưu thấp";
+  if(score>=85){level="strong";label="Mây đối lưu mạnh"}
+  else if(score>=70){level="watch";label="Mây đối lưu đáng chú ý"}
+  else if(score>=50){level="watch";label="Mây đang phát triển"}
+  el.className="intraday-signal "+level;
+  el.textContent=label+" · "+Math.round(score)+"/100"+(dry?" · VRain gần nhất chưa mưa":"");
+}
+
 function chartDataset(layer){
   const now=Date.now(),start=now-H1,end=now+H72;
   let history=[],forecast=[],actual=[];
@@ -959,7 +1024,13 @@ function chartDataset(layer){
     forecast=(t.series||[]).filter(r=>{const tt=Date.parse(r.time_iso);return Number.isFinite(tt)&&tt>=now-H1&&tt<=end}).map(r=>({time:r.time_iso,value:num(r.height_m),kind:"forecast"})).filter(r=>r.value!==null);
   }
   const sort=rows=>rows.sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));
-  return {history:sort(history),forecast:sort(forecast),actual:sort(actual),start,end};
+  history=sort(history);forecast=sort(forecast);actual=sort(actual);
+  if(["wind","rain","temperature","wave"].includes(layer)&&forecast.length){
+    const latest=history[history.length-1];
+    const anchor=latest?{...latest,time:new Date(Math.max(Date.now(),Date.parse(latest.time))).toISOString(),kind:"estimated-anchor"}:null;
+    forecast=interpolateRows(forecast,Date.now(),end,anchor);
+  }
+  return {history,forecast,actual,start,end};
 }
 function chartValueText(layer,v){
   if(num(v)===null)return "-";
@@ -973,6 +1044,7 @@ function intradayTip(r,label,layer){
     value:chartValueText(layer,r.value),
     high:num(r.high)!==null?chartValueText(layer,r.high):null,
     period:num(r.period_s)!==null?fmt(r.period_s,1)+" s":null,
+    interpolation:r.display_interpolated?("Điểm hiển thị nội suy từ mốc mô hình "+fmt(r.source_interval_hours,0)+"h; không tăng độ phân giải nguồn"):null,
     reference:r.reference_mode==="NEAREST_MARINE_SERIES"
       ?("Tham chiếu biển "+(critical?.points?.[r.reference_point]?.name||r.reference_point||"-")+
         (num(r.reference_distance_km)!==null?" · cách ô biển ~"+fmt(r.reference_distance_km,1)+" km":""))
@@ -987,7 +1059,8 @@ function setIntradayFocus(encoded){
     box.innerHTML='<b>'+esc(p.time||"-")+'</b><span>'+esc(p.label||"")+' · '+esc(p.value||"-")+'</span>'+
       (p.high?'<small>Biên q90 / Hmax: '+esc(p.high)+'</small>':'')+
       (p.period?'<small>Chu kỳ sóng: '+esc(p.period)+'</small>':'')+
-      (p.reference?'<small>'+esc(p.reference)+'</small>':'');
+      (p.reference?'<small>'+esc(p.reference)+'</small>':'')+
+      (p.interpolation?'<small>'+esc(p.interpolation)+'</small>':'');
   }catch{
     box.textContent="Chạm vào một điểm để xem số liệu.";
   }
@@ -995,6 +1068,10 @@ function setIntradayFocus(encoded){
 function renderIntradayChart(){
   const svg=$("intradayChart");if(!svg||!critical)return;
   const meta=INTRADAY_META[intradayLayer]||INTRADAY_META.wind;
+  const panel=document.querySelector(".intraday-panel");
+  if(panel)panel.dataset.layer=intradayLayer;
+  svg.dataset.layer=intradayLayer;
+  renderIntradaySignal();
   $("intradayTitle").textContent=meta.title+" - "+(point().name||current);
   $("intradayNote").textContent=meta.note;
   document.querySelectorAll("[data-intraday]").forEach(b=>b.classList.toggle("active",b.dataset.intraday===intradayLayer));
@@ -1078,6 +1155,16 @@ function renderIntradayChart(){
       const key="f"+i,label=intradayLayer==="tide"?"Triều mô hình":intradayLayer==="wave"?"Sóng MODEL_ONLY":"Forecast q50";
       out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="4" class="chart-point forecast" data-key="'+key+'"/>'+renderHit(r,key,label);
     });
+    if(intradayLayer==="tide"){
+      tideExtrema(data.forecast).forEach((r,i)=>{
+        const xx=x(r.time),yy=y(r.value),high=r.extreme==="HIGH",lab=localTickLabel(Date.parse(r.time));
+        const label=(high?"Triều cao ":"Triều thấp ")+lab.time;
+        const tip=intradayTip(r,label,intradayLayer),key="tide-ext-"+i;
+        out+='<circle cx="'+xx.toFixed(1)+'" cy="'+yy.toFixed(1)+'" r="5.5" class="tide-extreme '+(high?"high":"low")+'" data-key="'+key+'"/>';
+        out+='<text x="'+xx.toFixed(1)+'" y="'+(yy+(high?-10:15)).toFixed(1)+'" text-anchor="middle" class="tide-extreme-label '+(high?"high":"low")+'">'+esc((high?"Cao ":"Thấp ")+lab.time)+'</text>';
+        out+='<circle cx="'+xx.toFixed(1)+'" cy="'+yy.toFixed(1)+'" r="13" class="chart-hit" data-tip="'+tip+'" data-key="'+key+'"/>';
+      });
+    }
     data.actual.forEach((r,i)=>{
       const key="a"+i,label=(r.source||"ACTUAL")+" ACTUAL";
       out+='<circle cx="'+x(r.time).toFixed(1)+'" cy="'+y(r.value).toFixed(1)+'" r="4.8" class="chart-actual" data-key="'+key+'"/>'+renderHit(r,key,label);
@@ -1103,7 +1190,7 @@ function renderIntradayChart(){
   else if(intradayLayer==="wave")legends.push('<span><i></i>Local Now</span><span><i class="forecast"></i>MODEL_ONLY 72h</span><span><i class="q90"></i>Hmax</span>');
   else legends.push('<span><i class="forecast"></i>Triều mô hình</span>');
   $("intradayLegend").innerHTML=legends.join("");
-  $("intradayMeta").textContent="72 giờ tới · Giờ Phú Quốc UTC+7 · chạm điểm để xem số";
+  $("intradayMeta").textContent="0-24h: 1 giờ · 24-72h: 2 giờ · UTC+7 · chạm điểm để xem số";
 }
 
 function renderAll(){

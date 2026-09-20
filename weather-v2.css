@@ -1004,3 +1004,15 @@ footer{font-size:9.5px}
   .jotrip-live-map{min-height:390px}
 }
 
+.jotrip-map-legend{
+  display:grid;gap:4px;padding:8px 9px;border-radius:10px;
+  background:rgba(255,255,255,.94);box-shadow:0 6px 18px rgba(22,57,78,.16);
+  color:#567180;font-size:8px
+}
+.jotrip-map-legend b{font-size:9px;color:#234b63;margin-bottom:2px}
+.jotrip-map-legend span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.jotrip-map-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.jotrip-map-legend .lg-point{background:#d5a62e}
+.jotrip-map-legend .lg-rain{background:#168bd0}
+.jotrip-map-legend .lg-cloud{background:rgba(107,95,197,.25);border:1px dashed #6b5fc5}
+

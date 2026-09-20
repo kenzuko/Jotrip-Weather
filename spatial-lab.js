@@ -518,8 +518,8 @@ function drawVectorTexture(rows,kind){
   const marine=kind==="waves"||kind==="current";
   const support=marine?spatialSupportRadius(pv):Infinity;
   const support2=support*support+20;
-  const step=kind==="waves"?13:kind==="current"?12:11;
-  const len=kind==="waves"?7:kind==="current"?8:10;
+  const step=kind==="waves"?18:kind==="current"?13:11;
+  const len=kind==="waves"?11:kind==="current"?8:10;
 
   ctx.save();
   ctx.lineCap="round";
@@ -557,8 +557,8 @@ function drawVectorTexture(rows,kind){
 
       if(kind==="waves"||kind==="current"){
         const hx=p.x+ux*l*.55,hy=p.y+uy*l*.55;
-        const back=kind==="waves"?2.7:2.3,wing=kind==="waves"?1.5:1.25;
-        ctx.strokeStyle="rgba(255,255,255,"+(0.13+strength*.18).toFixed(3)+")";
+        const back=kind==="waves"?3.8:2.3,wing=kind==="waves"?2.2:1.25;
+        ctx.strokeStyle="rgba(255,255,255,"+(kind==="waves"?(0.22+strength*.28):(0.13+strength*.18)).toFixed(3)+")";
         ctx.beginPath();
         ctx.moveTo(hx,hy);
         ctx.lineTo(hx-ux*back-uy*wing,hy-uy*back+ux*wing);
@@ -1014,9 +1014,9 @@ function renderField(){
     return;
   }
 
-  // Surface current keeps a very light speed field under the moving vectors.
+  // Surface current is vector-first, like wind. Direction and motion are the message.
   if(state.layer==="current"){
-    drawIDW(rows,"current",.18);
+    clearCanvas("fieldCanvas");
     return;
   }
 
@@ -1467,14 +1467,17 @@ function renderScale(){
   const scale=document.querySelector(".scale");
   if(scale)scale.classList.toggle("hidden",["wind","current","storm"].includes(state.layer));
   const cfg={
-    wind:{g:"linear-gradient(90deg,#3f53ab,#3580c5,#36b3ba,#41c370,#dcc541,#e87d3d,#ca4259)",l:["0","10","20","30","40+"]},
-    rain:{g:"linear-gradient(90deg,#3652a4,#367cc5,#34afcf,#39c984,#dfd444,#ec823d,#cd425d)",l:["0","1","3","8","15+"]},
-    rain24:{g:"linear-gradient(90deg,#eef6ff,#b9dbf5,#63add7,#48c477,#d6d93d,#f0a23e,#e35b52,#a93e84)",l:["0","5","10","20","35","55","80+"]},
-    waves:{g:"linear-gradient(90deg,#374c99,#3474bd,#36a7c8,#45c59b,#d8bd44,#ca4767)",l:["0",".5","1","1.5","2+"]},
-    current:{g:"linear-gradient(90deg,#3058a1,#2a89be,#28b8bc,#43c991,#e1c242,#dc5c48)",l:["0",".5","1","2","3+"]},
-    storm:{g:"linear-gradient(90deg,#374991,#4268b8,#6d5cbe,#b04daa,#e56950,#be345b)",l:["0","25","50","75","100"]},
-    radar:{g:"linear-gradient(90deg,#4559ad,#39a2c9,#4bc77d,#e5d64a,#e57b3d,#cb455c)",l:["Nhẹ","","","","Mạnh"]}
+    wind:{t:"",g:"linear-gradient(90deg,#3f53ab,#3580c5,#36b3ba,#41c370,#dcc541,#e87d3d,#ca4259)",l:["0","10","20","30","40+"]},
+    rain:{t:"Mưa trong mốc · mm",g:"linear-gradient(90deg,#3652a4,#367cc5,#34afcf,#39c984,#dfd444,#ec823d,#cd425d)",l:["0","1","3","8","15+"]},
+    rain24:{t:"Mưa tích lũy 24h · mm",g:"linear-gradient(90deg,#eef6ff,#b9dbf5,#63add7,#48c477,#d6d93d,#f0a23e,#e35b52,#a93e84)",l:["0","5","10","20","35","55","80+"]},
+    waves:{t:"Sóng Hs · mét",g:"linear-gradient(90deg,#374c99,#3474bd,#36a7c8,#45c59b,#d8bd44,#ca4767)",l:["0",".5","1","1.5","2+"]},
+    current:{t:"",g:"linear-gradient(90deg,#3058a1,#2a89be,#28b8bc,#43c991,#e1c242,#dc5c48)",l:["0",".5","1","2","3+"]},
+    storm:{t:"",g:"linear-gradient(90deg,#374991,#4268b8,#6d5cbe,#b04daa,#e56950,#be345b)",l:["0","25","50","75","100"]},
+    radar:{t:"Radar mưa · phản hồi quan trắc",g:"linear-gradient(90deg,#4559ad,#39a2c9,#4bc77d,#e5d64a,#e57b3d,#cb455c)",l:["Nhẹ","","","","Mạnh"]}
   }[state.layer];
+  if(!cfg)return;
+  const title=$("scaleTitle");
+  if(title)title.textContent=cfg.t||"";
   $("scaleGradient").style.background=cfg.g;
   $("scaleLabels").innerHTML=cfg.l.map(x=>"<span>"+x+"</span>").join("");
 }
@@ -1529,9 +1532,15 @@ function updateReadout(){
     $("readoutMeta").textContent="Dòng chảy về "+directionText(row?.direction_toward_deg);
   }else{
     const score=num(row?.convective_score);
+    const high=num(row?.cloud_top_high_m??row?.cloud_top_median_m);
+    const cold=num(row?.cloud_top_cold_c??row?.cloud_top_median_c);
+    const label=score!==null&&score>=75?"MÂY RẤT CAO":score!==null&&score>=50?"MÂY CAO":score!==null&&score>=25?"MÂY PHÁT TRIỂN":"MÂY THẤP";
+    const detail=[];
+    if(high!==null)detail.push("đỉnh khoảng "+fmt(high/1000,1)+" km");
+    if(cold!==null)detail.push(fmt(cold,0)+"°C");
     $("readoutSource").textContent="HIMAWARI · MÂY";
-    $("readoutValue").textContent=fmt(score,0);$("readoutUnit").textContent="/100";
-    $("readoutMeta").textContent=score>=75?"Vùng mây rất cao, có thể kèm mưa dông":score>=50?"Mây cao đang phát triển":"Chưa thấy vùng mây mạnh rõ";
+    $("readoutValue").textContent=label;$("readoutUnit").textContent="";
+    $("readoutMeta").textContent=detail.length?detail.join(" · "):(score>=75?"Có vùng mây rất cao, cần theo dõi mưa dông":score>=50?"Mây cao đang phát triển":"Chưa thấy khối mây cao nổi bật");
   }
 }
 
@@ -1670,10 +1679,11 @@ function renderAll(redrawTimeline=true){
   stopParticles();
   clearCanvas("flowCanvas");
 
-  // V5.6: each weather layer gets its own visual grammar.
+  // Each layer speaks a different visual language.
+  // Wind/current = motion; rain = area/intensity; waves = Hs + direction;
+  // cloud = Himawari cloud mass. Avoid decorative colour that has no meaning.
   if(state.layer==="wind")startParticles(activeRows(),"wind");
   if(state.layer==="current")startParticles(activeRows(),"current");
-  // Rain = color field only. Cloud = Himawari cloud mass only.
 
   renderRisk();renderActual();renderScale();updateReadout();updateModelBadge();updateConfidence();updateModelDiffControl();
   if(state.flagMarker)updateSelectionFlag();
@@ -1728,7 +1738,9 @@ function flagMetric(lat,lon){
   if(state.layer==="rain24")return {value:fmt(row?.rain24_mm,1),unit:"mm",sub:"ECMWF · next 24h"};
   if(state.layer==="waves")return {value:fmt(validWaveHs(row?.wave_hs_m),1),unit:"m",sub:"Sóng từ "+directionText(row?.wave_direction_deg)};
   if(state.layer==="current")return {value:fmt(row?.speed_kmh,2),unit:"km/h",sub:"Chảy về "+directionText(row?.direction_toward_deg)};
-  return {value:fmt(row?.convective_score,0),unit:"/100",sub:"Mức phát triển mây"};
+  const score=num(row?.convective_score);
+  const cloudLabel=score!==null&&score>=75?"Mây rất cao":score!==null&&score>=50?"Mây cao":score!==null&&score>=25?"Mây phát triển":"Mây thấp";
+  return {value:cloudLabel,unit:"",sub:"Himawari · trạng thái khối mây"};
 }
 function updateSelectionFlag(){
   if(!state.flagMarker)return;

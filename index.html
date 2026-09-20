@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod25">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod26">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod25"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod26"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -96,7 +96,7 @@
       <b id="gustNow">--</b><small>km/h</small>
     </article>
     <article class="metric-card">
-      <div><span>Mưa tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
+      <div><span>Mưa ước tính tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
       <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
     </article>
     <article class="metric-card">
@@ -124,7 +124,7 @@
   <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ">
     <div class="panel-head intraday-head">
       <div><span class="eyebrow">DIỄN BIẾN 72 GIỜ</span><h2 id="intradayTitle">Gió 72 giờ</h2></div>
-      <small id="intradayMeta">72 giờ tới · Giờ Phú Quốc UTC+7</small>
+      <div class="intraday-head-meta"><small id="intradayMeta">72 giờ tới · Giờ Phú Quốc UTC+7</small><span id="intradaySignal" class="intraday-signal"></span></div>
     </div>
     <nav id="intradayTabs" class="intraday-tabs" aria-label="Chọn lớp biểu đồ">
       <button class="active" type="button" data-intraday="wind">Gió</button>

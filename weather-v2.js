@@ -1553,10 +1553,53 @@ async function loadRegionalForecast(){
 
 function mapCandidates(){
   const now=new Date(),base=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),now.getUTCHours(),Math.floor(now.getUTCMinutes()/10)*10);
-  return Array.from({length:12},(_,i)=>{
+  return Array.from({length:14},(_,i)=>{
     const d=new Date(base-(i+2)*600000),hh=String(d.getUTCHours()).padStart(2,"0"),mm=String(d.getUTCMinutes()).padStart(2,"0");
-    return JMA+"ha1_b13_"+hh+mm+".jpg";
+    return {url:JMA+"ha1_b13_"+hh+mm+".jpg",time:d.toISOString()};
   });
+}
+function preloadImage(url){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>resolve(true);
+    img.onerror=()=>resolve(false);
+    img.src=url+(url.includes("?")?"&":"?")+"t="+Date.now();
+  });
+}
+function stopHimawariLoop(){
+  if(himawariLoopTimer)clearInterval(himawariLoopTimer);
+  himawariLoopTimer=null;
+}
+async function startHimawariLoop(box,note,state){
+  stopHimawariLoop();
+  himawariLoopPlaying=true;
+  box.innerHTML='<div class="himawari-loop"><img id="himawariImg" alt="Chuỗi ảnh vệ tinh Himawari IR B13"><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
+  const candidates=mapCandidates();
+  const checked=await Promise.all(candidates.map(async x=>({...x,ok:await preloadImage(x.url)})));
+  const frames=checked.filter(x=>x.ok).slice(0,9).reverse();
+  const img=$("himawariImg"),time=$("himawariLoopTime"),count=$("himawariLoopCount"),play=$("himawariLoopPlay");
+  if(!frames.length){
+    if(note)note.textContent="Chưa tải được chuỗi ảnh Himawari IR trong lần này.";
+    if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}
+    return;
+  }
+  let i=0;
+  const show=()=>{
+    const f=frames[i];
+    img.src=f.url+"?t="+Date.now();
+    if(time)time.textContent=new Date(f.time).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit",hour12:false});
+    if(count)count.textContent=(i+1)+"/"+frames.length;
+  };
+  const tick=()=>{if(!himawariLoopPlaying)return;i=(i+1)%frames.length;show()};
+  show();
+  himawariLoopTimer=setInterval(tick,850);
+  play?.addEventListener("click",()=>{
+    himawariLoopPlaying=!himawariLoopPlaying;
+    play.textContent=himawariLoopPlaying?"❚❚":"▶";
+    play.setAttribute("aria-label",himawariLoopPlaying?"Tạm dừng ảnh vệ tinh":"Chạy ảnh vệ tinh");
+  });
+  if(note)note.textContent="Himawari IR B13 · chuỗi ảnh gần-live khoảng 10 phút mỗi khung. Nhìn chuyển động mây theo thời gian, không phải radar mưa.";
+  if(state){state.textContent="GẦN-LIVE";state.className="badge remote"}
 }
 function ensureLeaflet(){
   if(window.L)return Promise.resolve(window.L);
@@ -1634,6 +1677,7 @@ async function renderJoTripMap(){
 }
 
 function setMap(type){
+  stopHimawariLoop();
   mapLayer=type;
   document.querySelectorAll("[data-map]").forEach(b=>b.classList.toggle("active",b.dataset.map===type));
   if(!mapStarted)return;
@@ -1642,11 +1686,11 @@ function setMap(type){
   if(state){state.textContent="ĐANG TẢI";state.className="badge deferred"}
   if(type==="jotrip"){renderJoTripMap();return}
   if(type==="himawari"){
-    box.innerHTML='<img id="himawariImg" alt="JMA Himawari B13 infrared">';
-    const img=$("himawariImg"),list=mapCandidates();let i=0;
-    img.onerror=()=>{i++;if(i<list.length)img.src=list[i]+"?t="+Date.now();else{note.textContent="Không tải được ảnh Himawari trực tiếp lúc này.";state.textContent="KHÔNG TẢI ĐƯỢC"}};
-    img.onload=()=>{note.textContent="Himawari IR B13 gần-live · tự làm mới theo chu kỳ ảnh vệ tinh. Đây là ảnh mây hồng ngoại, không phải radar mưa.";state.textContent="GẦN-LIVE";state.className="badge remote"};
-    img.src=list[0]+"?t="+Date.now();
+    startHimawariLoop(box,note,state).catch(e=>{
+      console.warn("[Weather V2] Himawari loop",e);
+      note.textContent="Chưa tải được chuỗi ảnh Himawari trong lần này.";
+      state.textContent="CHƯA TẢI";state.className="badge deferred";
+    });
     return;
   }
   box.innerHTML='<iframe title="Weather map" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
@@ -1885,7 +1929,7 @@ async function boot(){
     defer(loadRegionalForecast,700);
     setInterval(()=>{renderStatus();renderHero()},60000);
     setInterval(refreshLive,LIVE_REFRESH_MS);
-    setInterval(()=>{if(mapLayer==="himawari")refreshActiveMap()},10*60*1000);
+    setInterval(()=>{if(mapLayer==="himawari"&&document.visibilityState==="visible")refreshActiveMap()},10*60*1000);
     document.addEventListener("visibilitychange",()=>{
       if(document.visibilityState==="visible"&&Date.now()-lastLiveRefreshAt>5*60*1000)refreshLive();
     });

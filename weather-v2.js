@@ -3,6 +3,7 @@
 
 const CRITICAL="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json";
 const LOCAL_NOW="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/local-now.json";
+const GROUND_TRUTH="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/latest.json";
 const TIDE=["https://kenzuko.github.io/Jotrip-Lab/weather/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
 const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
 const NOWCAST=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-nowcast/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/latest.json"];
@@ -125,16 +126,53 @@ function overlayFreshLocalNow(base,localNow){
       rain_class:rain.data_class||bp.local?.rain_class,
       marine_class:marine.data_class||bp.local?.marine_class,
       analysis_time:lp.analysis_time||localNow.generated_at||null,
+      reference_lat:num(lp.lat),
+      reference_lon:num(lp.lon),
       wind_method:wind.method||null
     };
   });
   return base;
 }
+function overlayFreshGroundTruth(base,ground){
+  if(!base||!ground)return base;
+  const actual=base.actual={...(base.actual||{})};
+  const v=ground.atmosphere?.vvpq||{};
+  if(v.status){
+    actual.vvpq={
+      status:v.status,
+      observed_at:v.observed_at,
+      temperature_c:num(v.temperature_c),
+      wind_kmh:num(v.wind_speed_kmh),
+      wind_direction_deg:num(v.wind_direction_deg),
+      pressure_hpa:num(v.pressure_hpa),
+      visibility_m:num(v.visibility_m),
+      weather:v.weather||null,
+      convective_cloud:Boolean(v.convective_cloud)
+    };
+    base.source_state={...(base.source_state||{}),vvpq:v.status};
+  }
+  const stations=ground.rainfall?.stations||{};
+  actual.rain_gauges=Object.values(stations).map(s=>({
+    name:s.station_name,
+    lat:num(s.lat),lon:num(s.lon),
+    accum_mm:num(s.accumulation_mm),
+    increment_mm:num(s.increment_mm),
+    increment_min:num(s.increment_window_minutes),
+    rain_observed:s.rain_observed,
+    rain_intensity_mm_h:num(s.rain_intensity_mm_h),
+    increment_qc:s.increment_qc,
+    observed_at:s.observed_at,
+    qc:s.qc
+  }));
+  if(ground.rainfall?.status)base.source_state={...(base.source_state||{}),vrain:ground.rainfall.status};
+  return base;
+}
 async function getCriticalWithFreshLocal(){
-  const [base,local]=await Promise.allSettled([getJSON(CRITICAL),getJSON(LOCAL_NOW)]);
+  const [base,local,ground]=await Promise.allSettled([getJSON(CRITICAL),getJSON(LOCAL_NOW),getJSON(GROUND_TRUTH)]);
   if(base.status!=="fulfilled")throw base.reason;
   critical=base.value;
   if(local.status==="fulfilled")overlayFreshLocalNow(critical,local.value);
+  if(ground.status==="fulfilled")overlayFreshGroundTruth(critical,ground.value);
   return critical;
 }
 
@@ -357,6 +395,30 @@ function summary(p){
   return bits.length?bits.join(" · ")+".":"Chưa đủ dữ liệu địa phương để tóm tắt.";
 }
 
+function kmBetween(lat1,lon1,lat2,lon2){
+  if([lat1,lon1,lat2,lon2].some(v=>num(v)===null))return null;
+  const r=6371.0088,toRad=x=>x*Math.PI/180;
+  const p1=toRad(lat1),p2=toRad(lat2),dp=toRad(lat2-lat1),dl=toRad(lon2-lon1);
+  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*r*Math.asin(Math.sqrt(a));
+}
+function nearestRainGauge(){
+  const l=localPoint(),gauges=critical?.actual?.rain_gauges||[];
+  const lat=num(l.reference_lat),lon=num(l.reference_lon);
+  if(lat===null||lon===null||!gauges.length)return null;
+  return gauges.map(g=>({...g,distance_km:kmBetween(lat,lon,g.lat,g.lon)}))
+    .filter(g=>g.distance_km!==null)
+    .sort((a,b)=>a.distance_km-b.distance_km)[0]||null;
+}
+function rainActualContext(){
+  const g=nearestRainGauge();if(!g)return "";
+  let state="";
+  if(g.rain_observed===true)state="CÓ MƯA";
+  else if(g.rain_observed===false||num(g.accum_mm)===0)state="KHÔNG MƯA";
+  else if(num(g.accum_mm)!==null)state="tổng kỳ "+fmt(g.accum_mm,1)+" mm";
+  if(!state)return "";
+  return "VRain "+esc(g.name||"gần nhất")+": "+state+" · đo thực · cách ~"+fmt(g.distance_km,1)+" km";
+}
 function renderHero(){
   const p=point(),l=p.local||{},m=p.model||{},n=p.nowcast||{};
   $("placeName").textContent=p.name||current;
@@ -380,6 +442,7 @@ function renderCurrent(){
   setMetric("rainNow",l.rain_rate_mm_h,2);
   $("rainConfidence").textContent=num(l.rain_confidence)===null?"-":Math.round(l.rain_confidence*100);
   setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
+  const rainCtx=$("rainActualContext");if(rainCtx)rainCtx.innerHTML=rainActualContext();
   $("convectiveNow").textContent=num(n.convective_score??l.convection_score)===null?"-":Math.round(num(n.convective_score??l.convection_score));
   setMetric("waveNow",l.wave_hs_m??m.wave_hs_m,2);setBadge("marineClass",l.marine_class||"MODEL_ONLY");
   setMetric("hmaxNow",m.wave_hmax_m,2);
@@ -600,8 +663,8 @@ function renderForecastDayRibbon(rows){
     return '<article class="forecast-day '+state.cls+'">'+
       '<header><b>'+esc(day.label)+'</b><span>'+esc(day.date)+'</span></header>'+
       '<strong>'+(temps.length?fmt(Math.min(...temps),0)+'-'+fmt(Math.max(...temps),0)+'°':'-')+'</strong>'+
-      '<div><span>Mưa ≥5 mm</span><b>'+pct(rainProb)+'</b></div>'+
-      '<div><span>Gió ≥30</span><b>'+pct(windProb)+' · Bft '+bft.force+'</b></div>'+
+      '<div><span>P(mưa ≥5 mm)</span><b>'+pct(rainProb)+'</b></div>'+
+      '<div><span>P(gió ≥30 km/h)</span><b>'+pct(windProb)+' · Bft '+bft.force+'</b></div>'+
       '<small>Tin cậy '+confScore+'/100 · '+esc(conf)+'</small>'+
     '</article>';
   }).join("")||'<span class="inline-loader">Chưa đủ dữ liệu để tóm tắt 10 ngày.</span>';

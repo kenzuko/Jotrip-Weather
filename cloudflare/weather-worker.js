@@ -24,6 +24,25 @@ function stamp(data){
 }
 function cleanText(value,max=500){return typeof value==='string'?value.trim().slice(0,max):''}
 function finiteOrNull(value){const n=Number(value);return Number.isFinite(n)?n:null}
+const ISO_INSTANT=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/;
+function isoUTC7(value=Date.now()){
+  const d=value instanceof Date?value:new Date(value);
+  if(Number.isNaN(d.getTime()))return null;
+  return new Date(d.getTime()+7*3600000).toISOString().replace('Z','+07:00');
+}
+function normalizeIsoString(value){
+  if(typeof value!=='string'||!ISO_INSTANT.test(value))return value;
+  return isoUTC7(value)||value;
+}
+function normalizeTimestamps(value){
+  if(Array.isArray(value))return value.map(normalizeTimestamps);
+  if(value&&typeof value==='object'){
+    const out={};
+    for(const [k,v] of Object.entries(value))out[k]=normalizeTimestamps(v);
+    return out;
+  }
+  return normalizeIsoString(value);
+}
 function normalizeFeedback(payload){
   if(!payload||typeof payload!=='object')throw new Error('invalid_payload');
   const id=cleanText(payload.id,100);
@@ -49,7 +68,7 @@ function normalizeFeedback(payload){
   }:{};
   return {
     id,
-    observed_at:observed.toISOString(),
+    observed_at:isoUTC7(observed),
     point_id:pointId,
     point_name:cleanText(payload.point_name,80),
     verdict,
@@ -59,8 +78,8 @@ function normalizeFeedback(payload){
     evidence_type:evidence,
     note:cleanText(payload.note,500),
     snapshot_id:cleanText(payload.snapshot_id,120),
-    forecast_generated_at:cleanText(payload.forecast_generated_at,80),
-    source_cycles:payload.source_cycles&&typeof payload.source_cycles==='object'?payload.source_cycles:{},
+    forecast_generated_at:normalizeIsoString(cleanText(payload.forecast_generated_at,80)),
+    source_cycles:normalizeTimestamps(payload.source_cycles&&typeof payload.source_cycles==='object'?payload.source_cycles:{}),
     forecast,
     ui_version:cleanText(payload.ui_version,60),
     calibration_eligible:0
@@ -71,13 +90,13 @@ async function fetchText(url,ms=2400){
   try{
     const r=await fetch(url,{headers:{accept:'application/json'},signal:controller.signal,cf:{cacheTtl:0,cacheEverything:false}});
     if(!r.ok)throw new Error(`HTTP ${r.status}`);
-    const text=await r.text();const data=JSON.parse(text);
-    return {text,data};
+    const text=await r.text();const data=normalizeTimestamps(JSON.parse(text));
+    return {text:JSON.stringify(data),data};
   }finally{clearTimeout(timer)}
 }
 async function storeFeedback(env,entry){
   if(!env.WEATHER_FEEDBACK)throw new Error('feedback_store_not_bound');
-  const createdAt=new Date().toISOString();
+  const createdAt=isoUTC7();
   await env.WEATHER_FEEDBACK.prepare(`INSERT OR IGNORE INTO weather_feedback
     (id,created_at,observed_at,point_id,point_name,verdict,wind_relation,wave_relation,rain_relation,evidence_type,note,snapshot_id,forecast_generated_at,source_cycles_json,forecast_json,ui_version,calibration_eligible)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(

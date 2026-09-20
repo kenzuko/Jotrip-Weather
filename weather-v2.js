@@ -2,6 +2,7 @@
 "use strict";
 
 const CRITICAL="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json";
+const LOCAL_NOW="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/local-now.json";
 const TIDE=["https://kenzuko.github.io/Jotrip-Lab/weather/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
 const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
 const NOWCAST=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-nowcast/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/latest.json"];
@@ -100,6 +101,42 @@ function setMetric(id,v,d){const el=$(id);if(el)el.textContent=num(v)===null?"-"
 function point(){return critical?.points?.[current]||{}}
 function localPoint(){return point().local||{}}
 function modelPoint(){return point().model||{}}
+function overlayFreshLocalNow(base,localNow){
+  if(!base||!localNow?.points)return base;
+  const localTs=Date.parse(localNow.generated_at||"");
+  const baseTs=Date.parse(base.local_generated_at||"");
+  if(Number.isFinite(baseTs)&&Number.isFinite(localTs)&&localTs<baseTs)return base;
+  base.local_generated_at=localNow.generated_at||base.local_generated_at;
+  base.source_state={...(base.source_state||{}),local_engine:localNow.engine||base.source_state?.local_engine};
+  Object.entries(localNow.points).forEach(([id,lp])=>{
+    const bp=base.points?.[id];if(!bp||!lp)return;
+    const rain=lp.rain||{},wind=lp.wind||{},temp=lp.temperature||{},marine=lp.marine||{};
+    bp.local={...(bp.local||{}),
+      available:true,
+      temperature_c:num(lp.temperature_c),
+      wind_kmh:num(lp.wind_kmh),
+      wind_direction_deg:num(lp.wind_direction_deg),
+      rain_rate_mm_h:num(rain.rain_rate_mm_h),
+      rain_confidence:num(rain.confidence),
+      convection_score:num(rain.convective_score),
+      wave_hs_m:num(lp.wave_hs_m),
+      temperature_class:temp.data_class||bp.local?.temperature_class,
+      wind_class:wind.data_class||bp.local?.wind_class,
+      rain_class:rain.data_class||bp.local?.rain_class,
+      marine_class:marine.data_class||bp.local?.marine_class,
+      analysis_time:lp.analysis_time||localNow.generated_at||null,
+      wind_method:wind.method||null
+    };
+  });
+  return base;
+}
+async function getCriticalWithFreshLocal(){
+  const [base,local]=await Promise.allSettled([getJSON(CRITICAL),getJSON(LOCAL_NOW)]);
+  if(base.status!=="fulfilled")throw base.reason;
+  critical=base.value;
+  if(local.status==="fulfilled")overlayFreshLocalNow(critical,local.value);
+  return critical;
+}
 
 function islandIds(){
   return (critical?.island_watch_order||[]).filter(id=>critical?.points?.[id]);
@@ -961,7 +998,7 @@ async function refreshLive(){
   if(liveRefreshBusy)return;
   liveRefreshBusy=true;
   try{
-    const next=await getJSON(CRITICAL);
+    const next=await getCriticalWithFreshLocal();
     critical=next;
     if(!critical?.points?.[current])current=critical.default_point||"duong_dong";
     renderAll();
@@ -979,7 +1016,7 @@ async function boot(){
   registerWeatherWorker();
   events();
   try{
-    critical=await getJSON(CRITICAL);
+    critical=await getCriticalWithFreshLocal();
     current=critical.default_point||"duong_dong";
     lastLiveRefreshAt=Date.now();
     renderAll();

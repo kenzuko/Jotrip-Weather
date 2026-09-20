@@ -1642,10 +1642,13 @@ function sourceFreshness(){
 
 async function loadAll(){
   if(state.loading)return;state.loading=true;
-  const [production,ecmwf,icon,marine,gefs,nowcast,critical,forecast]=await Promise.all([
-    optional(URLS.production),optional(URLS.ecmwf),optional(URLS.icon),optional(URLS.marine),optional(URLS.gefs),optional(URLS.nowcast),optional(URLS.critical),optional(URLS.forecast)
+  const [production,ecmwf,icon,marine,gefs,nowcast,critical,forecast,current,feedback]=await Promise.all([
+    optional(URLS.production),optional(URLS.ecmwf),optional(URLS.icon),optional(URLS.marine),optional(URLS.gefs),optional(URLS.nowcast),optional(URLS.critical),optional(URLS.forecast),optional(URLS.current),optional(URLS.feedback)
   ]);
-  state.production=production;state.ecmwf=ecmwf;state.icon=icon;state.marine=marine;state.gefs=gefs;state.nowcast=nowcast;state.critical=critical;state.forecast=forecast;
+  state.production=production;state.ecmwf=ecmwf;state.icon=icon;state.marine=marine;state.gefs=gefs;
+  state.nowcast=nowcast;state.critical=critical;state.forecast=forecast;
+  state.currentBundle=current;state.fieldFeedback=feedback;
+  if(state.critical&&state.currentBundle)overlayCurrentBundle(state.critical,state.currentBundle);
   setStatus();
   if(state.ecmwf)selectNearestNowFrame();
   renderAlert();
@@ -1692,11 +1695,18 @@ function bind(){
 async function start(){
   initMap();bind();setCrosshair(true);applyPresentationScene();await loadAll();
   setInterval(async()=>{
-    const [nowcast,marine,critical,forecast]=await Promise.all([optional(URLS.nowcast),optional(URLS.marine),optional(URLS.critical),optional(URLS.forecast)]);
-    if(nowcast)state.nowcast=nowcast;if(marine)state.marine=marine;if(critical)state.critical=critical;if(forecast)state.forecast=forecast;
-    setStatus();renderAlert();renderRisk();renderActual();
-    if(state.layer==="storm")renderAll(false);
-  },10*60*1000);
+    const [nowcast,marine,critical,forecast,current,feedback]=await Promise.all([
+      optional(URLS.nowcast),optional(URLS.marine),optional(URLS.critical),optional(URLS.forecast),optional(URLS.current),optional(URLS.feedback)
+    ]);
+    if(nowcast)state.nowcast=nowcast;
+    if(marine)state.marine=marine;
+    if(critical)state.critical=critical;
+    if(forecast)state.forecast=forecast;
+    if(current)state.currentBundle=current;
+    if(feedback)state.fieldFeedback=feedback;
+    if(state.critical&&state.currentBundle)overlayCurrentBundle(state.critical,state.currentBundle);
+    setStatus();renderAlert();renderRisk();renderActual();renderAll(false);
+  },2*60*1000);
 }
 
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();

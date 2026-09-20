@@ -3,6 +3,7 @@
 const KEY_HASH="e2b364cec6ff574866921d47cf621277833091cf9934b930a8a31e581e061269";
 const ANALYTICS_URL="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-analytics/latest.json";
 const CALIBRATION_URL="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-calibration/latest.json";
+const SOURCE_SKILL_URL="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-source-skill/latest.json";
 const $=id=>document.getElementById(id);
 let analyticsData=null;
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
@@ -43,6 +44,15 @@ function renderSummary(a){
     ["Ngưỡng học",a.minimum_samples??30,"case / nhóm"],
   ];
   $("summary").innerHTML=cards.map(x=>'<article class="summary-card"><span>'+esc(x[0])+'</span><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></article>').join("");
+}
+function renderSourceSkill(s){
+  const cards=[];
+  const w=s?.vvpq?.wind||{},dm=w.deterministic_background||{},em=w.ensemble_q50||{};
+  cards.push('<article class="actual-card"><span>VVPQ · WIND SKILL</span><b>'+esc(w.status||"LEARNING")+'</b><small>'+Number(s?.vvpq?.unique_actual_samples||0)+' METAR duy nhất · model MAE '+fmt(dm.mae,2)+' km/h · GEFS q50 MAE '+fmt(em.mae,2)+' km/h · gain ×'+fmt(w.ensemble_gain_multiplier??1,3)+'</small></article>');
+  Object.entries(s?.vrain||{}).forEach(([id,v])=>{
+    cards.push('<article class="actual-card"><span>'+esc(anchorName("vrain_"+id))+' · SOURCE QC</span><b>×'+fmt(v.quality_factor??1,3)+'</b><small>'+Number(v.sample_count||0)+' mẫu · QC '+Math.round(Number(v.qc_pass_ratio||0)*100)+'% · fresh '+Math.round(Number(v.fresh_ratio||0)*100)+'% · wet '+Number(v.wet_samples||0)+' / dry '+Number(v.dry_samples||0)+'</small></article>');
+  });
+  $("sourceSkillGrid").innerHTML=cards.join("")||'<article class="actual-card"><b>Đang chờ source-skill cycle đầu tiên</b></article>';
 }
 function renderActual(a){
   const latest=a.latest_actual||{},cards=[];
@@ -108,10 +118,10 @@ function renderCases(a){
 async function loadAnalytics(){
   $("dataState").textContent="LOADING";
   try{
-    const [a,c]=await Promise.all([getJSON(ANALYTICS_URL),getJSON(CALIBRATION_URL)]);
-    analyticsData=a;
+    const [a,c,s]=await Promise.all([getJSON(ANALYTICS_URL),getJSON(CALIBRATION_URL),getJSON(SOURCE_SKILL_URL).catch(()=>({}))]);
+    analyticsData={...a,source_skill:s};
     $("generatedAt").textContent=localTime(a.generated_at);
-    renderSummary(a);renderActual(a);renderGroups(a);renderCases(a);
+    renderSummary(a);renderSourceSkill(s);renderActual(a);renderGroups(a);renderCases(a);
     $("dataState").textContent=(c.status||a.learning_status||"LEARNING")+" · "+(a.matched_cases||0)+" CASES";
   }catch(e){
     $("dataState").textContent="DATA ERROR";

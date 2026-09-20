@@ -14,7 +14,7 @@ button,input{font:inherit}
 #map{position:absolute;inset:0;background:#d8e5ea}
 #windFlow{
   position:absolute;inset:0;z-index:4;width:100%;height:100%;
-  pointer-events:none;opacity:.94;
+  pointer-events:none;opacity:.78;
 }
 .maplibregl-canvas{outline:none}
 .maplibregl-ctrl-attrib{font-size:8px!important;background:rgba(255,255,255,.58)!important}

@@ -12,6 +12,10 @@ body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI"
 button,input{font:inherit}
 #app{position:relative}
 #map{position:absolute;inset:0;background:#d8e5ea}
+#windFlow{
+  position:absolute;inset:0;z-index:4;width:100%;height:100%;
+  pointer-events:none;opacity:.94;
+}
 .maplibregl-canvas{outline:none}
 .maplibregl-ctrl-attrib{font-size:8px!important;background:rgba(255,255,255,.58)!important}
 .glass{

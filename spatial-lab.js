@@ -14,7 +14,9 @@ const URLS={
   gefs:["./data/weather-ensemble/spatial.json","/data/weather-ensemble/spatial.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-ensemble/spatial.json"],
   nowcast:["./data/weather-nowcast/latest.json","/data/weather-nowcast/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/latest.json"],
   critical:["./data/critical.json","/weather/critical.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/gh-pages/weather/data/critical.json"],
-  forecast:["./jotrip-forecast.json","/weather/jotrip-forecast.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/gh-pages/weather/jotrip-forecast.json"]
+  forecast:["./jotrip-forecast.json","/weather/jotrip-forecast.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/gh-pages/weather/jotrip-forecast.json"],
+  current:["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-current/latest.json"],
+  feedback:["/feedback/recent?minutes=90&limit=30"]
 };
 
 const POINTS={
@@ -37,6 +39,8 @@ const state={
   nowcast:null,
   critical:null,
   forecast:null,
+  currentBundle:null,
+  fieldFeedback:null,
   layer:"wind",
   frameIndex:0,
   selected:{lat:10.2172,lon:103.9593,anchor:"duong_dong"},
@@ -125,6 +129,17 @@ function disagreementLabel(level){
   return level==="strong"?"BẤT ĐỒNG MẠNH":level==="moderate"?"BẤT ĐỒNG":"TƯƠNG ĐỐI ĐỒNG THUẬN";
 }
 const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+const EMBED=new URLSearchParams(location.search).get("embed")==="1";
+function haversineKm(lat1,lon1,lat2,lon2){
+  const R=6371.0088,toRad=x=>x*Math.PI/180;
+  const p1=toRad(lat1),p2=toRad(lat2),dp=toRad(lat2-lat1),dl=toRad(lon2-lon1);
+  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function feedbackCategory(note=""){
+  const m=String(note).match(/category=([A-Z_]+)/);
+  return m?m[1]:null;
+}
 
 async function fetchJSON(url){
   const sep=url.includes("?")?"&":"?";

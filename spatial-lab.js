@@ -1365,13 +1365,13 @@ function updateReadout(){
     const speed=local??num(row?.wind_kmh);
     const dir=(near?localMetric(anchor,"wind_direction"):null)??row?.wind_direction_deg;
     const gust=near?localMetric(anchor,"gust"):productionMetric(anchor,"gust");
-    $("readoutSource").textContent=local!==null?"JOTRIP LOCAL NOW · GIÓ":"MÔ HÌNH GIÓ · ECMWF";
+    $("readoutSource").textContent=local!==null?"JOTRIP · GIÓ HIỆN TẠI":"MÔ HÌNH GIÓ · ECMWF";
     $("readoutValue").textContent=fmt(speed,0);$("readoutUnit").textContent="km/h";
     $("readoutMeta").textContent=(dir!==null?"Gió từ "+directionText(dir):"Hướng gió chưa rõ")+(gust!==null?" · giật khoảng "+fmt(gust,0)+" km/h":"");
   }else if(state.layer==="rain"){
     const local=near?localMetric(anchor,"rain"):null;
     if(local!==null){
-      $("readoutSource").textContent="JOTRIP LOCAL NOW · MƯA";
+      $("readoutSource").textContent="JOTRIP · MƯA HIỆN TẠI";
       $("readoutValue").textContent=fmt(local,1);$("readoutUnit").textContent="mm/h";
       const field=recentFieldSignal(anchor,"RAIN_MORE");
       $("readoutMeta").textContent=field?"Phản hồi thực địa mới: mưa đang nhiều hơn ước tính":"Ước tính mưa hiện tại tại khu vực";
@@ -1518,6 +1518,11 @@ function renderAll(redrawTimeline=true){
 }
 
 function updateModelBadge(){
+  if(isOperationalNow()&&["wind","rain"].includes(state.layer)){
+    $("modelName").textContent="JOTRIP NOW";
+    $("modelRun").textContent="Local Now + ECMWF";
+    return;
+  }
   if(state.layer==="rain24"){
     $("modelName").textContent="ECMWF 24H";
     $("modelRun").textContent=state.ecmwf?.run_time?localStamp(state.ecmwf.run_time):"-";

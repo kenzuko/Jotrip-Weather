@@ -863,3 +863,255 @@ body.embed-mode .leaflet-control-attribution{opacity:.42;font-size:6px}
   body.embed-mode .readout-main strong{font-size:20px}
 }
 
+
+
+/* V6.8 - JoTrip Map visual lock: flow-first, layer-specific grammar, map-first UI */
+.scale.hidden,.context-modes.hidden{display:none!important}
+
+.context-modes{
+  position:absolute;
+  z-index:41;
+  right:8px;
+  top:78px;
+  display:flex;
+  gap:3px;
+  padding:3px;
+  border:1px solid rgba(255,255,255,.38);
+  border-radius:999px;
+  background:rgba(248,252,253,.58);
+  box-shadow:0 4px 14px rgba(8,31,42,.10);
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+.context-modes button{
+  min-height:26px;
+  padding:0 9px;
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:#426371;
+  font-size:7px;
+  font-weight:850;
+}
+.context-modes button.active{
+  background:rgba(18,67,91,.86);
+  color:#fff;
+}
+
+/* Keep geography visible for every layer. */
+body.embed-mode .map .leaflet-tile-pane{
+  opacity:1!important;
+  filter:saturate(.90) brightness(1.01) contrast(1.06)!important;
+}
+body.embed-mode .leaflet-weatherLabels-pane{
+  opacity:.92!important;
+  filter:none!important;
+}
+body.embed-mode .leaflet-weatherLabels-pane .leaflet-tile{filter:none!important}
+
+/* Layer-specific presentation weight. */
+body.embed-mode .map[data-weather-layer="wind"] #fieldCanvas{
+  opacity:0!important;
+  display:block!important;
+}
+body.embed-mode .map[data-weather-layer="rain"] #fieldCanvas{
+  opacity:.94!important;
+  filter:blur(.35px) saturate(1.12) contrast(1.04)!important;
+}
+body.embed-mode .map[data-weather-layer="rain24"] #fieldCanvas{
+  opacity:.58!important;
+  filter:saturate(1.04) contrast(1.02)!important;
+}
+body.embed-mode .map[data-weather-layer="waves"] #fieldCanvas{
+  opacity:.34!important;
+  filter:saturate(.92) contrast(1.03)!important;
+}
+body.embed-mode .map[data-weather-layer="current"] #fieldCanvas{
+  opacity:.18!important;
+  filter:saturate(.86) contrast(1.02)!important;
+}
+body.embed-mode .map[data-weather-layer="storm"] #fieldCanvas{
+  opacity:.68!important;
+  filter:blur(.55px) saturate(.82) contrast(1.06)!important;
+}
+body.embed-mode #flowCanvas{
+  opacity:.80!important;
+  filter:none!important;
+}
+
+/* Embedded map only exposes the controls a traveller needs. */
+body.embed-mode #crosshairBtn,
+body.embed-mode #ensembleBtn,
+body.embed-mode #modelDiffBtn,
+body.embed-mode #riskBtn,
+body.embed-mode #actualBtn{
+  display:none!important;
+}
+body.embed-mode .right-controls{
+  top:39px;
+  right:7px;
+}
+body.embed-mode #recenterBtn{
+  width:30px;
+  height:30px;
+  border-radius:10px;
+  background:rgba(248,252,253,.58);
+  border:1px solid rgba(255,255,255,.42);
+  box-shadow:0 4px 13px rgba(8,31,42,.10);
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+
+/* Brand + live state should identify the map, not occupy it. */
+body.embed-mode .topbar{
+  left:7px;
+  right:7px;
+  top:7px;
+}
+body.embed-mode .brand{
+  height:26px;
+  min-width:0;
+  padding:0;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+body.embed-mode .brand-logo{
+  width:44px;
+  filter:drop-shadow(0 1px 2px rgba(255,255,255,.55));
+}
+body.embed-mode .status-pill{
+  height:23px;
+  padding:0 7px;
+  border-radius:999px;
+  background:rgba(250,253,253,.56)!important;
+  border-color:rgba(255,255,255,.38)!important;
+  color:#426371;
+  box-shadow:0 3px 12px rgba(9,33,44,.08)!important;
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+body.embed-mode .status-pill i{width:6px;height:6px}
+
+/* Compact picker: numerical truth remains easy to read. */
+body.embed-mode .readout{
+  left:7px;
+  top:39px;
+  min-width:118px;
+  max-width:156px;
+  padding:6px 8px;
+  border-radius:10px;
+  background:rgba(12,28,37,.62)!important;
+  border-color:rgba(255,255,255,.08)!important;
+  box-shadow:0 4px 13px rgba(0,0,0,.13)!important;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+}
+body.embed-mode .readout>small{font-size:5.3px;color:#bdd3dc}
+body.embed-mode .readout-main strong{font-size:21px}
+body.embed-mode .readout-main span{font-size:6.5px}
+body.embed-mode .readout>p{font-size:6px;line-height:1.22;color:#e2ebef}
+
+/* Small contextual Rain Forecast / Radar switch, only visible in rain mode. */
+body.embed-mode .context-modes{
+  top:75px;
+  right:7px;
+}
+
+/* Six equal layer choices, no scrolling menu. */
+body.embed-mode .layerbar{
+  left:7px;
+  right:7px;
+  bottom:max(5px,env(safe-area-inset-bottom));
+  padding:4px;
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:4px;
+  overflow:visible;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;
+  background:rgba(12,27,35,.32)!important;
+  box-shadow:0 4px 16px rgba(0,0,0,.08);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+body.embed-mode .layer{
+  min-width:0!important;
+  width:100%;
+  height:34px;
+  padding:0 3px;
+  border-radius:9px;
+  background:rgba(255,255,255,.06)!important;
+  border-color:rgba(255,255,255,.08)!important;
+  color:rgba(255,255,255,.90);
+  gap:3px;
+  font-size:7px;
+}
+body.embed-mode .layer i{font-size:10px}
+body.embed-mode .layer.active{
+  background:rgba(255,255,255,.90)!important;
+  color:#143d50!important;
+  box-shadow:0 2px 9px rgba(0,0,0,.10)!important;
+}
+
+/* Timeline is a transparent tool, not a second panel. */
+body.embed-mode .timeline{
+  left:7px;
+  right:7px;
+  width:auto;
+  bottom:48px;
+  padding:4px 7px 3px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:10px;
+  background:rgba(11,25,33,.31)!important;
+  box-shadow:0 3px 12px rgba(0,0,0,.08);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+body.embed-mode .play{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:rgba(255,255,255,.88);
+  color:#17394a;
+}
+body.embed-mode .timeline-head b{font-size:7px}
+body.embed-mode .timeline-head span{font-size:5.3px;color:rgba(255,255,255,.72)}
+body.embed-mode .timeline-ticks{opacity:.48}
+body.embed-mode .timeline-ticks span{font-size:4.6px}
+
+/* Legend only appears when a scalar legend materially helps. */
+body.embed-mode .scale{
+  left:10px;
+  bottom:92px;
+  transform:none;
+  width:min(220px,56%);
+  padding:5px 7px 4px;
+  border-radius:9px;
+  background:rgba(12,27,35,.34);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+body.embed-mode .scale-gradient{height:4px;border:0;box-shadow:none}
+body.embed-mode .scale-labels{font-size:4.8px;margin-top:1px}
+
+/* Keep technical/debug surfaces out of the embedded traveller view. */
+body.embed-mode #uncertaintyCanvas{display:none!important}
+body.embed-mode .model-badge,
+body.embed-mode .alert-bar,
+body.embed-mode .risk-label,
+body.embed-mode .risk-dot,
+body.embed-mode .actual-label,
+body.embed-mode .actual-pin{display:none!important}
+body.embed-mode .leaflet-control-attribution{
+  opacity:.32;
+  font-size:5.5px!important;
+}
+
+@media(max-width:420px){
+  body.embed-mode .layer{height:33px;font-size:6.6px}
+  body.embed-mode .layer i{font-size:9px}
+  body.embed-mode .timeline{bottom:47px}
+  body.embed-mode .readout{max-width:148px}
+  body.embed-mode .scale{bottom:90px;width:min(205px,58%)}
+}

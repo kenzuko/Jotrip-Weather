@@ -372,10 +372,21 @@ function renderHazardBoard(){
       );
     }else{
       const dryNames=gauges.filter(g=>g.rain_observed===false).slice(0,3).map(g=>g.name);
-      setHazard("hazardRain","Chưa ghi nhận mưa đáng kể",
-        dryNames.length?("VRain "+dryNames.join(", ")+" hiện 0 mm/h"):"Các điểm hiện có đều ở mức mưa thấp",
-        0
-      );
+      const cloudMax=points.map(x=>num(effectiveNowcastFor(x.id)?.convective_score)||0).sort((a,b)=>b-a)[0]||0;
+      if(cloudMax>=70){
+        setHazard("hazardRain",
+          "Các trạm VRain gần đây chưa ghi nhận mưa tại đúng vị trí trạm",
+          (dryNames.length?("VRain "+dryNames.join(", ")+" đang 0 mm/h. "):"")+
+          "Tuy vậy Himawari đang thấy vùng mây rất cao quanh đảo, nên vẫn có thể có mưa cục bộ giữa các trạm.",
+          1
+        );
+      }else{
+        setHazard("hazardRain",
+          "Chưa thấy mưa đáng kể trong các nguồn đang có",
+          dryNames.length?("VRain "+dryNames.join(", ")+" hiện chưa ghi nhận mưa tại vị trí trạm"):"Ước tính mưa hiện tại đang thấp",
+          0
+        );
+      }
     }
   }
 

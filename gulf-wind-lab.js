@@ -428,6 +428,7 @@ function installSlot(slot, scalarUrl, opacity) {
     },
     'labels',
   );
+  if (map.getLayer('engine-grid')) map.moveLayer('engine-grid', 'labels');
 }
 
 function addGridOverlay() {

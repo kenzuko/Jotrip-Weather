@@ -158,6 +158,83 @@ async function optional(urls){
   try{return await fetchFirst(urls)}catch(e){console.warn("[V5 optional]",e);return null}
 }
 
+function overlayCurrentBundle(critical,bundle){
+  if(!critical||!bundle)return critical;
+  const local=bundle.local_now||{},ground=bundle.groundtruth||{},nowcast=bundle.nowcast||{};
+  if(local.points){
+    critical.local_generated_at=local.generated_at||critical.local_generated_at;
+    Object.entries(local.points).forEach(([id,lp])=>{
+      const p=critical.points?.[id];if(!p)return;
+      const rain=lp.rain||{},wind=lp.wind||{},temp=lp.temperature||{},marine=lp.marine||{};
+      p.local={...(p.local||{}),
+        temperature_c:num(lp.temperature_c),
+        wind_kmh:num(lp.wind_kmh),
+        wind_direction_deg:num(lp.wind_direction_deg),
+        rain_rate_mm_h:num(rain.rain_rate_mm_h),
+        rain_confidence:num(rain.confidence),
+        rain_imminence_score:num(rain.imminence?.score),
+        rain_imminence_level:rain.imminence?.level||null,
+        rain_impact_label:rain.imminence?.rain_impact_label||rain.rain_impact_label||null,
+        wave_hs_m:num(lp.wave_hs_m),
+        data_class:rain.data_class||p.local?.data_class,
+        wind_class:wind.data_class||p.local?.wind_class,
+        rain_class:rain.data_class||p.local?.rain_class,
+        analysis_time:lp.analysis_time||local.generated_at||null
+      };
+    });
+  }
+  if(nowcast.points){
+    state.nowcast=nowcast;
+    Object.entries(nowcast.points).forEach(([id,np])=>{
+      if(!critical.points?.[id])return;
+      critical.points[id].nowcast={...(critical.points[id].nowcast||{}),
+        convective_score:num(np.score??np.convective_signal?.score),
+        cloud_top_cold_c:num(np.cold_cloud_top_temp_c??np.regional_cold_cloud_top_temp_c),
+        cloud_top_high_m:num(np.high_cloud_top_height_m??np.regional_high_cloud_top_height_m),
+        cooling_c_per_20m:num(np.cooling_c_per_20m_proxy),
+        cloud_motion:np.cloud_motion||critical.points[id].nowcast?.cloud_motion||null
+      };
+    });
+  }
+  const actual=critical.actual={...(critical.actual||{})};
+  const v=ground.atmosphere?.vvpq||{};
+  if(v.status){
+    actual.vvpq={
+      status:v.status,observed_at:v.observed_at,
+      temperature_c:num(v.temperature_c),wind_kmh:num(v.wind_speed_kmh),
+      wind_direction_deg:num(v.wind_direction_deg),weather:v.weather||null
+    };
+  }
+  const stations=ground.rainfall?.stations||{};
+  if(Object.keys(stations).length){
+    actual.rain_gauges=Object.values(stations).map(g=>({
+      name:g.station_name,lat:num(g.lat),lon:num(g.lon),
+      accum_mm:num(g.accumulation_mm),increment_mm:num(g.increment_mm),
+      increment_min:num(g.increment_window_minutes),rain_observed:g.rain_observed,
+      rain_intensity_mm_h:num(g.rain_intensity_mm_h),observed_at:g.observed_at,qc:g.qc
+    }));
+  }
+  return critical;
+}
+function localMetric(anchor,key){
+  const p=state.critical?.points?.[anchor]||{},l=p.local||{},m=p.model||{};
+  const map={
+    wind:l.wind_kmh,wind_direction:l.wind_direction_deg,rain:l.rain_rate_mm_h,
+    wave:l.wave_hs_m??m.wave_hs_m,gust:m.gust_kmh,current:m.current_kmh
+  };
+  return num(map[key]);
+}
+function freshFieldReports(minutes=90){
+  const cutoff=Date.now()-minutes*60000;
+  return (state.fieldFeedback?.items||[]).filter(x=>{
+    const t=Date.parse(x.observed_at||"");
+    return Number.isFinite(t)&&t>=cutoff;
+  });
+}
+function recentFieldSignal(pointId,category){
+  return freshFieldReports().find(x=>x.point_id===pointId&&feedbackCategory(x.note)===category)||null;
+}
+
 function parseTime(s){
   if(!s)return NaN;
   return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s)?s:s+"Z");

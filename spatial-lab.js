@@ -554,7 +554,53 @@ function drawVectorTexture(rows,kind){
       ctx.moveTo(p.x-ux*l*.30-uy*.6,p.y-uy*l*.30+ux*.6);
       ctx.lineTo(p.x+ux*l*.45-uy*.6,p.y+uy*l*.45+ux*.6);
       ctx.stroke();
+
+      if(kind==="waves"||kind==="current"){
+        const hx=p.x+ux*l*.55,hy=p.y+uy*l*.55;
+        const back=kind==="waves"?2.7:2.3,wing=kind==="waves"?1.5:1.25;
+        ctx.strokeStyle="rgba(255,255,255,"+(0.13+strength*.18).toFixed(3)+")";
+        ctx.beginPath();
+        ctx.moveTo(hx,hy);
+        ctx.lineTo(hx-ux*back-uy*wing,hy-uy*back+ux*wing);
+        ctx.moveTo(hx,hy);
+        ctx.lineTo(hx-ux*back+uy*wing,hy-uy*back-ux*wing);
+        ctx.stroke();
+      }
     }
+  }
+  ctx.restore();
+}
+
+function drawRainPatches(rows){
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),s=canvasSize(c,innerWidth<760?.62:.56);
+  ctx.clearRect(0,0,c.width,c.height);
+  const pts=(rows||[]).map(r=>{
+    const rain=validRange(r.rain_mm,0,500);
+    if(rain===null||rain<.05)return null;
+    const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
+    return {x:p.x*s.sx,y:p.y*s.sy,n:fieldNorm(r,"rain"),rain};
+  }).filter(Boolean);
+  if(!pts.length)return;
+
+  const spacing=spatialSupportRadius(pts);
+  const radius=Number.isFinite(spacing)?clamp(spacing*1.18,18,66):34;
+
+  ctx.save();
+  ctx.globalCompositeOperation="source-over";
+  for(const p of pts){
+    if(p.n<.025)continue;
+    const rgb=colorAt("rain",p.n);
+    const alpha=clamp(.12+Math.pow(p.n,.72)*.62,.12,.76);
+    const r=radius*(.82+p.n*.42);
+    const g=ctx.createRadialGradient(p.x,p.y,r*.10,p.x,p.y,r);
+    g.addColorStop(0,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+alpha.toFixed(3)+")");
+    g.addColorStop(.48,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.72).toFixed(3)+")");
+    g.addColorStop(.78,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.30).toFixed(3)+")");
+    g.addColorStop(1,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0)");
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -925,20 +971,13 @@ function applyPresentationScene(){
   mapEl.dataset.weatherLayer=state.layer;
 }
 function renderField(){
-  if(state.layer==="radar"){clearCanvas("fieldCanvas");clearCanvas("uncertaintyCanvas");return}
-  const fieldCanvas=$("fieldCanvas");
-  fieldCanvas.style.filter=state.layer==="storm"?"blur(2.2px) saturate(1.16) contrast(1.10)"
-    :state.layer==="rain"?"blur(.6px) saturate(1.28) contrast(1.13)"
-    :state.layer==="rain24"?"blur(.5px) saturate(1.22) contrast(1.10)"
-    :state.layer==="wind"?"saturate(1.22) contrast(1.12)"
-    :state.layer==="waves"?"saturate(1.20) contrast(1.10)"
-    :state.layer==="current"?"saturate(1.18) contrast(1.10)"
-    :"none";
-  fieldCanvas.style.opacity=state.layer==="storm"?"0.78"
-    :state.layer==="rain"?"0.76"
-    :state.layer==="rain24"?"0.72"
-    :state.layer==="wind"?"0.66"
-    :"0.68";
+  if(state.layer==="radar"){
+    clearCanvas("fieldCanvas");
+    clearCanvas("uncertaintyCanvas");
+    state.currentRows=[];
+    return;
+  }
+
   const rows=activeRows();
   state.currentRows=rows;
   state.currentFrame=state.layer==="storm"
@@ -947,19 +986,44 @@ function renderField(){
       ?state.marine?.current||null
       :activeECMWFFrame();
 
-  if(state.layer==="storm"){
-    drawCloudMass(rows);
+  const fieldCanvas=$("fieldCanvas");
+  fieldCanvas.style.filter="none";
+  fieldCanvas.style.opacity="1";
+
+  // Wind is vector-first: no decorative scalar wash.
+  if(state.layer==="wind"){
+    clearCanvas("fieldCanvas");
     return;
   }
 
-  const alpha=state.layer==="wind"?.72
-    :state.layer==="rain"?.94
-    :state.layer==="rain24"?.88
-    :state.layer==="waves"?.76
-    :state.layer==="current"?.72
-    :.78;
-  drawIDW(rows,state.layer,alpha);
+  // Rain is shown as spatial rain patches, not a full-screen decorative gradient.
+  if(state.layer==="rain"){
+    drawRainPatches(rows);
+    return;
+  }
 
+  // 24h accumulation is a scalar field: location and amount matter, not motion.
+  if(state.layer==="rain24"){
+    drawIDW(rows,"rain24",.58);
+    return;
+  }
+
+  // Wave height is secondary context; short direction strokes do the explaining.
+  if(state.layer==="waves"){
+    drawIDW(rows,"waves",.30);
+    return;
+  }
+
+  // Surface current keeps a very light speed field under the moving vectors.
+  if(state.layer==="current"){
+    drawIDW(rows,"current",.18);
+    return;
+  }
+
+  // Himawari: cloud mass / cold tops, not a generic weather heatmap.
+  if(state.layer==="storm"){
+    drawCloudMass(rows,{clear:true,alphaScale:.78});
+  }
 }
 
 function drawUncertaintyField(rows,layer,kind="ensemble"){
@@ -1051,7 +1115,10 @@ function resetParticles(){
   fitFlow();
   const c=$("flowCanvas");
   const lowMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const count=lowMotion?(innerWidth<700?120:180):(innerWidth<700?360:620);
+  const mobile=innerWidth<700;
+  const normalCount=kind==="wind"?(mobile?300:500):kind==="current"?(mobile?120:210):(mobile?180:300);
+  const reducedCount=kind==="wind"?(mobile?100:150):(mobile?70:110);
+  const count=lowMotion?reducedCount:normalCount;
   state.particles=Array.from({length:count},()=>({
     x:Math.random()*c.width,y:Math.random()*c.height,
     vx:0,vy:0,age:Math.random()*125,max:100+Math.random()*175
@@ -1111,14 +1178,10 @@ function startParticles(rows,kind){
     ctx.fillStyle=lowMotion?"rgba(0,0,0,.075)":"rgba(0,0,0,.036)";
     ctx.fillRect(0,0,c.width,c.height);
     ctx.globalCompositeOperation="source-over";
-    ctx.strokeStyle=kind==="waves"
-      ?"rgba(224,245,255,.90)"
-      :kind==="current"
-        ?"rgba(190,245,239,.90)"
-        :"rgba(245,252,255,.97)";
+    ctx.strokeStyle=kind==="current"?"rgba(185,235,232,.45)":"rgba(245,252,255,.60)";
     ctx.lineWidth=innerWidth<700
-      ?(kind==="waves"?1.45:kind==="current"?1.35:1.75)
-      :(kind==="waves"?1.35:kind==="current"?1.25:1.55);
+      ?(kind==="current"?1.0:1.15)
+      :(kind==="current"?.92:1.05);
     ctx.shadowColor="rgba(0,0,0,.46)";
     ctx.shadowBlur=1.15;
     const dpr=Number(c.dataset.dpr)||1;
@@ -1150,8 +1213,17 @@ function startParticles(rows,kind){
         p.vx+= (targetX-p.vx)*turn;
         p.vy+= (targetY-p.vy)*turn;
       }
-      const trail=innerWidth<700?3.15:2.8;
+      const trail=kind==="current"?(innerWidth<700?2.15:2.0):(innerWidth<700?2.75:2.5);
       const nx=p.x+p.vx*trail,ny=p.y+p.vy*trail;
+      if(kind==="wind"){
+        const strength=clamp((n.mag||0)/12,0,1);
+        ctx.strokeStyle="rgba(248,253,255,"+(0.28+strength*.55).toFixed(3)+")";
+        ctx.lineWidth=(innerWidth<700?.78:.72)+strength*(innerWidth<700?.42:.36);
+      }else if(kind==="current"){
+        const strength=clamp((n.mag||0)/1.6,0,1);
+        ctx.strokeStyle="rgba(189,238,234,"+(0.20+strength*.34).toFixed(3)+")";
+        ctx.lineWidth=(innerWidth<700?.70:.66)+strength*.22;
+      }
       ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(nx,ny);ctx.stroke();
       p.x=nx;p.y=ny;p.age++;
       if(p.age>p.max||p.x<0||p.y<0||p.x>c.width||p.y>c.height){
@@ -1391,6 +1463,8 @@ function updateConfidence(){
 }
 
 function renderScale(){
+  const scale=document.querySelector(".scale");
+  if(scale)scale.classList.toggle("hidden",["wind","current","storm"].includes(state.layer));
   const cfg={
     wind:{g:"linear-gradient(90deg,#3f53ab,#3580c5,#36b3ba,#41c370,#dcc541,#e87d3d,#ca4259)",l:["0","10","20","30","40+"]},
     rain:{g:"linear-gradient(90deg,#3652a4,#367cc5,#34afcf,#39c984,#dfd444,#ec823d,#cd425d)",l:["0","1","3","8","15+"]},
@@ -1398,7 +1472,7 @@ function renderScale(){
     waves:{g:"linear-gradient(90deg,#374c99,#3474bd,#36a7c8,#45c59b,#d8bd44,#ca4767)",l:["0",".5","1","1.5","2+"]},
     current:{g:"linear-gradient(90deg,#3058a1,#2a89be,#28b8bc,#43c991,#e1c242,#dc5c48)",l:["0",".5","1","2","3+"]},
     storm:{g:"linear-gradient(90deg,#374991,#4268b8,#6d5cbe,#b04daa,#e56950,#be345b)",l:["0","25","50","75","100"]},
-    radar:{g:"linear-gradient(90deg,#4559ad,#39a2c9,#4bc77d,#e5d64a,#e57b3d,#cb455c)",l:["Light","","","","Heavy"]}
+    radar:{g:"linear-gradient(90deg,#4559ad,#39a2c9,#4bc77d,#e5d64a,#e57b3d,#cb455c)",l:["Nhẹ","","","","Mạnh"]}
   }[state.layer];
   $("scaleGradient").style.background=cfg.g;
   $("scaleLabels").innerHTML=cfg.l.map(x=>"<span>"+x+"</span>").join("");
@@ -1553,11 +1627,22 @@ function chooseInitialLiveLayer(){
   return "wind";
 }
 
+function syncLayerUI(){
+  document.querySelectorAll(".layer").forEach(b=>{
+    const active=state.layer==="radar"?b.dataset.layer==="rain":b.dataset.layer===state.layer;
+    b.classList.toggle("active",active);
+  });
+  const rainModes=$("rainModes");
+  if(rainModes)rainModes.classList.toggle("hidden",!(state.layer==="rain"||state.layer==="radar"));
+  $("rainForecastBtn")?.classList.toggle("active",state.layer==="rain");
+  $("radarBtn")?.classList.toggle("active",state.layer==="radar");
+}
+
 async function selectLayer(layer){
   state.layer=layer;
   applyPresentationScene();
   $("probe").classList.add("hidden");
-  document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("active",b.dataset.layer===layer));
+  syncLayerUI();
   clearRadar();stopParticles();stopTimer();
   if(layer==="radar"){
     try{
@@ -1578,6 +1663,7 @@ async function selectLayer(layer){
 
 function renderAll(redrawTimeline=true){
   applyPresentationScene();
+  syncLayerUI();
   renderField();
   renderUncertainty();
   stopParticles();
@@ -1585,7 +1671,6 @@ function renderAll(redrawTimeline=true){
 
   // V5.6: each weather layer gets its own visual grammar.
   if(state.layer==="wind")startParticles(activeRows(),"wind");
-  if(state.layer==="waves")startParticles(activeRows(),"waves");
   if(state.layer==="current")startParticles(activeRows(),"current");
   // Rain = color field only. Cloud = Himawari cloud mass only.
 
@@ -1833,7 +1918,7 @@ async function loadAll(){
   const initial=chooseInitialLiveLayer();
   if(initial!==state.layer){
     state.layer=initial;
-    document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("active",b.dataset.layer===initial));
+    syncLayerUI();
     if(initial==="storm")state.frameIndex=Math.max(0,cloudFrames().length-1);
     else selectNearestNowFrame();
     configureTimeline();
@@ -1847,6 +1932,8 @@ async function loadAll(){
 
 function bind(){
   document.querySelectorAll(".layer").forEach(b=>b.addEventListener("click",()=>{state.userSelectedLayer=true;selectLayer(b.dataset.layer)}));
+  $("rainForecastBtn")?.addEventListener("click",()=>{state.userSelectedLayer=true;selectLayer("rain")});
+  $("radarBtn")?.addEventListener("click",()=>{state.userSelectedLayer=true;selectLayer("radar")});
   $("ensembleBtn").addEventListener("click",()=>{
     state.ensemble=!state.ensemble;
     if(state.ensemble&&state.modelDiff){state.modelDiff=false;$("modelDiffBtn").classList.remove("active")}

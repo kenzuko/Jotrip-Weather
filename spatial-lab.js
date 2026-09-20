@@ -1542,7 +1542,9 @@ function chooseInitialLiveLayer(){
     return c==="RAIN_MORE"||c==="THUNDER";
   });
   const gaugeRain=(state.critical?.actual?.rain_gauges||[]).some(g=>
-    g.rain_observed===true&&(num(g.rain_intensity_mm_h)||0)>=1
+    (g.rain_observed===true&&(num(g.rain_intensity_mm_h)||0)>=1) ||
+    g.rain_recently_observed===true ||
+    (num(g.recent_change_mm)||0)>0
   );
   const maxConv=Math.max(0,...points.map(([,p])=>num(p.nowcast?.convective_score??p.local?.convection_score)||0));
   const maxLocalRain=Math.max(0,...points.map(([,p])=>num(p.local?.rain_rate_mm_h)||0));

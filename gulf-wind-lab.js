@@ -4,6 +4,7 @@ const DATA_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-poc/gulf-wind.json';
 const CARTO_KEY = 'cb1_3q98_1_d8112ce70cc7ec9b9276b0a0';
 const ENABLE_PARTICLES = false;
+const BUILD_ID = 'POC2-CARTO-CUBIC';
 const FALLBACK_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json';
 
@@ -621,7 +622,7 @@ function updateLabels() {
   $('slider').value = String(state.frameIndex);
   $('status').textContent =
     (state.sourceMode === 'GULF' ? 'GULF FIELD' : 'FALLBACK GRID') +
-    ' · CARTO · CUBIC · ' + ageText(state.pack.generated_at);
+    ' · CARTO · CUBIC · ' + BUILD_ID + ' · ' + ageText(state.pack.generated_at);
 }
 
 async function showFrame(index, immediate = false) {
@@ -774,6 +775,9 @@ function perfLoop() {
 async function boot() {
   bindUI();
   perfLoop();
+  $('errorCard').classList.add('hidden');
+  $('errorText').textContent = '';
+  $('status').textContent = BUILD_ID + ' · đang nạp field…';
 
   try {
     state.pack = await loadPack();

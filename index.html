@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod38">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod39">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod38"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod39"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -99,8 +99,8 @@
       <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
     </article>
     <article class="metric-card">
-      <div><span>Mây phát triển</span><em class="badge remote">VỆ TINH</em></div>
-      <b id="convectiveNow">--</b><small>mức phát triển mây /100</small>
+      <div><span>Mây quanh khu vực</span><em class="badge remote">VỆ TINH</em></div>
+      <b id="convectiveNow">--</b><small id="convectiveMeta">Himawari · đang phân tích</small>
     </article>
     <article class="metric-card">
       <div><span>Sóng Hs</span><em id="marineClass" class="badge model">MÔ HÌNH</em></div>
@@ -147,10 +147,10 @@
     <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip</b><span>Số đo thực tế + ước tính hiện tại + mây Himawari + gió + biển trên cùng một bản đồ.</span></div></div>
     <div id="mapNote" class="map-note">JoTrip Intelligence là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn được giữ nguyên để đối chiếu.</div>
     <div id="mapConvective" class="map-convective">
-      <span><b>Mây phát triển Himawari</b><strong id="mapConvectiveScore">-</strong></span>
-      <span><b>Đỉnh mây lạnh nhất</b><strong id="mapCloudTop">-</strong></span>
-      <span><b>Biến thiên 20 phút</b><strong id="mapCooling">-</strong></span>
-      <small>Đây là phân tích từ ảnh vệ tinh cho khu vực đang chọn, không phải xác suất có mưa hoặc sét.</small>
+      <span><b>Trạng thái mây</b><strong id="mapConvectiveScore">-</strong></span>
+      <span><b>Đỉnh mây</b><strong id="mapCloudTop">-</strong></span>
+      <span><b>20 phút gần đây</b><strong id="mapCooling">-</strong></span>
+      <small>Ảnh vệ tinh cho biết mây đang cao/lạnh và phát triển ra sao. Đây không phải xác suất mưa hay sét.</small>
     </div>
     <div class="map-source-links">
       <a href="https://himawari8.nict.go.jp/" target="_blank" rel="noopener noreferrer">NICT Himawari ↗</a>

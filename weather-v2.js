@@ -176,6 +176,9 @@ function overlayFreshGroundTruth(base,ground){
     increment_min:num(s.increment_window_minutes),
     rain_observed:s.rain_observed,
     rain_intensity_mm_h:num(s.rain_intensity_mm_h),
+    recent_change_mm:num(s.recent_change_mm),
+    recent_change_min:num(s.recent_change_window_minutes),
+    rain_recently_observed:s.rain_recently_observed,
     increment_qc:s.increment_qc,
     observed_at:s.observed_at,
     qc:s.qc

@@ -835,3 +835,5 @@ footer{font-size:9.5px}
 .feedback-toast.show{display:block}
 .feedback-toast.error{background:#fff0f1;color:#a34248}
 @media(max-width:700px){.feedback-actions.compact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.feedback-actions.compact button{font-size:11px;padding:10px 9px;min-height:42px}.feedback-toast{font-size:10.5px}}
+
+.metric-card>.metric-context{display:block;margin-top:7px;line-height:1.35;color:#527080;font-weight:600}

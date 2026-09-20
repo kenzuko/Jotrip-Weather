@@ -654,18 +654,25 @@ function renderForecastDayRibbon(rows){
   root.innerHTML=days.map(({day,rows})=>{
     const temps=rows.map(r=>num(r.temperature_c)).filter(v=>v!==null);
     const winds=rows.map(r=>num(r.wind_kmh)).filter(v=>v!==null);
+    const windQ90=rows.map(r=>num(r.wind_q90_kmh)).filter(v=>v!==null);
+    const rains=rows.map(r=>num(r.rain_mm)).filter(v=>v!==null);
+    const rainQ90=rows.map(r=>num(r.rain_q90_mm)).filter(v=>v!==null);
     const rainProb=Math.max(0,...rows.map(r=>num(r.rain_prob_5)).filter(v=>v!==null));
     const windProb=Math.max(0,...rows.map(r=>num(r.wind_prob_30)).filter(v=>v!==null));
     const state=forecastCardState(windProb,rainProb);
-    const bft=beaufort(winds.length?Math.max(...winds):0);
+    const windMax=winds.length?Math.max(...winds):null;
+    const windHigh=windQ90.length?Math.max(...windQ90):null;
+    const rainMax=rains.length?Math.max(...rains):null;
+    const rainHigh=rainQ90.length?Math.max(...rainQ90):null;
+    const bft=beaufort(windMax||0);
     const conf=worstConfidence(rows.map(r=>r.confidence_band).filter(Boolean));
     const confScore=Math.min(...rows.map(rowConfidence));
     return '<article class="forecast-day '+state.cls+'">'+
       '<header><b>'+esc(day.label)+'</b><span>'+esc(day.date)+'</span></header>'+
       '<strong>'+(temps.length?fmt(Math.min(...temps),0)+'-'+fmt(Math.max(...temps),0)+'°':'-')+'</strong>'+
-      '<div><span>P(mưa ≥5 mm/6h)</span><b>'+pct(rainProb)+'</b></div>'+
-      '<div><span>P(gió ≥30 km/h)</span><b>'+pct(windProb)+' · Bft '+bft.force+'</b></div>'+
-      '<small>Tin cậy '+confScore+'/100 · '+esc(conf)+'</small>'+
+      '<div><span>Mưa ước tính</span><b>'+(rainMax===null?'-':'~'+fmt(rainMax,1)+' mm/mốc')+'</b></div>'+
+      '<div><span>Gió ước tính</span><b>'+(windMax===null?'-':fmt(windMax,0)+' km/h · Bft '+bft.force)+'</b></div>'+
+      '<small>Biên cao q90: mưa '+(rainHigh===null?'-':fmt(rainHigh,1)+' mm')+' · gió '+(windHigh===null?'-':fmt(windHigh,0)+' km/h')+'<br>Tin cậy '+confScore+'/100 · '+esc(conf)+'</small>'+
     '</article>';
   }).join("")||'<span class="inline-loader">Chưa đủ dữ liệu để tóm tắt 10 ngày.</span>';
 }
@@ -740,7 +747,7 @@ function renderJoTripForecast(){
   if(title)title.textContent=(regionalForecast?.horizon_hours>=240?"10 ngày tới":"Dự báo hiện có")+" - "+(meta?.name||"theo vùng");
 
   if(!regionalForecast||!meta){
-    if(body)body.innerHTML='<tr><td colspan="9"><span class="inline-loader">Đang tải dự báo JoTrip theo vùng...</span></td></tr>';
+    if(body)body.innerHTML='<tr><td colspan="8"><span class="inline-loader">Đang tải dự báo JoTrip theo vùng...</span></td></tr>';
     $("jotripForecastSummary").textContent="Dự báo 10 ngày được tải sau để phần thời tiết hiện tại luôn mở nhanh.";
     $("ensembleMeta").textContent="Đang chờ sản phẩm dự báo vùng.";
     return;
@@ -752,7 +759,7 @@ function renderJoTripForecast(){
   if(metaBox)metaBox.innerHTML='<b>'+esc(meta.name)+'</b><span>Điểm đại diện: '+esc((meta.points||[]).join(" · "))+'</span>';
 
   if(!rows.length){
-    body.innerHTML='<tr><td colspan="9"><div class="data-empty"><b>CHƯA ĐỦ DỮ LIỆU 10 NGÀY</b><span>Vùng này chưa có đủ dữ liệu dự báo tổ hợp để công bố.</span></div></td></tr>';
+    body.innerHTML='<tr><td colspan="8"><div class="data-empty"><b>CHƯA ĐỦ DỮ LIỆU 10 NGÀY</b><span>Vùng này chưa có đủ dữ liệu dự báo tổ hợp để công bố.</span></div></td></tr>';
     $("jotripForecastSummary").textContent="JoTrip không lấy dự báo nguyên bản của một mô hình để lấp vào khi dữ liệu tổng hợp chưa đủ.";
     $("ensembleMeta").textContent="Dự báo JoTrip chưa sẵn sàng.";
     const ribbon=$("forecastDayRibbon");if(ribbon)ribbon.innerHTML='<span class="inline-loader">Chưa đủ dữ liệu để tóm tắt 10 ngày.</span>';
@@ -770,10 +777,9 @@ function renderJoTripForecast(){
     return '<tr class="'+state.cls+'">'+
       '<td><b>'+esc(r.valid_time?localTime(r.valid_time):("+"+fmt(r.lead_hours,0)+" giờ"))+'</b><small>Giờ Phú Quốc · UTC+7</small></td>'+
       '<td>'+fmt(r.temperature_c,1)+'°C</td>'+
-      '<td><b>'+fmt(r.wind_kmh,0)+' km/h</b><small>q90 '+fmt(r.wind_q90_kmh,0)+'</small></td>'+
+      '<td><b>'+fmt(r.wind_kmh,0)+' km/h</b><small>q90 '+fmt(r.wind_q90_kmh,0)+' km/h</small></td>'+
       '<td><b>Bft '+bft.force+'</b><small>'+esc(bft.label)+'</small></td>'+
-      '<td><b>'+pct(r.rain_prob_5)+'</b><small>'+forecastBand(r.rain_prob_5)+'</small></td>'+
-      '<td><b>'+pct(r.wind_prob_30)+'</b><small>'+forecastBand(r.wind_prob_30)+'</small></td>'+
+      '<td><b>~'+fmt(r.rain_mm,1)+' mm/mốc</b><small>q90 '+fmt(r.rain_q90_mm,1)+' mm</small></td>'+
       '<td><b>'+rowVariability(r)+'/100</b><small>'+variation.label.toLowerCase()+'</small></td>'+
       '<td><b>'+rowConfidence(r)+'/100</b><small>'+esc((r.confidence_band||"-").toLowerCase())+'</small></td>'+
       '<td>'+esc(driverText)+'</td>'+
@@ -785,7 +791,7 @@ function renderJoTripForecast(){
     ? "D0-D3 mỗi 6 giờ; D4-D10 mỗi 12 giờ. "
     : "Nguồn hiện tại mới đủ "+Math.round(horizon/24)+" ngày. ")+
     (watch?watch+" mốc trong vùng có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
-    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Tỷ lệ % trên thẻ ngày là xác suất vượt ngưỡng cao nhất ở một mốc dự báo trong ngày, không phải xác suất mưa/gió cho toàn ngày.";
+    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
 
   $("ensembleMeta").textContent="Dự báo JoTrip theo vùng · dữ liệu đầy đủ "+
     (num(regionalForecast.ensemble_completion_ratio)===null?"-":Math.round(regionalForecast.ensemble_completion_ratio*100)+"%")+
@@ -853,7 +859,7 @@ async function loadRegionalForecast(){
     renderJoTripForecast();renderStatus();renderQuickAlert();
   }catch(e){
     console.warn("[Weather V2] regional forecast",e);
-    $("jotripForecastRows").innerHTML='<tr><td colspan="9"><div class="data-empty"><b>CHƯA TẢI ĐƯỢC DỰ BÁO VÙNG</b><span>Phần quan trắc hiện tại vẫn hoạt động bình thường.</span></div></td></tr>';
+    $("jotripForecastRows").innerHTML='<tr><td colspan="8"><div class="data-empty"><b>CHƯA TẢI ĐƯỢC DỰ BÁO VÙNG</b><span>Phần quan trắc hiện tại vẫn hoạt động bình thường.</span></div></td></tr>';
   }
 }
 

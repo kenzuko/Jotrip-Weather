@@ -4,6 +4,7 @@ const KEY_HASH="e2b364cec6ff574866921d47cf621277833091cf9934b930a8a31e581e061269
 const ANALYTICS_URL="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-analytics/latest.json";
 const CALIBRATION_URL="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-calibration/latest.json";
 const $=id=>document.getElementById(id);
+let analyticsData=null;
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const fmt=(v,d=1)=>num(v)===null?"-":Number(v).toFixed(d);
@@ -77,6 +78,22 @@ function renderGroups(a){
     '</tr>';
   }).join("")||'<tr><td colspan="8">Chưa có forecast archive để ghép case. Hệ thống sẽ tự điền từ các cycle mới.</td></tr>';
 }
+function saveBlob(name,type,text){
+  const url=URL.createObjectURL(new Blob([text],{type}));
+  const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportJSON(){
+  if(!analyticsData)return;
+  saveBlob("jotrip-weather-analytics.json","application/json;charset=utf-8",JSON.stringify(analyticsData,null,2));
+}
+function exportCSV(){
+  if(!analyticsData)return;
+  const rows=[["anchor","variable","lead_bucket","sample_count","status","mae","rmse","mean_error","median_error","applied_bias","applied_factor"]];
+  (analyticsData.groups||[]).forEach(g=>rows.push([g.target,g.variable,g.lead_bucket,g.sample_count,g.status,g.mae,g.rmse,g.mean_error,g.median_error,g.applied_bias,g.applied_factor]));
+  const csv=rows.map(row=>row.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(",")).join("\n");
+  saveBlob("jotrip-weather-calibration.csv","text/csv;charset=utf-8","\ufeff"+csv);
+}
 function renderCases(a){
   $("caseRows").innerHTML=(a.recent_cases||[]).slice(0,80).map(c=>'<tr>'+
     '<td>'+esc(localTime(c.valid_time))+'</td>'+
@@ -92,6 +109,7 @@ async function loadAnalytics(){
   $("dataState").textContent="LOADING";
   try{
     const [a,c]=await Promise.all([getJSON(ANALYTICS_URL),getJSON(CALIBRATION_URL)]);
+    analyticsData=a;
     $("generatedAt").textContent=localTime(a.generated_at);
     renderSummary(a);renderActual(a);renderGroups(a);renderCases(a);
     $("dataState").textContent=(c.status||a.learning_status||"LEARNING")+" · "+(a.matched_cases||0)+" CASES";
@@ -106,6 +124,8 @@ function unlock(){
   sessionStorage.setItem("jotrip-weather-analytics","1");
   loadAnalytics();
 }
+$("exportCsv")?.addEventListener("click",exportCSV);
+$("exportJson")?.addEventListener("click",exportJSON);
 $("gateForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const key=$("accessKey").value;

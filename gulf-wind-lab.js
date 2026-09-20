@@ -3,8 +3,13 @@ import * as maplibregl from 'maplibre-gl';
 const DATA_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-poc/gulf-wind.json';
 const CARTO_KEY = 'cb1_3q98_1_d8112ce70cc7ec9b9276b0a0';
+const QUERY = new URLSearchParams(location.search);
+const EMBED_MODE = QUERY.get('embed') === '1';
 const ENABLE_PARTICLES = false;
-const BUILD_ID = 'POC5-FLOW-FIRST';
+const ENABLE_SCALAR = false;
+const DEBUG_GRID = QUERY.get('debug') === '1';
+const BUILD_ID = 'POC6-FLOW-ONLY';
+document.documentElement.classList.toggle('embed-mode', EMBED_MODE);
 const FALLBACK_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json';
 
@@ -77,7 +82,8 @@ const map = new maplibregl.Map({
   container: 'map',
   style: BASE_STYLE,
   renderWorldCopies: false,
-  attributionControl: true,
+  attributionControl: !EMBED_MODE,
+  interactive: !EMBED_MODE,
   minZoom: 4.8,
   maxZoom: 11.5,
   maxPitch: 0,
@@ -85,7 +91,9 @@ const map = new maplibregl.Map({
   touchPitch: false,
 });
 
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+if (!EMBED_MODE) {
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+}
 
 function localTime(iso) {
   const d = new Date(iso || '');
@@ -245,8 +253,8 @@ function fitGulf() {
     duration: 650,
     essential: true,
   });
-  $('gulfCamera').classList.add('active');
-  $('islandCamera').classList.remove('active');
+  if ($('gulfCamera')) $('gulfCamera').classList.add('active');
+  if ($('islandCamera')) $('islandCamera').classList.remove('active');
 }
 
 function fitIsland() {
@@ -259,8 +267,8 @@ function fitIsland() {
       duration: 650,
     },
   );
-  $('islandCamera').classList.add('active');
-  $('gulfCamera').classList.remove('active');
+  if ($('islandCamera')) $('islandCamera').classList.add('active');
+  if ($('gulfCamera')) $('gulfCamera').classList.remove('active');
 }
 
 function colorLut() {
@@ -542,7 +550,7 @@ function addGridOverlay() {
       paint: {
         'line-color': 'rgba(15,45,62,.72)',
         'line-width': 0.75,
-        'line-opacity': state.smooth ? 0 : 0.38,
+        'line-opacity': DEBUG_GRID ? 0.34 : 0,
       },
     },
     'labels',
@@ -551,7 +559,7 @@ function addGridOverlay() {
 
 function setGridOpacity() {
   if (map.getLayer('engine-grid')) {
-    map.setPaintProperty('engine-grid', 'line-opacity', state.smooth ? 0 : 0.38);
+    map.setPaintProperty('engine-grid', 'line-opacity', DEBUG_GRID ? 0.34 : 0);
   }
 }
 
@@ -645,45 +653,39 @@ async function showFrame(index, immediate = false) {
   state.flow.transitionStart = performance.now();
   updateLabels();
 
-  let assets;
-  try {
-    assets = frameAssets(state.frameIndex);
-  } catch (err) {
-    console.error('[Gulf Wind Lab] frame render failed', err);
-    $('errorCard').classList.remove('hidden');
-    $('errorText').textContent =
-      'Không dựng được weather field của frame này. Basemap vẫn giữ nguyên. ' +
-      String(err?.message || err);
-    return;
-  }
-
-  const nextSlot = state.activeSlot === 'a' ? 'b' : 'a';
-  installSlot(nextSlot, assets.scalarUrl, state.activeSlot && !immediate ? 0 : 0.34);
-
-  if (!state.activeSlot || immediate) {
-    if (state.activeSlot) removeSlot(state.activeSlot);
-    state.activeSlot = nextSlot;
-  } else {
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    if (token !== state.renderToken) return;
-    const old = state.activeSlot;
-    await fadeBetween(old, nextSlot, token, state.playing ? 760 : 280);
-    if (token !== state.renderToken) return;
-    removeSlot(old);
-    state.activeSlot = nextSlot;
-  }
-
-  if (ENABLE_PARTICLES) updateParticles(assets.vectorUrl);
-  setGridOpacity();
-
-  const ahead = Math.min(state.pack.frames.length - 1, state.frameIndex + 1);
-  const preload = () => {
-    if (ahead !== state.frameIndex) {
-      try { frameAssets(ahead); } catch (_) {}
+  if (ENABLE_SCALAR) {
+    let assets;
+    try {
+      assets = frameAssets(state.frameIndex);
+    } catch (err) {
+      console.error('[Gulf Wind Lab] frame render failed', err);
+      $('errorCard').classList.remove('hidden');
+      $('errorText').textContent =
+        'Không dựng được weather field của frame này. Basemap vẫn giữ nguyên. ' +
+        String(err?.message || err);
+      return;
     }
-  };
-  if ('requestIdleCallback' in window) requestIdleCallback(preload, { timeout: 1000 });
-  else setTimeout(preload, 120);
+
+    const nextSlot = state.activeSlot === 'a' ? 'b' : 'a';
+    installSlot(nextSlot, assets.scalarUrl, state.activeSlot && !immediate ? 0 : 0.34);
+
+    if (!state.activeSlot || immediate) {
+      if (state.activeSlot) removeSlot(state.activeSlot);
+      state.activeSlot = nextSlot;
+    } else {
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (token !== state.renderToken) return;
+      const old = state.activeSlot;
+      await fadeBetween(old, nextSlot, token, state.playing ? 760 : 280);
+      if (token !== state.renderToken) return;
+      removeSlot(old);
+      state.activeSlot = nextSlot;
+    }
+
+    if (ENABLE_PARTICLES) updateParticles(assets.vectorUrl);
+  }
+
+  setGridOpacity();
 }
 
 function resizeWindFlow() {
@@ -819,11 +821,11 @@ function drawWindFlow(ts) {
   ctx.globalCompositeOperation = 'source-over';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = innerWidth < 700 ? 0.9 : 0.8;
-  ctx.strokeStyle = 'rgba(255,255,255,0.46)';
   ctx.shadowBlur = 0;
-  ctx.beginPath();
 
+  const weak = [];
+  const medium = [];
+  const strong = [];
   const heads = [];
 
   for (const p of state.flow.particles) {
@@ -872,11 +874,11 @@ function drawWindFlow(ts) {
     const toX = from.x + dx * pixels;
     const toY = from.y + dy * pixels;
 
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(toX, toY);
+    const bucket = speedNorm < 0.28 ? weak : speedNorm < 0.62 ? medium : strong;
+    bucket.push([from.x, from.y, toX, toY]);
 
-    if ((p.maxAge % 11) === 0 && p.age > 5) {
-      heads.push({ x: toX, y: toY, dx, dy });
+    if ((p.maxAge % 13) === 0 && p.age > 5) {
+      heads.push({ x: toX, y: toY, dx, dy, strong: speedNorm >= 0.62 });
     }
 
     const next = map.unproject([toX, toY]);
@@ -884,11 +886,25 @@ function drawWindFlow(ts) {
     p.lat = next.lat;
   }
 
-  ctx.stroke();
+  const drawBucket = (segments, alpha, widthPx) => {
+    if (!segments.length) return;
+    ctx.strokeStyle = 'rgba(255,255,255,' + alpha + ')';
+    ctx.lineWidth = widthPx;
+    ctx.beginPath();
+    for (const seg of segments) {
+      ctx.moveTo(seg[0], seg[1]);
+      ctx.lineTo(seg[2], seg[3]);
+    }
+    ctx.stroke();
+  };
+
+  drawBucket(weak, 0.26, innerWidth < 700 ? 0.72 : 0.66);
+  drawBucket(medium, 0.45, innerWidth < 700 ? 0.88 : 0.80);
+  drawBucket(strong, 0.68, innerWidth < 700 ? 1.05 : 0.94);
 
   if (heads.length) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
-    ctx.lineWidth = innerWidth < 700 ? 1.0 : 0.9;
+    ctx.strokeStyle = 'rgba(255,255,255,0.64)';
+    ctx.lineWidth = innerWidth < 700 ? 0.92 : 0.84;
     ctx.beginPath();
     for (const h of heads) {
       const back = 3.2;
@@ -997,10 +1013,8 @@ function setMode(smooth) {
 }
 
 function bindUI() {
-  $('gulfCamera').addEventListener('click', fitGulf);
-  $('islandCamera').addEventListener('click', fitIsland);
-  $('smoothBtn').addEventListener('click', () => setMode(true));
-  $('gridBtn').addEventListener('click', () => setMode(false));
+  if ($('gulfCamera')) $('gulfCamera').addEventListener('click', fitGulf);
+  if ($('islandCamera')) $('islandCamera').addEventListener('click', fitIsland);
   $('playBtn').addEventListener('click', togglePlay);
 
   $('slider').addEventListener('input', (e) => {

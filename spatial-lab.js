@@ -184,7 +184,8 @@ function overlayCurrentBundle(critical,bundle){
     });
   }
   if(nowcast.points){
-    state.nowcast=nowcast;
+    // Keep the full Himawari spatial frames already loaded from weather-nowcast/latest.
+    state.nowcast={...(state.nowcast||{}),...nowcast,spatial:state.nowcast?.spatial||nowcast.spatial};
     Object.entries(nowcast.points).forEach(([id,np])=>{
       if(!critical.points?.[id])return;
       critical.points[id].nowcast={...(critical.points[id].nowcast||{}),
@@ -800,6 +801,54 @@ function accumulation24Rows(){
   return [...sums.values()].map(r=>({...r,rain24_mm:Math.max(0,r.rain24_mm)}));
 }
 
+function isOperationalNow(){
+  const t=activeValidTime();
+  return Number.isFinite(t)&&Math.abs(t-Date.now())<=3*3600000;
+}
+function operationalAnchorAdjustments(rows,layer){
+  if(!isOperationalNow()||!state.critical||!rows?.length||!["wind","rain"].includes(layer))return rows;
+  const anchors=[];
+  Object.entries(POINTS).forEach(([id,cfg])=>{
+    const p=state.critical.points?.[id],l=p?.local||{};
+    if(!p)return;
+    const nearest=nearestRow(rows,cfg.lat,cfg.lon);
+    if(!nearest)return;
+    if(layer==="wind"){
+      const target=num(l.wind_kmh),base=num(nearest.wind_kmh);
+      if(target===null||base===null)return;
+      anchors.push({lat:cfg.lat,lon:cfg.lon,delta:target-base});
+    }else{
+      const rate=num(l.rain_rate_mm_h),base=num(nearest.rain_mm);
+      if(rate===null||base===null)return;
+      // Spatial rain field is the model-step accumulation; Local Now is mm/h.
+      // Convert only for this near-now visual correction, without changing the
+      // stored engine value or future forecast frames.
+      anchors.push({lat:cfg.lat,lon:cfg.lon,delta:rate*3-base});
+    }
+  });
+  if(!anchors.length)return rows;
+  const decay=layer==="wind"?38:28;
+  return rows.map(row=>{
+    let sw=0,sd=0;
+    for(const a of anchors){
+      const d=haversineKm(row.lat,row.lon,a.lat,a.lon);
+      const w=Math.exp(-d/decay);
+      sw+=w;sd+=w*a.delta;
+    }
+    if(!sw)return row;
+    const correction=sd/sw;
+    if(layer==="wind"){
+      const base=num(row.wind_kmh)??0,newWind=Math.max(0,base+correction*.90);
+      const ratio=base>1?newWind/base:1;
+      return {...row,wind_kmh:newWind,
+        u10_ms:num(row.u10_ms)===null?row.u10_ms:num(row.u10_ms)*ratio,
+        v10_ms:num(row.v10_ms)===null?row.v10_ms:num(row.v10_ms)*ratio,
+        _jotrip_local_corrected:true};
+    }
+    return {...row,rain_mm:Math.max(0,(num(row.rain_mm)||0)+correction*.85),_jotrip_local_corrected:true};
+  });
+}
+
 function activeRows(){
   if(state.layer==="storm"){
     const fs=cloudFrames();
@@ -836,8 +885,8 @@ function activeRows(){
   const frame=activeECMWFFrame();
   if(frame?.cells?.length){
     if(state.layer==="waves")return frame.cells.filter(r=>validWaveHs(r.wave_hs_m)!==null&&validWaveDir(r.wave_direction_deg)!==null);
-    if(state.layer==="rain")return frame.cells.filter(r=>num(r.rain_mm)!==null);
-    if(state.layer==="wind")return frame.cells.filter(r=>num(r.wind_kmh)!==null);
+    if(state.layer==="rain")return operationalAnchorAdjustments(frame.cells.filter(r=>num(r.rain_mm)!==null),"rain");
+    if(state.layer==="wind")return operationalAnchorAdjustments(frame.cells.filter(r=>num(r.wind_kmh)!==null),"wind");
     return frame.cells;
   }
   const gf=gefsFrames()[clamp(state.frameIndex,0,Math.max(0,gefsFrames().length-1))];

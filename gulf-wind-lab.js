@@ -4,7 +4,7 @@ const DATA_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-poc/gulf-wind.json';
 const CARTO_KEY = 'cb1_3q98_1_d8112ce70cc7ec9b9276b0a0';
 const ENABLE_PARTICLES = false;
-const BUILD_ID = 'POC4-NATURAL-FLOW';
+const BUILD_ID = 'POC5-FLOW-FIRST';
 const FALLBACK_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json';
 
@@ -78,6 +78,8 @@ const map = new maplibregl.Map({
   style: BASE_STYLE,
   renderWorldCopies: false,
   attributionControl: true,
+  minZoom: 4.8,
+  maxZoom: 11.5,
   maxPitch: 0,
   dragRotate: false,
   touchPitch: false,
@@ -233,20 +235,16 @@ function nearestFrameIndex(frames) {
 }
 
 function fitGulf() {
-  const p = state.pack;
-  const b = state.sourceMode === 'GULF'
-    ? [p.bounds.west, p.bounds.south, p.bounds.east, p.bounds.north]
-    : [100.75, 7.5, 105.75, 13.0];
-
-  map.fitBounds(
-    [[b[0], b[1]], [b[2], b[3]]],
-    {
-      padding: innerWidth < 700
-        ? { top: 70, right: 5, bottom: 80, left: 5 }
-        : { top: 76, right: 18, bottom: 88, left: 18 },
-      duration: 650,
-    },
-  );
+  // Camera is intentionally narrower than the full render domain.
+  // The engine still carries the whole Gulf field, but portrait screens should
+  // show the useful upstream watch corridor instead of zooming out to "Asia".
+  const mobile = innerWidth < 700;
+  map.easeTo({
+    center: mobile ? [103.35, 10.15] : [103.25, 10.20],
+    zoom: mobile ? 5.35 : 5.65,
+    duration: 650,
+    essential: true,
+  });
   $('gulfCamera').classList.add('active');
   $('islandCamera').classList.remove('active');
 }
@@ -565,10 +563,10 @@ function fadeBetween(fromSlot, toSlot, token, duration = 280) {
       const t = clamp((now - start) / duration, 0, 1);
       const eased = t * t * (3 - 2 * t);
       if (fromSlot && map.getLayer(fieldLayerId(fromSlot))) {
-        map.setPaintProperty(fieldLayerId(fromSlot), 'raster-opacity', 0.66 * (1 - eased));
+        map.setPaintProperty(fieldLayerId(fromSlot), 'raster-opacity', 0.34 * (1 - eased));
       }
       if (map.getLayer(fieldLayerId(toSlot))) {
-        map.setPaintProperty(fieldLayerId(toSlot), 'raster-opacity', 0.66 * eased);
+        map.setPaintProperty(fieldLayerId(toSlot), 'raster-opacity', 0.34 * eased);
       }
       if (t < 1) requestAnimationFrame(tick);
       else resolve();
@@ -660,7 +658,7 @@ async function showFrame(index, immediate = false) {
   }
 
   const nextSlot = state.activeSlot === 'a' ? 'b' : 'a';
-  installSlot(nextSlot, assets.scalarUrl, state.activeSlot && !immediate ? 0 : 0.66);
+  installSlot(nextSlot, assets.scalarUrl, state.activeSlot && !immediate ? 0 : 0.34);
 
   if (!state.activeSlot || immediate) {
     if (state.activeSlot) removeSlot(state.activeSlot);
@@ -1022,7 +1020,7 @@ function bindUI() {
     $('probeValue').textContent = s.speedKmh.toFixed(1) + ' km/h';
     $('probeMeta').textContent =
       cardinal(s.direction) + ' ' + Math.round(s.direction) + '° · ' +
-      localTime(frame.valid_time) + ' · màu = tốc độ · vệt = hướng gió';
+      localTime(frame.valid_time) + ' · nền màu = mạnh/yếu · vệt = hướng gió';
   });
 }
 

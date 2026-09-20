@@ -6,7 +6,7 @@ const LOCAL_NOW="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weath
 const GROUND_TRUTH="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/latest.json";
 const TIDE=["https://kenzuko.github.io/Jotrip-Lab/weather/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
 const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
-const NOWCAST=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-nowcast/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/latest.json"];
+const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"];
 const JOTRIP_FORECAST="https://kenzuko.github.io/Jotrip-Lab/weather/jotrip-forecast.json";
 const LIVE_REFRESH_MS=10*60*1000;
 const FEEDBACK_ENDPOINT="/feedback";
@@ -43,16 +43,17 @@ let mapLayer="radar";
 let liveRefreshBusy=false;
 let lastLiveRefreshAt=0;
 
-async function getJSON(url){
+async function getJSON(url,ttlMs=120000){
   const sep=url.includes("?")?"&":"?";
-  const r=await fetch(url+sep+"t="+Date.now(),{cache:"no-store"});
+  const bucket=Math.floor(Date.now()/Math.max(30000,ttlMs));
+  const r=await fetch(url+sep+"v="+bucket,{cache:"default"});
   if(!r.ok)throw new Error("HTTP "+r.status);
   return r.json();
 }
-async function getFirst(urls){
+async function getFirst(urls,ttlMs=120000){
   let last;
   for(const u of urls){
-    try{return await getJSON(u)}catch(e){last=e}
+    try{return await getJSON(u,ttlMs)}catch(e){last=e}
   }
   throw last||new Error("unavailable");
 }
@@ -585,11 +586,11 @@ function effectiveNowcast(){
     status:fullNowcast.status,
     sampled_time:fullNowcast.sampled_time,
     source:fullNowcast.source,
-    cloud_top_cold_c:p.regional_cold_cloud_top_temp_c,
-    cloud_top_high_m:p.regional_high_cloud_top_height_m,
+    cloud_top_cold_c:p.cold_cloud_top_temp_c??p.regional_cold_cloud_top_temp_c,
+    cloud_top_high_m:p.high_cloud_top_height_m??p.regional_high_cloud_top_height_m,
     cooling_c_per_20m:p.cooling_c_per_20m_proxy,
-    convective_score:sig.score,
-    convective_level:sig.level,
+    convective_score:p.score??sig.score,
+    convective_level:p.level??sig.level,
     lightning:p.lightning_observed||fullNowcast.lightning_observed?.status
   };
 }
@@ -840,20 +841,20 @@ function renderAll(){
 }
 
 async function loadAQI(){
-  try{fullAQI=await getFirst(AQI);renderAQI()}catch(e){console.warn("[Weather V2] AQI",e)}
+  try{fullAQI=await getFirst(AQI,15*60*1000);renderAQI()}catch(e){console.warn("[Weather V2] AQI",e)}
 }
 async function loadTide(){
-  try{fullTide=await getFirst(TIDE);renderTide()}catch(e){
+  try{fullTide=await getFirst(TIDE,30*60*1000);renderTide()}catch(e){
     console.warn("[Weather V2] tide",e);
     const el=$("tideSpark");if(el)el.innerHTML='<text x="300" y="65" text-anchor="middle" fill="#8b9ba5" font-size="10">Chưa tải được chuỗi triều 24h</text>';
   }
 }
 async function loadNowcast(){
-  try{fullNowcast=await getFirst(NOWCAST);renderMapConvective();renderCurrent();renderStatus();renderQuickAlert()}catch(e){console.warn("[Weather V2] nowcast",e)}
+  try{fullNowcast=await getFirst(NOWCAST,5*60*1000);renderMapConvective();renderCurrent();renderStatus();renderQuickAlert()}catch(e){console.warn("[Weather V2] compact nowcast",e)}
 }
 async function loadRegionalForecast(){
   try{
-    regionalForecast=await getJSON(JOTRIP_FORECAST);
+    regionalForecast=await getJSON(JOTRIP_FORECAST,10*60*1000);
     const ids=Object.keys(regionalForecast.regions||{});
     if(!ids.includes(currentRegion))currentRegion=ids[0]||currentRegion;
     renderJoTripForecast();renderStatus();renderQuickAlert();

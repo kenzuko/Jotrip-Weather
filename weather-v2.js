@@ -663,7 +663,7 @@ function renderForecastDayRibbon(rows){
     return '<article class="forecast-day '+state.cls+'">'+
       '<header><b>'+esc(day.label)+'</b><span>'+esc(day.date)+'</span></header>'+
       '<strong>'+(temps.length?fmt(Math.min(...temps),0)+'-'+fmt(Math.max(...temps),0)+'°':'-')+'</strong>'+
-      '<div><span>P(mưa ≥5 mm)</span><b>'+pct(rainProb)+'</b></div>'+
+      '<div><span>P(mưa ≥5 mm/6h)</span><b>'+pct(rainProb)+'</b></div>'+
       '<div><span>P(gió ≥30 km/h)</span><b>'+pct(windProb)+' · Bft '+bft.force+'</b></div>'+
       '<small>Tin cậy '+confScore+'/100 · '+esc(conf)+'</small>'+
     '</article>';
@@ -785,7 +785,7 @@ function renderJoTripForecast(){
     ? "D0-D3 mỗi 6 giờ; D4-D10 mỗi 12 giờ. "
     : "Nguồn hiện tại mới đủ "+Math.round(horizon/24)+" ngày. ")+
     (watch?watch+" mốc trong vùng có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
-    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo.";
+    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Tỷ lệ % trên thẻ ngày là xác suất vượt ngưỡng cao nhất ở một mốc dự báo trong ngày, không phải xác suất mưa/gió cho toàn ngày.";
 
   $("ensembleMeta").textContent="Dự báo JoTrip theo vùng · dữ liệu đầy đủ "+
     (num(regionalForecast.ensemble_completion_ratio)===null?"-":Math.round(regionalForecast.ensemble_completion_ratio*100)+"%")+

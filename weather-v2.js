@@ -331,40 +331,110 @@ function setHazard(id,label,meta,level){
 }
 function renderHazardBoard(){
   const points=islandIds().map(id=>({id,p:critical.points[id]}));
+
+  // Mưa hiện tại: ưu tiên VRain đo thực, sau đó mới tới Local Now.
+  const gauges=(critical?.actual?.rain_gauges||[])
+    .filter(g=>freshEnough(g.observed_at,35))
+    .map(g=>({...g,rate:num(g.rain_intensity_mm_h)}))
+    .sort((a,b)=>(b.rate||0)-(a.rate||0));
+  const wetGauge=gauges.find(g=>g.rain_observed===true&&(g.rate||0)>0);
+  if(wetGauge){
+    const rate=wetGauge.rate||0;
+    setHazard(
+      "hazardRain",
+      wetGauge.name+" đang mưa ~"+fmt(rate,1)+" mm/h",
+      (num(wetGauge.increment_mm)!==null&&num(wetGauge.increment_min)!==null
+        ?("VRain đo thực · +"+fmt(wetGauge.increment_mm,1)+" mm trong "+fmt(wetGauge.increment_min,0)+" phút")
+        :"VRain đo thực · "+ageText(wetGauge.observed_at)),
+      rate>=7.5?3:rate>=2.5?2:1
+    );
+  }else{
+    const localRain=points.map(x=>({name:x.p.name,rate:num(x.p.local?.rain_rate_mm_h)||0,cls:x.p.local?.rain_class}))
+      .sort((a,b)=>b.rate-a.rate)[0];
+    if(localRain&&localRain.rate>=0.5){
+      setHazard("hazardRain",
+        localRain.name+" ước tính ~"+fmt(localRain.rate,1)+" mm/h",
+        "JoTrip Local Now · chưa phải số đo tại chỗ",
+        localRain.rate>=7.5?3:localRain.rate>=2.5?2:1
+      );
+    }else{
+      const dryNames=gauges.filter(g=>g.rain_observed===false).slice(0,3).map(g=>g.name);
+      setHazard("hazardRain","Chưa ghi nhận mưa đáng kể",
+        dryNames.length?("VRain "+dryNames.join(", ")+" hiện 0 mm/h"):"Các điểm hiện có đều ở mức mưa thấp",
+        0
+      );
+    }
+  }
+
+  // Mây mưa 0-3 giờ: chỉ phát giờ đến khi backend xác nhận quỹ đạo cắt khu vực.
+  const impacts=points.map(x=>{
+    const n=effectiveNowcastFor(x.id),m=n.cloud_motion||{};
+    return {id:x.id,name:x.p.name,n,m,eta:num(m.eta_minutes),score:num(n.convective_score)||0};
+  });
+  const incoming=impacts.filter(x=>x.m.public_track_usable&&x.m.predicted_impact&&x.eta!==null&&x.eta>=0&&x.eta<=180)
+    .sort((a,b)=>a.eta-b.eta);
+  if(incoming.length){
+    const first=incoming[0];
+    setHazard("hazardStorm",
+      "Vùng mây mưa đang hướng tới "+first.name,
+      motionEtaText(first.m)+" · "+cloudImpactText(first.id,first.n),
+      first.eta<=60?3:2
+    );
+  }else{
+    const strongest=impacts.sort((a,b)=>b.score-a.score)[0];
+    if(strongest&&strongest.score>=70){
+      const st=String(strongest.m.status||"").toUpperCase();
+      const movement=st==="MOVING_AWAY"?"đang rời xa":st==="PASSING_BY"?"dự kiến đi lệch khu vực":"chưa xác định đường vào đủ rõ";
+      const cloud=cloudStateLabel(strongest.n);
+      setHazard("hazardStorm",
+        cloud.label,
+        strongest.name+" · "+movement+(cloud.detail?" · "+cloud.detail:""),
+        1
+      );
+    }else{
+      setHazard("hazardStorm","Chưa thấy vùng mây mưa đáng lo","Himawari chưa cho thấy quỹ đạo mây mạnh đi thẳng vào các điểm đảo trong 3 giờ tới",0);
+    }
+  }
+
+  // Gió & biển hiện tại: số hiện tại, không dùng xác suất.
+  const windNow=points.map(x=>({name:x.p.name,wind:num(x.p.local?.wind_kmh??x.p.model?.wind_kmh)||0,gust:num(x.p.model?.gust_kmh)}))
+    .sort((a,b)=>b.wind-a.wind)[0];
+  const waveNow=points.map(x=>({name:x.p.name,hs:num(x.p.local?.wave_hs_m??x.p.model?.wave_hs_m)||0}))
+    .sort((a,b)=>b.hs-a.hs)[0];
+  const windLabel=windNow?("Gió mạnh nhất "+windNow.name+" ~"+fmt(windNow.wind,0)+" km/h"):"Chưa đủ số gió";
+  const windMeta=(waveNow?("Sóng Hs cao nhất ~"+fmt(waveNow.hs,1)+" m tại "+waveNow.name):"")+
+    (windNow&&windNow.gust!==null?(" · gió giật mô hình ~"+fmt(windNow.gust,0)+" km/h"):"");
+  setHazard("hazardWind",windLabel,windMeta||"Đang tổng hợp điều kiện biển",windNow?.wind>=40||waveNow?.hs>=2?3:windNow?.wind>=30||waveNow?.hs>=1.5?2:0);
+
+  // 12 giờ tới: dùng giá trị JoTrip forecast dễ đọc, không lấy probability làm dòng chính.
   const future=[];
-  points.forEach(x=>futureForecastRows(x.p.ensemble?.rows||[]).forEach(r=>future.push({id:x.id,p:x.p,row:r})));
-
-  const rain=future.map(x=>({...x,val:num(x.row.rain?.prob)||0})).sort((a,b)=>b.val-a.val)[0];
-  const rainLvl=probabilityLevel(rain?.val);
-  setHazard("hazardRain",rain?pct(rain.val):"-",rain?"P(mưa ≥5 mm / 6h) · "+esc(rain.p.name)+" · "+leadMoment(rain.row):"Chưa đủ dữ liệu tổ hợp",rainLvl.score);
-
-  const storms=points.map(x=>({
-    ...x,
-    score:num(x.p.nowcast?.convective_score)||0,
-    cooling:num(x.p.nowcast?.cooling_c_per_20m)
-  })).sort((a,b)=>b.score-a.score);
-  const storm=storms[0];
-  let stormLevel=0;
-  if(storm?.score>=75)stormLevel=3;
-  else if(storm?.score>=60)stormLevel=2;
-  else if(storm?.score>=40)stormLevel=1;
-  const stormNow=storm?effectiveNowcastFor(storm.id):null;
-  const stormCloud=stormNow?cloudStateLabel(stormNow):null;
-  setHazard(
-    "hazardStorm",
-    stormCloud?stormCloud.label:"-",
-    stormCloud?(esc(storm.p.name)+" · "+esc(stormCloud.detail||"Theo dõi ảnh vệ tinh")):"Chưa có Himawari",
-    stormLevel
-  );
-
-  const wind=future.map(x=>({...x,val:num(x.row.wind?.prob)||0})).sort((a,b)=>b.val-a.val)[0];
-  const windLvl=probabilityLevel(wind?.val);
-  const waves=points.map(x=>({name:x.p.name,hs:num(x.p.local?.wave_hs_m??x.p.model?.wave_hs_m)||0})).sort((a,b)=>b.hs-a.hs)[0];
-  const windMeta=wind?"P(gió ≥30 km/h) · "+esc(wind.p.name)+" · "+leadMoment(wind.row)+(waves?.hs?" · Hs cao nhất "+fmt(waves.hs,1)+" m":""):"Chưa đủ dữ liệu tổ hợp";
-  setHazard("hazardWind",wind?pct(wind.val):"-",windMeta,Math.max(windLvl.score,waves?.hs>=2?3:waves?.hs>=1.5?2:0));
-
-  const vol=future.map(x=>({...x,v:variationLevel(x.row.wind,x.row.rain)})).sort((a,b)=>b.v.index-a.v.index)[0];
-  setHazard("hazardVolatility",vol?vol.v.index+"/100":"-",vol?"Biến động ensemble · "+esc(vol.p.name)+" · mạnh nhất "+leadMoment(vol.row)+" · không phải xác suất":"Chưa đủ dữ liệu",vol?.v.score||0);
+  Object.values(regionalForecast?.regions||{}).forEach(region=>{
+    (region.rows||[]).forEach(row=>{
+      const ms=rowValidMs(row),hours=ms===null?num(row.lead_hours):(ms-Date.now())/3600000;
+      if(hours===null||hours<0||hours>12)return;
+      const rain=num(row.rain_mm)||0,wind=num(row.wind_kmh)||0,rainHigh=num(row.rain_q90_mm),windHigh=num(row.wind_q90_kmh);
+      const severity=Math.max(
+        rain>=7.5?3:rain>=2.5?2:rain>=.5?1:0,
+        wind>=40?3:wind>=30?2:wind>=22?1:0,
+        (rainHigh!==null&&rainHigh>=12)||(windHigh!==null&&windHigh>=40)?2:0
+      );
+      future.push({region:region.name||"Phú Quốc",row,hours,rain,wind,rainHigh,windHigh,severity});
+    });
+  });
+  future.sort((a,b)=>b.severity-a.severity||a.hours-b.hours);
+  const f=future[0];
+  if(f&&f.severity>0){
+    const time=f.row.valid_time?localTime(f.row.valid_time):("+"+fmt(f.hours,0)+" giờ");
+    setHazard("hazardVolatility",
+      f.region+" cần lưu ý khoảng "+time,
+      "Mưa ~"+fmt(f.rain,1)+" mm/mốc · gió ~"+fmt(f.wind,0)+" km/h"+
+        (f.rainHigh!==null?(" · kịch bản mưa cao "+fmt(f.rainHigh,1)+" mm"):"")+
+        (f.windHigh!==null?(" · gió cao "+fmt(f.windHigh,0)+" km/h"):""),
+      f.severity
+    );
+  }else{
+    setHazard("hazardVolatility","Chưa thấy mốc xấu rõ trong 12 giờ tới","JoTrip vẫn tiếp tục đối chiếu ensemble và dữ liệu thực tế mỗi chu kỳ",0);
+  }
 }
 
 function islandAssessment(){
@@ -1541,92 +1611,24 @@ function mapPopup(id,p){
 async function renderJoTripMap(){
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(!box)return;
-  try{
-    const L=await ensureLeaflet();
-    if(mapLayer!=="jotrip")return;
-    if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
-    box.innerHTML='<div id="jotripMap" class="jotrip-live-map" aria-label="Bản đồ JoTrip Weather Intelligence"></div>';
-    jotripMap=L.map("jotripMap",{zoomControl:true,attributionControl:true,preferCanvas:true});
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-      maxZoom:18,attribution:'&copy; OpenStreetMap contributors'
-    }).addTo(jotripMap);
-
-    const bounds=[];
-    Object.entries(critical?.points||{}).forEach(([id,p])=>{
-      const c=pointCoords(id,p);if(!c)return;
-      const isCompare=id==="rach_gia",level=pointMapLevel(p);
-      bounds.push(c);
-      const marker=L.circleMarker(c,{
-        radius:isCompare?7:8,
-        weight:2,
-        color:"#ffffff",
-        fillColor:pointMapColor(level),
-        fillOpacity:.92
-      }).addTo(jotripMap);
-      marker.bindTooltip((p.name||id)+(isCompare?" · đối chiếu":""),{direction:"top",offset:[0,-7]});
-      marker.bindPopup(mapPopup(id,p));
-    });
-
-    // Direct VRain gauges stay visually separate from JoTrip Estimated Now.
-    (critical?.actual?.rain_gauges||[]).forEach(g=>{
-      const lat=num(g.lat),lon=num(g.lon);if(lat===null||lon===null)return;
-      const rate=num(g.rain_intensity_mm_h),raining=g.rain_observed===true;
-      L.circleMarker([lat,lon],{
-        radius:5,weight:2,color:"#ffffff",fillColor:raining?"#168bd0":"#8ba5b4",fillOpacity:.98
-      }).addTo(jotripMap)
-        .bindTooltip("VRain · "+esc(g.name||"trạm mưa"),{direction:"right"})
-        .bindPopup('<div class="jotrip-map-popup"><b>VRain · '+esc(g.name||"trạm mưa")+'</b><span>'+
-          (raining&&rate!==null?("Đang mưa ~"+fmt(rate,1)+" mm/h"):"Hiện chưa ghi nhận mưa")+
-          '</span><small>Quan trắc thực tế · '+esc(ageText(g.observed_at))+'</small></div>');
-    });
-
-    // Hà Tiên comparison anchor - satellite corridor only, never fake local weather.
-    const ht=[10.3831,104.487534],htm=fullNowcast?.corridor_motion?.ha_tien||null;
-    bounds.push(ht);
-    const htMarker=L.circleMarker(ht,{radius:7,weight:2,color:"#fff",fillColor:"#7e6fb3",fillOpacity:.9}).addTo(jotripMap);
-    htMarker.bindTooltip("Hà Tiên · đối chiếu",{direction:"top",offset:[0,-7]});
-    htMarker.bindPopup('<div class="jotrip-map-popup"><b>Hà Tiên · đối chiếu</b><span>Điểm hành lang mây vệ tinh</span><small>'+
-      esc(htm?motionEtaText(htm):"Đang chờ Himawari")+'</small></div>');
-
-    // Deduplicate cloud objects by current center and only draw public-usable paths.
-    const cloudSeen=new Set();
-    [...islandIds(),"rach_gia"].forEach(id=>{
-      const n=effectiveNowcastFor(id),m=n.cloud_motion||{};
-      const lat=num(m.cloud_center_lat),lon=num(m.cloud_center_lon);
-      if(lat===null||lon===null)return;
-      const key=lat.toFixed(2)+","+lon.toFixed(2);
-      if(!cloudSeen.has(key)){
-        cloudSeen.add(key);
-        L.circle([lat,lon],{
-          radius:18000,color:"#6b5fc5",weight:1,fillColor:"#8d82d8",fillOpacity:.14,dashArray:"5 5"
-        }).addTo(jotripMap).bindTooltip("Cụm mây Himawari",{direction:"top"});
-      }
-      if(!m.public_track_usable||!m.predicted_impact)return;
-      const target=pointCoords(id,critical?.points?.[id]);if(!target)return;
-      L.polyline([[lat,lon],target],{color:"#6b5fc5",weight:3,opacity:.78,dashArray:"8 7"}).addTo(jotripMap);
-      L.circleMarker(target,{radius:13,weight:1,color:"#6b5fc5",fillOpacity:0}).addTo(jotripMap)
-        .bindTooltip("Dự kiến ảnh hưởng "+motionEtaText(m),{direction:"bottom"});
-    });
-
-    if(bounds.length)jotripMap.fitBounds(bounds,{padding:[24,24],maxZoom:10});
-    else jotripMap.setView([10.20,104.05],9);
-    const legend=L.control({position:"bottomleft"});
-    legend.onAdd=()=>{
-      const d=L.DomUtil.create("div","jotrip-map-legend");
-      d.innerHTML='<b>JoTrip Intelligence</b><span><i class="lg-point"></i>Điểm phân tích</span><span><i class="lg-rain"></i>VRain đo thực</span><span><i class="lg-cloud"></i>Cụm mây Himawari</span>';
-      return d;
-    };
-    legend.addTo(jotripMap);
-    setTimeout(()=>jotripMap?.invalidateSize(),80);
+  const existing=box.querySelector('iframe[data-jotrip-spatial]');
+  if(existing){
     if(state){state.textContent="LIVE";state.className="badge actual"}
-    if(note)note.textContent="JoTrip Intelligence · màu điểm phản ánh mưa/gió hiện tại; vòng tím là cụm mây Himawari. Chỉ vẽ đường tới điểm khi quỹ đạo đủ ổn định và dự kiến thật sự đi qua khu vực.";
-  }catch(e){
-    console.warn("[Weather V2] JoTrip map",e);
-    box.innerHTML='<div class="map-placeholder"><b>Chưa tải được nền bản đồ</b><span>Số liệu JoTrip vẫn hoạt động. Bạn có thể chuyển sang Radar, Himawari hoặc Windy để đối chiếu.</span></div>';
-    if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}
-    if(note)note.textContent="Lớp JoTrip Intelligence chưa tải được nền bản đồ trong lần này; các lớp đối chiếu bên cạnh vẫn dùng được.";
+    return;
   }
+  if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
+  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260919-62&embed=1"></iframe>';
+  const frame=box.firstChild;
+  frame.onload=()=>{
+    if(state){state.textContent="LIVE";state.className="badge actual"}
+    if(note)note.textContent="JoTrip Spatial V6.2 · bản đồ nội bộ tổng hợp gió, mưa, mưa 24h, sóng, dòng chảy, mây, radar, Actual và Risk. Các lớp Radar/Windy/Himawari riêng vẫn giữ bên cạnh để đối chiếu.";
+  };
+  frame.onerror=()=>{
+    if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}
+    if(note)note.textContent="Chưa tải được JoTrip Spatial trong lần này. Radar, Himawari IR, Windy gió, mưa và sóng vẫn dùng bình thường.";
+  };
 }
+
 function setMap(type){
   mapLayer=type;
   document.querySelectorAll("[data-map]").forEach(b=>b.classList.toggle("active",b.dataset.map===type));
@@ -1657,7 +1659,7 @@ function setMap(type){
 }
 function refreshActiveMap(){
   if(!mapStarted)return;
-  if(mapLayer==="jotrip"){renderJoTripMap();return}
+  if(mapLayer==="jotrip")return;
   if(mapLayer==="himawari"){setMap("himawari")}
 }
 function startMap(){
@@ -1808,7 +1810,7 @@ function events(){
     const compare=e.target.closest("[data-compare]");
     if(compare?.dataset.compare==="ha_tien"){
       startMap();setMap("jotrip");
-      setTimeout(()=>{if(jotripMap){jotripMap.setView([10.3831,104.487534],10)}},350);
+      document.querySelector(".command-center")?.scrollIntoView({behavior:"smooth",block:"start"});
       return;
     }
     const b=e.target.closest("[data-point]");if(!b)return;

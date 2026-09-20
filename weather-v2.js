@@ -348,7 +348,14 @@ function renderHazardBoard(){
   if(storm?.score>=75)stormLevel=3;
   else if(storm?.score>=60)stormLevel=2;
   else if(storm?.score>=40)stormLevel=1;
-  setHazard("hazardStorm",storm?fmt(storm.score,0)+"/100":"-",storm?"Chỉ số đối lưu · "+esc(storm.p.name)+(storm.cooling!==null?" · Δ20p "+fmt(storm.cooling,1)+"°C":"")+" · không phải xác suất dông":"Chưa có Himawari",stormLevel);
+  const stormNow=storm?effectiveNowcastFor(storm.id):null;
+  const stormCloud=stormNow?cloudStateLabel(stormNow):null;
+  setHazard(
+    "hazardStorm",
+    stormCloud?stormCloud.label:"-",
+    stormCloud?(esc(storm.p.name)+" · "+esc(stormCloud.detail||"Theo dõi ảnh vệ tinh")):"Chưa có Himawari",
+    stormLevel
+  );
 
   const wind=future.map(x=>({...x,val:num(x.row.wind?.prob)||0})).sort((a,b)=>b.val-a.val)[0];
   const windLvl=probabilityLevel(wind?.val);
@@ -375,7 +382,8 @@ function renderPointTabs(){
   nav.innerHTML=ids.map(id=>{
     const off=id==="rach_gia";
     return '<button class="'+(id===current?'active ':'')+(off?'off-island':'')+'" data-point="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+(off?' · đối chiếu':'')+'</button>';
-  }).join("");
+  }).join("")+
+  '<button class="off-island" data-compare="ha_tien" title="Đối chiếu hành lang mây Himawari tại Hà Tiên">Hà Tiên · đối chiếu</button>';
 }
 
 function renderStatus(){
@@ -767,7 +775,7 @@ function renderCloudMotionTable(){
   });
   const corridor=fullNowcast?.corridor_motion?.ha_tien;
   if(corridor){
-    rows.push({name:"Hà Tiên - hành lang mây",nowcast:{convective_score:num(corridor.max_convective_score),cloud_motion:corridor},score:num(corridor.max_convective_score),motion:corridor,sampled:fullNowcast.sampled_time,corridor:true});
+    rows.push({name:"Hà Tiên - đối chiếu",nowcast:{convective_score:num(corridor.max_convective_score),cloud_motion:corridor},score:num(corridor.max_convective_score),motion:corridor,sampled:fullNowcast.sampled_time,corridor:true});
   }
   if(!rows.length){
     body.innerHTML='<tr><td colspan="6">Chưa có dữ liệu chuyển động mây.</td></tr>';
@@ -1777,8 +1785,14 @@ function shareWeather(){
 }
 function events(){
   $("pointTabs")?.addEventListener("click",e=>{
+    const compare=e.target.closest("[data-compare]");
+    if(compare?.dataset.compare==="ha_tien"){
+      startMap();setMap("jotrip");
+      setTimeout(()=>{if(jotripMap){jotripMap.setView([10.3831,104.487534],10)}},350);
+      return;
+    }
     const b=e.target.closest("[data-point]");if(!b)return;
-    current=b.dataset.point;renderAll();
+    current=b.dataset.point;renderAll();refreshActiveMap();
   });
   document.querySelectorAll("[data-map]").forEach(b=>b.addEventListener("click",()=>{startMap();setMap(b.dataset.map)}));
   $("intradayTabs")?.addEventListener("click",e=>{

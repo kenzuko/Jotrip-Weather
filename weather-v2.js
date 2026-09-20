@@ -1011,7 +1011,6 @@ function renderIntradayChart(){
   for(let t=firstMidnight;t<=data.end+12*H1;t+=12*H1){
     if(t<data.start-30*60*1000)continue;
     const xx=xMs(t),lab=localTickLabel(t);
-    if(t% (24*H1)===((17*H1)%(24*H1))){} // no-op; local-midnight markers handled by offset-derived base
     out+='<line x1="'+xx.toFixed(1)+'" y1="'+T+'" x2="'+xx.toFixed(1)+'" y2="'+(H-B)+'" class="chart-time-grid"/>';
     out+='<text x="'+xx.toFixed(1)+'" y="'+(H-25)+'" text-anchor="middle" class="chart-axis-date">'+esc(lab.date)+'</text>';
     out+='<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" class="chart-axis-label">'+esc(lab.time)+'</text>';
@@ -1298,7 +1297,9 @@ function events(){
   });
   $("intradayChart")?.addEventListener("click",e=>{
     const el=e.target.closest("[data-tip]");if(!el)return;
-    try{$("intradayFocus").textContent=decodeURIComponent(el.dataset.tip||"")}catch{}
+    const key=el.dataset.key;
+    document.querySelectorAll("#intradayChart [data-key]").forEach(node=>node.classList.toggle("selected",Boolean(key)&&node.dataset.key===key));
+    setIntradayFocus(el.dataset.tip||"");
   });
   $("forecastRegionTabs")?.addEventListener("click",e=>{
     const b=e.target.closest("[data-region]");if(!b)return;

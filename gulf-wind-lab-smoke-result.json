@@ -1,15 +1,15 @@
 {
-  "ok": true,
-  "stage": "done",
+  "ok": false,
+  "stage": "wait-data",
   "status": "ECMWF GULF · 1.1 giờ trước",
-  "perf": "FPS 10 · LOAD 0.5s · PACK 217KB",
+  "perf": "FPS 60 · LOAD 0.4s · PACK 217KB",
   "time": "22:00 20-09",
-  "probe": "8.8 km/h",
-  "mapCanvasCount": 1,
-  "flowCanvasPixels": 3921,
+  "probe": "Chạm bản đồ để đọc gió",
+  "mapCanvasCount": 0,
+  "flowCanvasPixels": 0,
   "errorVisible": false,
   "errorText": null,
   "pageErrors": [],
   "consoleErrors": [],
-  "failure": null
+  "failure": "page.waitForFunction: Timeout 30000ms exceeded.\n    at /home/runner/work/Jotrip-Weather/Jotrip-Weather/gulf-wind-lab-smoke.mjs:40:14"
 }

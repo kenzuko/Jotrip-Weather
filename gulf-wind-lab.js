@@ -4,7 +4,7 @@ const DATA_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-poc/gulf-wind.json';
 const CARTO_KEY = 'cb1_3q98_1_d8112ce70cc7ec9b9276b0a0';
 const ENABLE_PARTICLES = false;
-const BUILD_ID = 'POC3-CARTO-CUBIC-FLOW';
+const BUILD_ID = 'POC4-NATURAL-FLOW';
 const FALLBACK_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json';
 
@@ -633,8 +633,8 @@ function updateLabels() {
   $('runLabel').textContent = runText(state.pack.run_time);
   $('slider').value = String(state.frameIndex);
   $('status').textContent =
-    (state.sourceMode === 'GULF' ? 'GULF FIELD' : 'FALLBACK GRID') +
-    ' · CARTO · CUBIC · ' + BUILD_ID + ' · ' + ageText(state.pack.generated_at);
+    (state.sourceMode === 'GULF' ? 'ECMWF GULF' : 'ECMWF LOCAL') +
+    ' · ' + ageText(state.pack.generated_at);
 }
 
 async function showFrame(index, immediate = false) {
@@ -802,11 +802,14 @@ function drawWindFlow(ts) {
   // and continuity without sharing MapLibre's WebGL context.
   ctx.save();
   ctx.globalCompositeOperation = 'destination-in';
-  ctx.fillStyle = 'rgba(0,0,0,0.925)';
+  ctx.fillStyle = 'rgba(0,0,0,0.865)';
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
 
-  const targetCount = innerWidth < 700 ? 520 : 900;
+  const zoom = map.getZoom();
+  const targetCount = innerWidth < 700
+    ? (zoom > 6.1 ? 230 : 360)
+    : (zoom > 6.1 ? 380 : 620);
   while (state.flow.particles.length < targetCount) {
     state.flow.particles.push(seedFlowParticle({}));
   }
@@ -818,11 +821,12 @@ function drawWindFlow(ts) {
   ctx.globalCompositeOperation = 'source-over';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = innerWidth < 700 ? 1.05 : 0.9;
-  ctx.strokeStyle = 'rgba(255,255,255,0.70)';
-  ctx.shadowColor = 'rgba(7,43,57,0.50)';
-  ctx.shadowBlur = 1.4;
+  ctx.lineWidth = innerWidth < 700 ? 0.9 : 0.8;
+  ctx.strokeStyle = 'rgba(255,255,255,0.46)';
+  ctx.shadowBlur = 0;
   ctx.beginPath();
+
+  const heads = [];
 
   for (const p of state.flow.particles) {
     p.age += dt;
@@ -866,12 +870,16 @@ function drawWindFlow(ts) {
     // Display speed is deliberately exaggerated so direction is legible.
     // Numerical speed remains the ECMWF value shown by the probe.
     const speedNorm = clamp(vector.speedKmh / 36, 0, 1);
-    const pixels = (0.58 + speedNorm * 1.55) * dt;
+    const pixels = (0.52 + speedNorm * 1.30) * dt;
     const toX = from.x + dx * pixels;
     const toY = from.y + dy * pixels;
 
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(toX, toY);
+
+    if ((p.maxAge % 11) === 0 && p.age > 5) {
+      heads.push({ x: toX, y: toY, dx, dy });
+    }
 
     const next = map.unproject([toX, toY]);
     p.lon = next.lng;
@@ -879,6 +887,26 @@ function drawWindFlow(ts) {
   }
 
   ctx.stroke();
+
+  if (heads.length) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+    ctx.lineWidth = innerWidth < 700 ? 1.0 : 0.9;
+    ctx.beginPath();
+    for (const h of heads) {
+      const back = 3.2;
+      const wing = 1.8;
+      const bx = h.x - h.dx * back;
+      const by = h.y - h.dy * back;
+      const px = -h.dy;
+      const py = h.dx;
+      ctx.moveTo(h.x, h.y);
+      ctx.lineTo(bx + px * wing, by + py * wing);
+      ctx.moveTo(h.x, h.y);
+      ctx.lineTo(bx - px * wing, by - py * wing);
+    }
+    ctx.stroke();
+  }
+
   ctx.restore();
 
   state.flow.raf = requestAnimationFrame(drawWindFlow);
@@ -994,7 +1022,7 @@ function bindUI() {
     $('probeValue').textContent = s.speedKmh.toFixed(1) + ' km/h';
     $('probeMeta').textContent =
       cardinal(s.direction) + ' ' + Math.round(s.direction) + '° · ' +
-      localTime(frame.valid_time) + ' · màu = tốc độ · vệt = hướng · grid 0.25°';
+      localTime(frame.valid_time) + ' · màu = tốc độ · vệt = hướng gió';
   });
 }
 

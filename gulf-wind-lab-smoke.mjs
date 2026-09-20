@@ -11,6 +11,7 @@ const result = {
   time: null,
   probe: null,
   mapCanvasCount: 0,
+  flowCanvasPixels: 0,
   errorVisible: null,
   errorText: null,
   pageErrors: errors,
@@ -57,6 +58,20 @@ try {
   result.status = await page.locator('#status').innerText();
   result.perf = await page.locator('#perf').innerText();
   result.time = await page.locator('#timeLabel').innerText();
+
+  result.stage = 'flow-canvas';
+  await page.waitForTimeout(1400);
+  result.flowCanvasPixels = await page.locator('#windFlow').evaluate((canvas) => {
+    if (!(canvas instanceof HTMLCanvasElement) || !canvas.width || !canvas.height) return 0;
+    const ctx = canvas.getContext('2d');
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let visible = 0;
+    for (let i = 3; i < data.length; i += 64) {
+      if (data[i] > 6) visible++;
+    }
+    return visible;
+  });
+  if (result.flowCanvasPixels < 8) throw new Error('Wind flow canvas did not draw visible trails');
 
   result.stage = 'grid-toggle';
   await page.locator('#gridBtn').click();

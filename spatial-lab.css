@@ -652,3 +652,59 @@ body.embed-mode .map-crosshair{transform:translate(-50%,-42%) scale(.82)}
   body.embed-mode .layer{min-width:50px}
 }
 
+/* V6.4 - clean Windy-like overview */
+.map .leaflet-tile-pane{filter:saturate(.78) brightness(.92) contrast(1.08)}
+.field-canvas{opacity:.80}
+.uncertainty-canvas{opacity:.72}
+body.embed-mode .readout>b{display:none}
+body.embed-mode .readout{
+  min-width:138px;
+  max-width:176px;
+  padding:7px 9px;
+  background:rgba(13,30,40,.76);
+  border-color:rgba(255,255,255,.08);
+  box-shadow:0 6px 18px rgba(0,0,0,.20)
+}
+body.embed-mode .readout>small{font-size:5.8px;color:#b8d1dc}
+body.embed-mode .readout-main strong{font-size:23px}
+body.embed-mode .readout-main span{font-size:7px}
+body.embed-mode .readout>p{font-size:6.7px;color:#d4e0e5}
+body.embed-mode .right-controls{top:39px}
+body.embed-mode .tool,
+body.embed-mode .toggle{
+  width:31px;min-width:31px;height:28px;border-radius:9px;
+  background:rgba(255,255,255,.76);
+  border-color:rgba(255,255,255,.58);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)
+}
+body.embed-mode .toggle.active{background:rgba(18,68,94,.82);color:#fff}
+body.embed-mode .status-pill{
+  background:rgba(255,255,255,.68);
+  border-color:rgba(255,255,255,.42);
+}
+body.embed-mode .alert-bar{display:none!important}
+body.embed-mode .timeline{bottom:48px}
+body.embed-mode .layerbar{background:rgba(11,27,36,.68);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+body.embed-mode .layer{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.10);color:#e9f2f6}
+body.embed-mode .layer.active{background:rgba(255,255,255,.92);color:#123e55}
+body.embed-mode .model-badge{display:none}
+body.embed-mode .actual-label,
+body.embed-mode .risk-label{display:none!important}
+body.embed-mode .actual-pin,
+body.embed-mode .risk-dot{display:none!important}
+body.embed-mode .leaflet-control-attribution{opacity:.55}
+body.embed-mode .windy-flag{
+  min-width:112px;
+  padding:6px 8px;
+  border-radius:8px;
+  background:rgba(12,28,38,.82);
+  color:#fff;
+  box-shadow:0 5px 16px rgba(0,0,0,.24);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)
+}
+body.embed-mode .windy-flag-place{display:none}
+body.embed-mode .windy-flag-value{font-size:18px}
+body.embed-mode .windy-flag-value small{font-size:7px}
+body.embed-mode .windy-flag-sub{font-size:6.5px;color:#d7e4ea;margin-top:2px}
+body.embed-mode .map-crosshair{opacity:.92}
+

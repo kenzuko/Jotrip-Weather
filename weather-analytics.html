@@ -40,7 +40,10 @@
           <h1>JoTrip Weather Analytics</h1>
           <p>Chỉ dữ liệu <b>ACTUAL</b> được dùng làm nhãn học. Estimated Now không được phép tự huấn luyện ngược vào forecast.</p>
         </div>
-        <div class="hero-time"><span>Cập nhật</span><b id="generatedAt">-</b></div>
+        <div class="hero-side">
+          <div class="hero-time"><span>Cập nhật</span><b id="generatedAt">-</b></div>
+          <div class="export-actions"><button id="exportCsv" type="button">Xuất CSV</button><button id="exportJson" type="button">Xuất JSON</button></div>
+        </div>
       </section>
 
       <section id="summary" class="summary-grid"></section>

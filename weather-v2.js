@@ -345,6 +345,8 @@ function renderHazardBoard(){
     .map(g=>({...g,rate:num(g.rain_intensity_mm_h)}))
     .sort((a,b)=>(b.rate||0)-(a.rate||0));
   const fieldRain=combinedRecentFeedback().find(x=>feedbackCategoryFromRecord(x)==="RAIN_MORE");
+  const recentGauge=gauges.filter(g=>num(g.recent_change_mm)>0&&num(g.recent_change_min)>0)
+    .sort((a,b)=>(b.recent_change_mm||0)-(a.recent_change_mm||0))[0];
   const wetGauge=gauges.find(g=>g.rain_observed===true&&(g.rate||0)>0);
   if(fieldRain){
     const nm=fieldRain.point_name||pointDisplayName(fieldRain.point_id);
@@ -363,6 +365,13 @@ function renderHazardBoard(){
         ?("VRain đo thực · +"+fmt(wetGauge.increment_mm,1)+" mm trong "+fmt(wetGauge.increment_min,0)+" phút")
         :"VRain đo thực · "+ageText(wetGauge.observed_at)),
       rate>=7.5?3:rate>=2.5?2:1
+    );
+  }else if(recentGauge){
+    setHazard(
+      "hazardRain",
+      recentGauge.name+": vừa ghi nhận có mưa",
+      "Tổng tại trạm tăng +"+fmt(recentGauge.recent_change_mm,1)+" mm trong khoảng "+fmt(recentGauge.recent_change_min,0)+" phút kể từ lần lấy trước. Chưa dùng khoảng này để tính mm/h hiện tại.",
+      1
     );
   }else{
     const localRain=points.map(x=>({name:x.p.name,rate:num(x.p.local?.rain_rate_mm_h)||0,cls:x.p.local?.rain_class}))
@@ -642,6 +651,9 @@ function renderActual(){
     }else if(acc===0){
       observed="TRẠM CHƯA GHI NHẬN MƯA";
       detail="VRain tại đúng vị trí trạm hiện ghi 0 mm trong kỳ quan trắc. Mưa cục bộ có thể xảy ra ngoài vị trí trạm."
+    }else if(num(x.recent_change_mm)>0&&num(x.recent_change_min)>0){
+      observed="VỪA GHI NHẬN CÓ MƯA";
+      detail="Trạm tăng thêm "+fmt(x.recent_change_mm,1)+" mm trong khoảng "+fmt(x.recent_change_min,0)+" phút kể từ lần lấy dữ liệu trước. Khoảng lấy mẫu quá dài nên không dùng để tính cường độ mưa hiện tại.";
     }else if(acc!==null&&acc>0){
       observed="ĐÃ CÓ MƯA TRONG KỲ";
       detail="Tổng kỳ "+fmt(acc,1)+" mm · chưa đủ hai mẫu gần nhau để kết luận đang mưa ngay lúc này.";

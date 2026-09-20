@@ -1,17 +1,15 @@
 {
   "ok": false,
-  "stage": "wait-data",
-  "status": "Đang nạp field…",
+  "stage": "grid-toggle",
+  "status": "ECMWF GULF · 1.7 giờ trước",
   "perf": "FPS -- · LOAD -- · PACK --",
-  "time": "--:--",
+  "time": "22:00 20-09",
   "probe": "Chạm bản đồ để đọc gió",
-  "mapCanvasCount": 0,
-  "flowCanvasPixels": 0,
+  "mapCanvasCount": 1,
+  "flowCanvasPixels": 2615,
   "errorVisible": false,
   "errorText": null,
-  "pageErrors": [
-    "TypeError: Cannot read properties of null (reading 'addEventListener')"
-  ],
+  "pageErrors": [],
   "consoleErrors": [],
-  "failure": "page.waitForFunction: Timeout 30000ms exceeded.\n    at /home/runner/work/Jotrip-Weather/Jotrip-Weather/gulf-wind-lab-smoke.mjs:40:14"
+  "failure": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('#gridBtn')\n\n    at /home/runner/work/Jotrip-Weather/Jotrip-Weather/gulf-wind-lab-smoke.mjs:77:34"
 }

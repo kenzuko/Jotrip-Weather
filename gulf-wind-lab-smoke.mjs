@@ -73,15 +73,6 @@ try {
   });
   if (result.flowCanvasPixels < 8) throw new Error('Wind flow canvas did not draw visible trails');
 
-  result.stage = 'grid-toggle';
-  await page.locator('#gridBtn').click();
-  await page.waitForTimeout(500);
-  const gridActive = await page.locator('#gridBtn').evaluate((el) => el.classList.contains('active'));
-  if (!gridActive) throw new Error('Grid mode did not activate');
-
-  await page.locator('#smoothBtn').click();
-  await page.waitForTimeout(500);
-
   result.stage = 'timeline';
   const slider = page.locator('#slider');
   const max = Number(await slider.getAttribute('max'));

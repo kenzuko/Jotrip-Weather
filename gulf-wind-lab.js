@@ -4,7 +4,7 @@ const DATA_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-poc/gulf-wind.json';
 const CARTO_KEY = 'cb1_3q98_1_d8112ce70cc7ec9b9276b0a0';
 const ENABLE_PARTICLES = false;
-const BUILD_ID = 'POC2-CARTO-CUBIC';
+const BUILD_ID = 'POC3-CARTO-CUBIC-FLOW';
 const FALLBACK_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json';
 
@@ -28,6 +28,18 @@ const state = {
   packBytes: 0,
   sourceMode: 'POC',
   renderToken: 0,
+  flow: {
+    canvas: null,
+    ctx: null,
+    particles: [],
+    raf: null,
+    running: false,
+    lastTs: 0,
+    fromFrameIndex: 0,
+    toFrameIndex: 0,
+    transitionStart: 0,
+    transitionDuration: 760,
+  },
 };
 
 const BASE_STYLE = {
@@ -545,7 +557,7 @@ function setGridOpacity() {
   }
 }
 
-function fadeBetween(fromSlot, toSlot, token, duration = 260) {
+function fadeBetween(fromSlot, toSlot, token, duration = 280) {
   return new Promise((resolve) => {
     const start = performance.now();
     const tick = (now) => {
@@ -628,7 +640,11 @@ function updateLabels() {
 async function showFrame(index, immediate = false) {
   if (!state.pack?.frames?.length) return;
   const token = ++state.renderToken;
+  const previousFrameIndex = state.frameIndex;
   state.frameIndex = clamp(index, 0, state.pack.frames.length - 1);
+  state.flow.fromFrameIndex = previousFrameIndex;
+  state.flow.toFrameIndex = state.frameIndex;
+  state.flow.transitionStart = performance.now();
   updateLabels();
 
   let assets;
@@ -653,7 +669,7 @@ async function showFrame(index, immediate = false) {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     if (token !== state.renderToken) return;
     const old = state.activeSlot;
-    await fadeBetween(old, nextSlot, token);
+    await fadeBetween(old, nextSlot, token, state.playing ? 760 : 280);
     if (token !== state.renderToken) return;
     removeSlot(old);
     state.activeSlot = nextSlot;
@@ -670,6 +686,234 @@ async function showFrame(index, immediate = false) {
   };
   if ('requestIdleCallback' in window) requestIdleCallback(preload, { timeout: 1000 });
   else setTimeout(preload, 120);
+}
+
+function resizeWindFlow() {
+  const canvas = state.flow.canvas;
+  const ctx = state.flow.ctx;
+  if (!canvas || !ctx) return;
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const width = Math.max(1, canvas.clientWidth);
+  const height = Math.max(1, canvas.clientHeight);
+  const pxWidth = Math.round(width * dpr);
+  const pxHeight = Math.round(height * dpr);
+
+  if (canvas.width !== pxWidth || canvas.height !== pxHeight) {
+    canvas.width = pxWidth;
+    canvas.height = pxHeight;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    state.flow.particles.length = 0;
+  }
+}
+
+function flowBoundsContains(lng, lat) {
+  const b = state.pack?.bounds;
+  return !!b &&
+    lng >= b.west && lng <= b.east &&
+    lat >= b.south && lat <= b.north;
+}
+
+function seedFlowParticle(particle = {}) {
+  const canvas = state.flow.canvas;
+  if (!canvas || !state.pack) return particle;
+
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  let ll = null;
+
+  for (let attempt = 0; attempt < 14; attempt++) {
+    const x = Math.random() * width;
+    const y = Math.random() * height;
+    const candidate = map.unproject([x, y]);
+    if (flowBoundsContains(candidate.lng, candidate.lat)) {
+      ll = candidate;
+      break;
+    }
+  }
+
+  if (!ll) {
+    const b = state.pack.bounds;
+    ll = {
+      lng: b.west + Math.random() * (b.east - b.west),
+      lat: b.south + Math.random() * (b.north - b.south),
+    };
+  }
+
+  particle.lon = ll.lng;
+  particle.lat = ll.lat;
+  particle.age = Math.floor(Math.random() * 50);
+  particle.maxAge = 55 + Math.floor(Math.random() * 85);
+  return particle;
+}
+
+function flowVectorAt(lat, lon, now) {
+  if (!state.pack?.frames?.length) return null;
+  const from = state.pack.frames[clamp(state.flow.fromFrameIndex, 0, state.pack.frames.length - 1)];
+  const to = state.pack.frames[clamp(state.flow.toFrameIndex, 0, state.pack.frames.length - 1)];
+  if (!from || !to) return null;
+
+  const a = sampleAt(from, lat, lon);
+  const b = sampleAt(to, lat, lon);
+  if (!a && !b) return null;
+  if (!a) return b;
+  if (!b) return a;
+
+  const elapsed = Math.max(0, now - state.flow.transitionStart);
+  const t = clamp(elapsed / Math.max(1, state.flow.transitionDuration), 0, 1);
+  const eased = t * t * (3 - 2 * t);
+  const u = a.u * (1 - eased) + b.u * eased;
+  const v = a.v * (1 - eased) + b.v * eased;
+
+  return {
+    u,
+    v,
+    speedKmh: Math.hypot(u, v) * 3.6,
+  };
+}
+
+function clearWindFlow(reseed = true) {
+  const canvas = state.flow.canvas;
+  const ctx = state.flow.ctx;
+  if (!canvas || !ctx) return;
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  if (reseed) state.flow.particles.length = 0;
+}
+
+function drawWindFlow(ts) {
+  if (!state.flow.running) return;
+  const canvas = state.flow.canvas;
+  const ctx = state.flow.ctx;
+  if (!canvas || !ctx || !state.pack) {
+    state.flow.raf = requestAnimationFrame(drawWindFlow);
+    return;
+  }
+
+  resizeWindFlow();
+
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const previousTs = state.flow.lastTs || ts;
+  const dt = clamp((ts - previousTs) / 16.67, 0.45, 2.2);
+  state.flow.lastTs = ts;
+
+  // Fade previous trails instead of clearing the canvas. This gives direction
+  // and continuity without sharing MapLibre's WebGL context.
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = 'rgba(0,0,0,0.925)';
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  const targetCount = innerWidth < 700 ? 520 : 900;
+  while (state.flow.particles.length < targetCount) {
+    state.flow.particles.push(seedFlowParticle({}));
+  }
+  if (state.flow.particles.length > targetCount) {
+    state.flow.particles.length = targetCount;
+  }
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = innerWidth < 700 ? 1.05 : 0.9;
+  ctx.strokeStyle = 'rgba(255,255,255,0.70)';
+  ctx.shadowColor = 'rgba(7,43,57,0.50)';
+  ctx.shadowBlur = 1.4;
+  ctx.beginPath();
+
+  for (const p of state.flow.particles) {
+    p.age += dt;
+    if (p.age > p.maxAge || !flowBoundsContains(p.lon, p.lat)) {
+      seedFlowParticle(p);
+      continue;
+    }
+
+    const vector = flowVectorAt(p.lat, p.lon, ts);
+    if (!vector || vector.speedKmh < 0.12) {
+      seedFlowParticle(p);
+      continue;
+    }
+
+    const from = map.project([p.lon, p.lat]);
+    if (
+      from.x < -30 || from.y < -30 ||
+      from.x > width + 30 || from.y > height + 30
+    ) {
+      seedFlowParticle(p);
+      continue;
+    }
+
+    const cosLat = Math.max(0.2, Math.cos(p.lat * Math.PI / 180));
+    const previewSeconds = 120;
+    const dLon = (vector.u * previewSeconds) / (111320 * cosLat);
+    const dLat = (vector.v * previewSeconds) / 110540;
+    const guide = map.project([p.lon + dLon, p.lat + dLat]);
+
+    let dx = guide.x - from.x;
+    let dy = guide.y - from.y;
+    const mag = Math.hypot(dx, dy);
+    if (!Number.isFinite(mag) || mag < 0.0001) {
+      seedFlowParticle(p);
+      continue;
+    }
+
+    dx /= mag;
+    dy /= mag;
+
+    // Display speed is deliberately exaggerated so direction is legible.
+    // Numerical speed remains the ECMWF value shown by the probe.
+    const speedNorm = clamp(vector.speedKmh / 36, 0, 1);
+    const pixels = (0.58 + speedNorm * 1.55) * dt;
+    const toX = from.x + dx * pixels;
+    const toY = from.y + dy * pixels;
+
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(toX, toY);
+
+    const next = map.unproject([toX, toY]);
+    p.lon = next.lng;
+    p.lat = next.lat;
+  }
+
+  ctx.stroke();
+  ctx.restore();
+
+  state.flow.raf = requestAnimationFrame(drawWindFlow);
+}
+
+function initWindFlow() {
+  const canvas = $('windFlow');
+  if (!canvas) return;
+
+  state.flow.canvas = canvas;
+  state.flow.ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+  resizeWindFlow();
+  state.flow.running = true;
+  state.flow.lastTs = performance.now();
+  state.flow.fromFrameIndex = state.frameIndex;
+  state.flow.toFrameIndex = state.frameIndex;
+  state.flow.transitionStart = performance.now();
+
+  window.addEventListener('resize', () => {
+    resizeWindFlow();
+    clearWindFlow(true);
+  }, { passive: true });
+
+  map.on('movestart', () => clearWindFlow(true));
+  map.on('zoomstart', () => clearWindFlow(true));
+  map.on('moveend', () => {
+    resizeWindFlow();
+    clearWindFlow(true);
+  });
+  map.on('zoomend', () => {
+    resizeWindFlow();
+    clearWindFlow(true);
+  });
+
+  if (!state.flow.raf) state.flow.raf = requestAnimationFrame(drawWindFlow);
 }
 
 function directionFromUV(u, v) {
@@ -750,7 +994,7 @@ function bindUI() {
     $('probeValue').textContent = s.speedKmh.toFixed(1) + ' km/h';
     $('probeMeta').textContent =
       cardinal(s.direction) + ' ' + Math.round(s.direction) + '° · ' +
-      localTime(frame.valid_time) + ' · nội suy hiển thị từ grid 0.25°';
+      localTime(frame.valid_time) + ' · màu = tốc độ · vệt = hướng · grid 0.25°';
   });
 }
 
@@ -792,6 +1036,7 @@ async function boot() {
 
     if (ENABLE_PARTICLES) await ensureParticleRenderer();
     await showFrame(state.frameIndex, true);
+    initWindFlow();
 
     state.loadMs = performance.now() - state.loadStarted;
     updateLabels();

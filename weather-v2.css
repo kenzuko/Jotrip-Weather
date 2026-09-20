@@ -836,7 +836,22 @@ footer{font-size:9.5px}
 .feedback-toast.error{background:#fff0f1;color:#a34248}
 @media(max-width:700px){.feedback-actions.compact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.feedback-actions.compact button{font-size:11px;padding:10px 9px;min-height:42px}.feedback-toast{font-size:10.5px}}
 
-.metric-card>.metric-context{display:block;margin-top:7px;line-height:1.35;color:#527080;font-weight:600}
+.metric-card>.metric-context{display:block;margin-top:7px;line-height:1.45;color:#527080;font-weight:600}
+.metric-context .ctx-line{display:block}
+.metric-context .ctx-line+.ctx-line{margin-top:4px;color:#355f75}
+
+.cloud-nowcast-panel{margin-top:12px;overflow:hidden}
+.cloud-table-shell{overflow:auto;-webkit-overflow-scrolling:touch;border:1px solid #e1ebf0;border-radius:15px;margin-top:10px}
+.cloud-nowcast-table{width:100%;min-width:820px;border-collapse:collapse;background:#fff}
+.cloud-nowcast-table th{background:#f3f8fb;color:#5d7786;font-size:8.5px;letter-spacing:.04em;text-align:left;padding:9px 10px;border-bottom:1px solid #dce7ed;white-space:nowrap}
+.cloud-nowcast-table td{padding:10px;border-bottom:1px solid #edf2f5;color:#456476;font-size:9.5px;vertical-align:middle}
+.cloud-nowcast-table tr:last-child td{border-bottom:0}
+.cloud-nowcast-table td:first-child b,.cloud-nowcast-table td:nth-child(2) b,.cloud-nowcast-table td:nth-child(5) b{color:#274f66}
+.cloud-nowcast-table td:nth-child(2) small{display:block;margin-top:2px;color:#8a9aa3;font-size:8px}
+@media(max-width:700px){
+  .cloud-nowcast-panel{padding:14px}
+  .cloud-nowcast-table{min-width:760px}
+}
 
 
 /* Intraday operational chart */

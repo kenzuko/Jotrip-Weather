@@ -1,16 +1,14 @@
 {
-  "ok": false,
-  "stage": "probe",
-  "status": "GULF FIELD · 9 phút trước",
-  "perf": "FPS 41 · LOAD 5.8s · PACK 217KB",
+  "ok": true,
+  "stage": "done",
+  "status": "GULF FIELD · CARTO · CUBIC · 42 phút trước",
+  "perf": "FPS -- · LOAD -- · PACK --",
   "time": "22:00 20-09",
-  "probe": "Chạm bản đồ để đọc gió",
+  "probe": "8.8 km/h",
   "mapCanvasCount": 1,
-  "errorVisible": true,
-  "errorText": "Particle renderer không tải được, nhưng basemap và scalar wind field vẫn giữ nguyên. The requested module '/@luma.gl/core@9.4.2/es2022/core.mjs' does not provide an export named 'getDataType'",
+  "errorVisible": false,
+  "errorText": null,
   "pageErrors": [],
-  "consoleErrors": [
-    "[Gulf Wind Lab] particle renderer failed SyntaxError: The requested module '/@luma.gl/core@9.4.2/es2022/core.mjs' does not provide an export named 'getDataType'"
-  ],
-  "failure": "Error: Probe did not respond to map click: Chạm bản đồ để đọc gió\n    at file:///home/runner/work/Jotrip-Weather/Jotrip-Weather/gulf-wind-lab-smoke.mjs:82:11"
+  "consoleErrors": [],
+  "failure": null
 }

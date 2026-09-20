@@ -1,0 +1,48 @@
+name: Gulf Wind POC browser smoke
+
+on:
+  push:
+    paths:
+      - "gulf-wind-lab.html"
+      - "gulf-wind-lab.css"
+      - "gulf-wind-lab.js"
+      - "gulf-wind-lab-smoke.mjs"
+      - ".github/workflows/gulf-wind-lab-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 >/tmp/gulf-wind-http.log 2>&1 &
+          echo $! >/tmp/gulf-wind-http.pid
+          sleep 2
+
+      - name: Run browser smoke
+        run: node gulf-wind-lab-smoke.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gulf-wind-lab-smoke
+          path: |
+            /tmp/gulf-wind-lab-mobile.png
+            /tmp/gulf-wind-http.log
+          retention-days: 7

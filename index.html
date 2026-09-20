@@ -100,8 +100,8 @@
       <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
     </article>
     <article class="metric-card">
-      <div><span>Đối lưu</span><em class="badge remote">VỆ TINH</em></div>
-      <b id="convectiveNow">--</b><small>chỉ số đối lưu /100</small>
+      <div><span>Mây phát triển</span><em class="badge remote">VỆ TINH</em></div>
+      <b id="convectiveNow">--</b><small>mức phát triển mây /100</small>
     </article>
     <article class="metric-card">
       <div><span>Sóng Hs</span><em id="marineClass" class="badge model">MÔ HÌNH</em></div>
@@ -134,8 +134,8 @@
             <th>Tình trạng mây</th>
             <th>Mây đang ở phía</th>
             <th>Hướng di chuyển</th>
-            <th>Ước tính tới điểm</th>
-            <th>Tin cậy track</th>
+            <th>Có thể tới khu vực</th>
+            <th>Độ chắc đường đi</th>
           </tr>
         </thead>
         <tbody id="cloudMotionRows">
@@ -143,7 +143,7 @@
         </tbody>
       </table>
     </div>
-    <small class="panel-foot">ETA là ngoại suy chuyển động cụm mây đối lưu từ ảnh vệ tinh liên tiếp, không phải cam kết thời điểm bắt đầu mưa. Số mm/h hiện tại và quan trắc VRain vẫn được giữ riêng.</small>
+    <small class="panel-foot">“Độ chắc đường đi” cho biết hướng mây có ổn định qua nhiều ảnh Himawari hay chưa. Thời gian tới khu vực chỉ hiện khi cụm mây thực sự đang hướng vào điểm; đây không phải cam kết thời điểm bắt đầu mưa.</small>
   </section>
 
   <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ">
@@ -156,7 +156,7 @@
       <button type="button" data-intraday="rain">Mưa</button>
       <button type="button" data-intraday="temperature">Nhiệt</button>
       <button type="button" data-intraday="wave">Sóng</button>
-      <button type="button" data-intraday="convective">Đối lưu</button>
+      <button type="button" data-intraday="convective">Mây</button>
       <button type="button" data-intraday="tide">Triều</button>
     </nav>
     <div class="intraday-chart-shell">
@@ -175,7 +175,7 @@
     <summary>Các con số phía trên nghĩa là gì?</summary>
     <div class="number-guide-grid">
       <span><b>Mưa mm/h</b> - cường độ mưa ước tính tại thời điểm hiện tại. % tin cậy cho biết mức chắc chắn của phép ước tính, không phải xác suất sẽ có mưa.</span>
-      <span><b>Nowcast 0-60 phút</b> - tín hiệu ngắn hạn từ mây đối lưu, tốc độ phát triển, hướng di chuyển, model và ensemble. Mức CAO không có nghĩa là 82% xác suất mưa.</span>
+      <span><b>Nowcast 0-60 phút</b> - tín hiệu ngắn hạn từ độ cao/lạnh của đỉnh mây, xu hướng phát triển, hướng di chuyển, model và ensemble. Mức CAO không có nghĩa là 82% xác suất mưa.</span>
       <span><b>Gió giật</b> - giá trị dự báo gió giật của mô hình, khác với gió trung bình tại chỗ.</span>
       <span><b>Hs</b> - chiều cao sóng có ý nghĩa, dùng mô tả trạng thái biển nền. Đây không phải con sóng lớn nhất.</span>
       <span><b>Hmax</b> - chiều cao sóng lớn dùng để nhìn phần rủi ro của trạng thái biển. Khi chưa có giá trị trực tiếp, hệ thống dùng ước tính thống kê và ghi rõ nguồn.</span>
@@ -261,7 +261,7 @@
     <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Bản đồ sẽ tự tải khi cuộn tới đây</b><span>Không chặn phần số liệu phía trên.</span></div></div>
     <div id="mapNote" class="map-note">Radar và Himawari là lớp quan sát. Gió, mưa dự báo và sóng là lớp mô hình tham khảo để nhìn cấu trúc không gian - không thay Dự báo JoTrip.</div>
     <div id="mapConvective" class="map-convective">
-      <span><b>Đối lưu Himawari</b><strong id="mapConvectiveScore">-</strong></span>
+      <span><b>Mây phát triển Himawari</b><strong id="mapConvectiveScore">-</strong></span>
       <span><b>Đỉnh mây lạnh nhất</b><strong id="mapCloudTop">-</strong></span>
       <span><b>Biến thiên 20 phút</b><strong id="mapCooling">-</strong></span>
       <small>Đây là phân tích từ ảnh vệ tinh cho khu vực đang chọn, không phải xác suất có mưa hoặc sét.</small>
@@ -283,7 +283,7 @@
         <div id="islandSummary" class="island-summary">Đang tổng hợp tình hình toàn đảo...</div>
         <section id="hazardBoard" class="hazard-board" aria-label="Các nguy cơ cần theo dõi">
           <article><span>Mưa lớn</span><b id="hazardRain">Đang tính</b><small id="hazardRainMeta">-</small></article>
-          <article><span>Đối lưu - dông</span><b id="hazardStorm">Đang tính</b><small id="hazardStormMeta">-</small></article>
+          <article><span>Mây phát triển - dông</span><b id="hazardStorm">Đang tính</b><small id="hazardStormMeta">-</small></article>
           <article><span>Gió - biển</span><b id="hazardWind">Đang tính</b><small id="hazardWindMeta">-</small></article>
           <article><span>Biến động 10 ngày</span><b id="hazardVolatility">Đang tính</b><small id="hazardVolatilityMeta">-</small></article>
         </section>

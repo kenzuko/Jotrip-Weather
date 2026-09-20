@@ -724,8 +724,12 @@ function motionEtaText(m){
 function cloudImpactText(id,n){
   const p=critical?.points?.[id]||{},l=p.local||{},m=p.model||{},motion=n?.cloud_motion||{};
   if(!(motion.predicted_impact||String(motion.status||"").toUpperCase()==="NEARBY")){
-    if(String(motion.status||"").toUpperCase()==="PASSING_BY")return "Không dự kiến tác động trực tiếp";
-    return "Chưa phát cường độ";
+    const st=String(motion.status||"").toUpperCase();
+    if(st==="PASSING_BY")return "Không dự kiến mưa do cụm này";
+    if(st==="TRACK_UNCERTAIN")return "Chờ xác nhận đường đi";
+    if(st==="BEYOND_HORIZON")return "Chưa đánh giá ngoài 3 giờ";
+    if(st==="MOVING_AWAY")return "Không dự kiến tác động trực tiếp";
+    return "Chưa dự kiến tác động trực tiếp";
   }
   if(l.rain_impact_label)return l.rain_impact_label;
   const avg=Math.max(0,(num(m.rain_3h_mm)||0)/3),score=num(n?.convective_score)||0;

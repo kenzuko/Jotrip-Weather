@@ -4,6 +4,7 @@
 const CRITICAL="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json";
 const LOCAL_NOW="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/local-now.json";
 const GROUND_TRUTH="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/latest.json";
+const CURRENT_BUNDLE="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-current/latest.json";
 const TIDE=["https://kenzuko.github.io/Jotrip-Lab/weather/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
 const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
 const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"];
@@ -169,9 +170,17 @@ function overlayFreshGroundTruth(base,ground){
   return base;
 }
 async function getCriticalWithFreshLocal(){
-  const [base,local,ground]=await Promise.allSettled([getJSON(CRITICAL),getJSON(LOCAL_NOW),getJSON(GROUND_TRUTH)]);
+  const [base,bundle]=await Promise.allSettled([getJSON(CRITICAL,2*60*1000),getJSON(CURRENT_BUNDLE,2*60*1000)]);
   if(base.status!=="fulfilled")throw base.reason;
   critical=base.value;
+  if(bundle.status==="fulfilled"){
+    const live=bundle.value||{};
+    if(live.local_now)overlayFreshLocalNow(critical,live.local_now);
+    if(live.groundtruth)overlayFreshGroundTruth(critical,live.groundtruth);
+    if(live.nowcast&&live.nowcast.points)fullNowcast=live.nowcast;
+    return critical;
+  }
+  const [local,ground]=await Promise.allSettled([getJSON(LOCAL_NOW,2*60*1000),getJSON(GROUND_TRUTH,2*60*1000)]);
   if(local.status==="fulfilled")overlayFreshLocalNow(critical,local.value);
   if(ground.status==="fulfilled")overlayFreshGroundTruth(critical,ground.value);
   return critical;
@@ -1003,7 +1012,7 @@ async function feedback(kind,button){
     category_label:labels[kind]||kind,
     evidence_class:"FIELD_FEEDBACK_UNVERIFIED",
     accepted_as_ground_truth:false,
-    engine:critical?.source_state?.local_engine||"PQ_LOCAL_NOW_V1",
+    engine:critical?.source_state?.local_engine||"PQ_LOCAL_NOW_V2",
     snapshot_id:critical?.snapshot_id||null,
     source_cycles:critical?.source_cycles||null,
     estimate:{
@@ -1073,7 +1082,9 @@ async function refreshLive(){
     if(!critical?.points?.[current])current=critical.default_point||"duong_dong";
     renderAll();
     lastLiveRefreshAt=Date.now();
-    await Promise.allSettled([loadTide(),loadAQI(),loadNowcast(),loadRegionalForecast()]);
+    const jobs=[loadTide(),loadAQI(),loadRegionalForecast()];
+    if(!fullNowcast)jobs.push(loadNowcast());
+    await Promise.allSettled(jobs);
   }catch(e){
     console.warn("[Weather V2] live refresh",e);
     renderStatus();
@@ -1093,7 +1104,7 @@ async function boot(){
     installMapObserver();
     loadTide();
     defer(loadAQI,350);
-    defer(loadNowcast,500);
+    if(!fullNowcast)defer(loadNowcast,500);
     defer(loadRegionalForecast,700);
     setInterval(()=>{renderStatus();renderHero()},60000);
     setInterval(refreshLive,LIVE_REFRESH_MS);

@@ -1654,7 +1654,7 @@ function stopHimawariLoop(){
 async function startHimawariLoop(box,note,state){
   stopHimawariLoop();
   himawariLoopPlaying=true;
-  box.innerHTML='<div class="himawari-loop"><img id="himawariImg" alt="Chuỗi ảnh vệ tinh Himawari IR B13"><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
+  box.innerHTML='<div class="himawari-loop"><div class="himawari-focus"><img id="himawariImg" alt="Chuỗi ảnh vệ tinh Himawari IR B13 tập trung khu vực Phú Quốc"><div class="himawari-pq-marker"><i></i><span>PHÚ QUỐC</span></div></div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
   const candidates=mapCandidates();
   const checked=await Promise.all(candidates.map(async x=>({...x,ok:await preloadImage(x.url)})));
   const frames=checked.filter(x=>x.ok).slice(0,9).reverse();
@@ -1679,7 +1679,7 @@ async function startHimawariLoop(box,note,state){
     play.textContent=himawariLoopPlaying?"❚❚":"▶";
     play.setAttribute("aria-label",himawariLoopPlaying?"Tạm dừng ảnh vệ tinh":"Chạy ảnh vệ tinh");
   });
-  if(note)note.textContent="Himawari IR B13 · chuỗi ảnh gần-live khoảng 10 phút mỗi khung. Nhìn chuyển động mây theo thời gian, không phải radar mưa.";
+  if(note)note.textContent="Himawari IR B13 · đã phóng to vùng Vịnh Thái Lan quanh Phú Quốc để theo dõi mây có ảnh hưởng tới đảo. Chuỗi ảnh gần-live khoảng 10 phút mỗi khung, không phải radar mưa.";
   if(state){state.textContent="GẦN-LIVE";state.className="badge remote"}
 }
 function ensureLeaflet(){
@@ -1745,7 +1745,7 @@ async function renderJoTripMap(){
     return;
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
-  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260920-74&embed=1"></iframe>';
+  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260920-75&embed=1"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}

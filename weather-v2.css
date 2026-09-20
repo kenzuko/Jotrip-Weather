@@ -885,5 +885,44 @@ footer{font-size:9.5px}
   .intraday-tabs button{padding:8px 11px;font-size:8.5px}
   .intraday-under{grid-template-columns:1fr;gap:8px}
   .intraday-focus{text-align:left;max-width:none}
+  .intraday-head-meta{align-items:flex-start}
+  .intraday-signal{max-width:100%;white-space:normal}
 }
+
+
+
+/* 72h chart color system */
+.intraday-head-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.intraday-signal{display:none;max-width:360px;border-radius:999px;padding:6px 10px;font-size:8.5px;font-weight:850;letter-spacing:.01em}
+.intraday-signal.calm,.intraday-signal.watch,.intraday-signal.strong{display:inline-flex}
+.intraday-signal.calm{background:#e7f8f1;color:#17745a;border:1px solid #c9ecdf}
+.intraday-signal.watch{background:#fff3d5;color:#9b6414;border:1px solid #f3d899}
+.intraday-signal.strong{background:#ffe1e7;color:#ad334b;border:1px solid #f6b9c7}
+
+.intraday-panel[data-layer="wind"]{--chart-accent:#1596a7;--chart-accent2:#53c1b5;--chart-soft:rgba(21,150,167,.16)}
+.intraday-panel[data-layer="rain"]{--chart-accent:#3478f6;--chart-accent2:#7b61ff;--chart-soft:rgba(52,120,246,.18)}
+.intraday-panel[data-layer="temperature"]{--chart-accent:#f28c28;--chart-accent2:#ffbd4a;--chart-soft:rgba(242,140,40,.17)}
+.intraday-panel[data-layer="wave"]{--chart-accent:#0877b9;--chart-accent2:#11a6c7;--chart-soft:rgba(8,119,185,.16)}
+.intraday-panel[data-layer="convective"]{--chart-accent:#7d45d6;--chart-accent2:#e64b6f;--chart-soft:rgba(125,69,214,.15)}
+.intraday-panel[data-layer="tide"]{--chart-accent:#0b87a6;--chart-accent2:#3fc6d8;--chart-soft:rgba(11,135,166,.15)}
+.intraday-panel{--chart-accent:#173f57;--chart-accent2:#4280a3;--chart-soft:rgba(66,128,163,.12)}
+.intraday-panel .chart-history{stroke:var(--chart-accent)}
+.intraday-panel .chart-forecast{stroke:var(--chart-accent2)}
+.intraday-panel .chart-band{fill:var(--chart-soft)}
+.intraday-panel .chart-point{fill:var(--chart-accent)}
+.intraday-panel .chart-point.forecast{fill:var(--chart-accent2)}
+.intraday-panel .chart-q90-cap{stroke:var(--chart-accent2)}
+.intraday-panel[data-layer="rain"] .chart-bar{fill:rgba(52,120,246,.48)}
+.intraday-panel[data-layer="rain"] .chart-bar.forecast{fill:rgba(123,97,255,.56)}
+.intraday-panel[data-layer="convective"] .intraday-chart-shell{background:linear-gradient(180deg,#fbf8ff,#fff8f8)}
+.intraday-panel[data-layer="rain"] .intraday-chart-shell{background:linear-gradient(180deg,#f8fbff,#f7f7ff)}
+.intraday-panel[data-layer="temperature"] .intraday-chart-shell{background:linear-gradient(180deg,#fffaf3,#fffdf9)}
+.intraday-panel[data-layer="wave"] .intraday-chart-shell,.intraday-panel[data-layer="tide"] .intraday-chart-shell{background:linear-gradient(180deg,#f5fbfe,#f8fdff)}
+
+.tide-extreme{stroke:#fff;stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
+.tide-extreme.high{fill:#09a7b5}
+.tide-extreme.low{fill:#6b6ee8}
+.tide-extreme-label{font-size:8px;font-weight:900;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.tide-extreme-label.high{fill:#087d87}
+.tide-extreme-label.low{fill:#5557bd}
 

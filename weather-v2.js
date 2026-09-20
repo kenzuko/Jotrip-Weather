@@ -1767,15 +1767,15 @@ async function renderJoTripMap(){
     return;
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
-  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260920-79&embed=1"></iframe>';
+  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260920-82&embed=1"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}
-    if(note)note.textContent="Bản đồ JoTrip · tổng hợp gió, mưa, mưa 24 giờ, sóng, dòng chảy, mây, radar, số đo thực tế và mức cần chú ý. Các lớp Radar/Windy/Himawari riêng vẫn giữ bên cạnh để đối chiếu.";
+    if(note)note.textContent="Bản đồ JoTrip · gió ưu tiên luồng chuyển động; mưa theo vùng; mưa 24h theo tích lũy; sóng theo Hs + hướng; dòng theo vector; mây từ Himawari. Radar nằm trong chế độ Mưa.";
   };
   frame.onerror=()=>{
     if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}
-    if(note)note.textContent="Chưa tải được JoTrip Spatial trong lần này. Radar, Himawari IR, Windy gió, mưa và sóng vẫn dùng bình thường.";
+    if(note)note.textContent="Chưa tải được Bản đồ JoTrip trong lần này. Các số liệu và phần dự báo khác của trang vẫn hoạt động bình thường.";
   };
 }
 

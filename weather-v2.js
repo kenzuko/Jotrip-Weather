@@ -618,7 +618,7 @@ function renderCurrent(){
 function renderActual(){
   const a=critical.actual||{},v=a.vvpq||{},g=a.rain_gauges||[],cards=[];
   if(current==="rach_gia"){
-    cards.push('<article class="actual-card"><header><b>Rạch Giá</b><em class="badge model">MÔ HÌNH</em></header><strong>Chưa có số đo trực tiếp đang hoạt động</strong><small>Hiện chỉ dùng mô hình cùng Himawari, AQI và triều ở những nguồn có dữ liệu. Không kéo VVPQ/VRain Phú Quốc sang Rạch Giá.</small></article>');
+    cards.push('<article class="actual-card"><header><b>Rạch Giá</b><em class="badge model">MÔ HÌNH</em></header><strong>Chưa có số đo trực tiếp đang hoạt động</strong><small>Hiện chỉ dùng mô hình cùng Himawari, AQI và triều ở những nguồn đang có dữ liệu. Không lấy VVPQ/VRain Phú Quốc để đại diện cho Rạch Giá.</small></article>');
     $("actualStrip").innerHTML=cards.join("");
     $("actualState").textContent="Chưa có nguồn đo trực tiếp đang hoạt động";
     return;
@@ -1734,7 +1734,7 @@ async function renderJoTripMap(){
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}
-    if(note)note.textContent="JoTrip Spatial · bản đồ nội bộ tổng hợp gió, mưa, mưa 24h, sóng, dòng chảy, mây, radar, số đo thực tế và rủi ro. Các lớp Radar/Windy/Himawari riêng vẫn giữ bên cạnh để đối chiếu.";
+    if(note)note.textContent="Bản đồ JoTrip · tổng hợp gió, mưa, mưa 24 giờ, sóng, dòng chảy, mây, radar, số đo thực tế và mức cần chú ý. Các lớp Radar/Windy/Himawari riêng vẫn giữ bên cạnh để đối chiếu.";
   };
   frame.onerror=()=>{
     if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}

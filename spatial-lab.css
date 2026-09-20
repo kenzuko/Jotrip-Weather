@@ -1212,3 +1212,59 @@ body.embed-mode #recenterBtn{
   body.embed-mode .layer{font-size:6.8px;height:31px}
   body.embed-mode .scale{width:min(220px,64%)}
 }
+
+
+/* V6.10 - mobile visibility + timeline geometry fix */
+body.embed-mode .timeline{
+  left:7px!important;
+  right:7px!important;
+  width:auto!important;
+  transform:none!important;
+  bottom:47px!important;
+}
+body.embed-mode .timeline-head{
+  grid-template-columns:auto minmax(0,1fr)!important;
+}
+body.embed-mode #timeSlider{
+  width:100%!important;
+  min-width:0;
+}
+
+/* The canvas pixels already carry value-dependent alpha.
+   Do not fade the whole canvas a second time until the data becomes invisible. */
+body.embed-mode .map[data-weather-layer="rain"] #fieldCanvas{opacity:1!important}
+body.embed-mode .map[data-weather-layer="rain24"] #fieldCanvas{opacity:.88!important}
+body.embed-mode .map[data-weather-layer="waves"] #fieldCanvas{opacity:.78!important}
+body.embed-mode .map[data-weather-layer="storm"] #fieldCanvas{opacity:.82!important}
+
+/* Motion layers remain clean and map-first. */
+body.embed-mode .map[data-weather-layer="wind"] #fieldCanvas,
+body.embed-mode .map[data-weather-layer="current"] #fieldCanvas{opacity:0!important}
+body.embed-mode #flowCanvas{opacity:.88!important}
+
+/* On phones, preserve map area and keep overlays legible without becoming panels. */
+@media(max-width:560px){
+  body.embed-mode .readout{
+    top:38px;
+    min-width:112px;
+    max-width:150px;
+    padding:6px 8px;
+  }
+  body.embed-mode .context-modes{top:72px}
+  body.embed-mode .timeline{
+    left:6px!important;
+    right:6px!important;
+    bottom:45px!important;
+    padding:4px 6px 3px!important;
+  }
+  body.embed-mode .layerbar{
+    left:6px;
+    right:6px;
+    padding:4px!important;
+  }
+  body.embed-mode .scale{
+    left:8px;
+    bottom:88px;
+    width:min(220px,66%);
+  }
+}

@@ -1167,18 +1167,38 @@ function nearestEnsembleRow(p,lead){
   return best;
 }
 function currentRisk(p){
-  const l=p.local||{},m=p.model||{},n=p.nowcast||{},rows=(p.ensemble?.rows||[]).slice(0,2);
-  let level=0,reasons=[],wp=0,rp=0;
-  rows.forEach(r=>{wp=Math.max(wp,num(r.wind?.prob)||0);rp=Math.max(rp,num(r.rain?.prob)||0)});
-  const conv=num(n.convective_score??l.convection_score),gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),wave=num(l.wave_hs_m??m.wave_hs_m);
-  if(conv!==null&&conv>=75){level=Math.max(level,2);reasons.push("đối lưu cao")}else if(conv!==null&&conv>=60)level=Math.max(level,1);
-  if(gust!==null&&gust>=39){level=3;reasons.push("gió giật mạnh")}else if(gust!==null&&gust>=29){level=Math.max(level,2);reasons.push("gió giật tăng")}
-  if(rain!==null&&rain>=25){level=3;reasons.push("mưa 3 giờ lớn")}else if(rain!==null&&rain>=10){level=Math.max(level,2);reasons.push("mưa tăng")}
-  if(wave!==null&&wave>=2){level=3;reasons.push("sóng nền cao")}else if(wave!==null&&wave>=1.5){level=Math.max(level,2);reasons.push("sóng tăng")}
-  if(wp>=.25){level=Math.max(level,2);reasons.push("ensemble gió phân tán")}else if(wp>=.10)level=Math.max(level,1);
-  if(rp>=.5){level=Math.max(level,2);reasons.push("ensemble nghiêng về mưa")}else if(rp>=.25)level=Math.max(level,1);
+  const l=p.local||{},m=p.model||{},n=p.nowcast||{};
+  const id=Object.keys(state.critical?.points||{}).find(k=>state.critical.points[k]===p)||null;
+  const conv=num(n.convective_score??l.convection_score);
+  const wind=num(l.wind_kmh??m.wind_kmh),gust=num(m.gust_kmh);
+  const rain=num(l.rain_rate_mm_h),wave=num(l.wave_hs_m??m.wave_hs_m);
+  let level=0,reasons=[];
+
+  if(id&&recentFieldSignal(id,"RAIN_MORE")){
+    level=Math.max(level,3);
+    reasons.push("phản hồi tại chỗ cho biết mưa lớn hơn hệ thống đang ước tính");
+  }
+  if(id&&recentFieldSignal(id,"WIND_MORE")){
+    level=Math.max(level,2);
+    reasons.push("phản hồi tại chỗ cho biết gió mạnh hơn hệ thống đang ước tính");
+  }
+  if(rain!==null&&rain>=7.5){level=Math.max(level,3);reasons.push("mưa hiện tại đang mạnh")}
+  else if(rain!==null&&rain>=2.5){level=Math.max(level,2);reasons.push("mưa hiện tại ở mức vừa")}
+  else if(rain!==null&&rain>=.5){level=Math.max(level,1);reasons.push("đang có mưa nhẹ")}
+
+  if(conv!==null&&conv>=75){level=Math.max(level,2);reasons.push("có vùng mây rất cao, dễ kèm mưa dông")}
+  else if(conv!==null&&conv>=55){level=Math.max(level,1);reasons.push("mây đang phát triển")}
+
+  if(wind!==null&&wind>=40){level=Math.max(level,3);reasons.push("gió hiện tại đang rất mạnh")}
+  else if(wind!==null&&wind>=30){level=Math.max(level,2);reasons.push("gió hiện tại đang mạnh")}
+  else if(gust!==null&&gust>=40){level=Math.max(level,2);reasons.push("gió giật có thể tăng")}
+
+  if(wave!==null&&wave>=2){level=Math.max(level,3);reasons.push("sóng nền cao")}
+  else if(wave!==null&&wave>=1.5){level=Math.max(level,2);reasons.push("sóng đang tăng")}
+
   return {level,reasons};
 }
+
 function futureRisk(row){
   if(!row)return {level:0,reasons:[]};
   const wp=num(row.wind?.prob)||0,rp=num(row.rain?.prob)||0,w95=num(row.wind?.q95),r90=num(row.rain?.q90);
@@ -1238,24 +1258,24 @@ function updateConfidence(){
     return;
   }
   if(state.layer==="current"){
-    $("confidenceLabel").textContent="Copernicus near-now";
-    $("trendLabel").textContent="SURFACE CURRENT";
+    $("confidenceLabel").textContent="Dữ liệu biển gần hiện tại";
+    $("trendLabel").textContent="DÒNG MẶT";
     return;
   }
   if(state.layer==="storm"){
-    $("confidenceLabel").textContent="Observed satellite";
+    $("confidenceLabel").textContent="Ảnh vệ tinh quan trắc";
     $("trendLabel").textContent="HIMAWARI";
     return;
   }
   if(state.layer==="radar"){
-    $("confidenceLabel").textContent="Observed radar";
+    $("confidenceLabel").textContent="Radar quan trắc";
     $("trendLabel").textContent="RADAR";
     return;
   }
   const row=regionalForecastRow();
   const lead=currentLeadHours();
-  $("confidenceLabel").textContent=row?"Confidence "+fmt(row.confidence_score,0)+"/100":"Confidence --";
-  $("trendLabel").textContent=lead>72?"D"+Math.round(lead/24)+" · TREND":"+"+Math.round(lead)+"H";
+  $("confidenceLabel").textContent=row?"Tin cậy "+fmt(row.confidence_score,0)+"/100":"Tin cậy --";
+  $("trendLabel").textContent=lead>72?"Ngày "+Math.round(lead/24):"+"+Math.round(lead)+" giờ";
 }
 
 function renderScale(){
@@ -1273,46 +1293,58 @@ function renderScale(){
 }
 
 function updateReadout(){
+  const lead=currentLeadHours();
+  const near=lead<=3;
   if(state.layer==="radar"){
-    $("readoutSource").textContent="RADAR · OBSERVED SOURCE";
+    $("readoutSource").textContent="RADAR · QUAN TRẮC";
     $("readoutValue").textContent="RADAR";$("readoutUnit").textContent="";
     $("readoutPlace").textContent="Phú Quốc";
-    $("readoutMeta").textContent=state.radarMeta?"Chuỗi frame gần hiện tại":"Đang tải radar...";
+    $("readoutMeta").textContent=state.radarMeta?"Chuỗi ảnh gần thời điểm hiện tại":"Đang tải radar...";
     return;
   }
   const row=nearestRow(state.currentRows,state.selected.lat,state.selected.lon);
-  $("readoutPlace").textContent=POINTS[state.selected.anchor]?.name||"Điểm chọn";
+  const anchor=state.selected.anchor;
+  $("readoutPlace").textContent=POINTS[anchor]?.name||"Điểm chọn";
+
   if(state.layer==="wind"){
-    const control=productionMetric(state.selected.anchor,"wind");
-    const gust=productionMetric(state.selected.anchor,"gust");
-    const speed=control??num(row?.wind_kmh);
-    const dir=row?.wind_direction_deg;
-    $("readoutSource").textContent=control!==null?"JOTRIP WEATHER · ECMWF CONTROL":(activeECMWFFrame()?"ECMWF · SPATIAL":"GEFS · RAW P50");
+    const local=near?localMetric(anchor,"wind"):null;
+    const speed=local??num(row?.wind_kmh);
+    const dir=(near?localMetric(anchor,"wind_direction"):null)??row?.wind_direction_deg;
+    const gust=near?localMetric(anchor,"gust"):productionMetric(anchor,"gust");
+    $("readoutSource").textContent=local!==null?"JOTRIP LOCAL NOW · GIÓ":"MÔ HÌNH GIÓ · ECMWF";
     $("readoutValue").textContent=fmt(speed,0);$("readoutUnit").textContent="km/h";
-    $("readoutMeta").textContent="Gió từ "+directionText(dir)+(gust!==null?" · giật "+fmt(gust,0)+" km/h":"");
+    $("readoutMeta").textContent=(dir!==null?"Gió từ "+directionText(dir):"Hướng gió chưa rõ")+(gust!==null?" · giật khoảng "+fmt(gust,0)+" km/h":"");
   }else if(state.layer==="rain"){
-    const control=productionMetric(state.selected.anchor,"rain");
-    $("readoutSource").textContent=control!==null?"JOTRIP WEATHER · ECMWF CONTROL":(activeECMWFFrame()?"ECMWF · SPATIAL":"GEFS · RAW P50");
-    $("readoutValue").textContent=fmt(control??row?.rain_mm,1);$("readoutUnit").textContent="mm";
-    $("readoutMeta").textContent="Mưa trong bước thời gian đang chọn";
+    const local=near?localMetric(anchor,"rain"):null;
+    if(local!==null){
+      $("readoutSource").textContent="JOTRIP LOCAL NOW · MƯA";
+      $("readoutValue").textContent=fmt(local,1);$("readoutUnit").textContent="mm/h";
+      const field=recentFieldSignal(anchor,"RAIN_MORE");
+      $("readoutMeta").textContent=field?"Phản hồi thực địa mới: mưa đang nhiều hơn ước tính":"Ước tính mưa hiện tại tại khu vực";
+    }else{
+      $("readoutSource").textContent="MÔ HÌNH MƯA · ECMWF";
+      $("readoutValue").textContent=fmt(row?.rain_mm,1);$("readoutUnit").textContent="mm";
+      $("readoutMeta").textContent="Lượng mưa trong mốc dự báo đang chọn";
+    }
   }else if(state.layer==="rain24"){
-    $("readoutSource").textContent="ECMWF · NEXT 24H ACCUMULATION";
+    $("readoutSource").textContent="ECMWF · MƯA 24 GIỜ TỚI";
     $("readoutValue").textContent=fmt(row?.rain24_mm,1);$("readoutUnit").textContent="mm";
-    $("readoutMeta").textContent="Dự báo tích lũy 24 giờ tới · không phải quan trắc 24h";
+    $("readoutMeta").textContent="Lượng mưa dự báo tích lũy 24 giờ · không phải số đo thực tế";
   }else if(state.layer==="waves"){
-    const near=isNearNowMarine()&&marineWaveRows().length;
-    $("readoutSource").textContent=near?"COPERNICUS · WAVE NEAR-NOW":"ECMWF WAVE · MOST LIKELY";
-    $("readoutValue").textContent=fmt(validWaveHs(row?.wave_hs_m),1);$("readoutUnit").textContent="m Hs";
+    const local=near?localMetric(anchor,"wave"):null;
+    $("readoutSource").textContent=local!==null?"JOTRIP · SÓNG HIỆN TẠI":"MÔ HÌNH SÓNG · ECMWF";
+    $("readoutValue").textContent=fmt(local??validWaveHs(row?.wave_hs_m),1);$("readoutUnit").textContent="m Hs";
     const waveDir=validWaveDir(row?.wave_direction_deg);
-    $("readoutMeta").textContent="Sóng từ "+directionText(waveDir)+" · chu kỳ "+fmt(validWavePeriod(row?.wave_period_s??row?.wave_mean_period_s??row?.wave_peak_period_s),1)+" s";
+    $("readoutMeta").textContent="Sóng từ "+directionText(waveDir)+" · chu kỳ "+fmt(validWavePeriod(row?.wave_period_s??row?.wave_mean_period_s??row?.wave_peak_period_s),1)+" giây";
   }else if(state.layer==="current"){
-    $("readoutSource").textContent="COPERNICUS · SURFACE CURRENT";
+    $("readoutSource").textContent="COPERNICUS · DÒNG CHẢY MẶT";
     $("readoutValue").textContent=fmt(row?.speed_kmh,2);$("readoutUnit").textContent="km/h";
-    $("readoutMeta").textContent="Chảy về "+directionText(row?.direction_toward_deg)+" · near-now";
+    $("readoutMeta").textContent="Dòng chảy về "+directionText(row?.direction_toward_deg);
   }else{
-    $("readoutSource").textContent="HIMAWARI-9 · OBSERVED";
-    $("readoutValue").textContent=fmt(row?.convective_score,0);$("readoutUnit").textContent="/100";
-    $("readoutMeta").textContent="Proxy đối lưu · không phải quan trắc sét";
+    const score=num(row?.convective_score);
+    $("readoutSource").textContent="HIMAWARI · MÂY";
+    $("readoutValue").textContent=fmt(score,0);$("readoutUnit").textContent="/100";
+    $("readoutMeta").textContent=score>=75?"Vùng mây rất cao, có thể kèm mưa dông":score>=50?"Mây cao đang phát triển":"Chưa thấy vùng mây mạnh rõ";
   }
 }
 
@@ -1639,7 +1671,7 @@ function setStatus(){
   if(!state.gefs)missing.push("GEFS");
   if(!state.nowcast)missing.push("Himawari");
   const el=$("dataStatus").parentElement;
-  if(!missing.length){el.className="status-pill live";$("dataStatus").textContent="V5 LIVE"}
+  if(!missing.length){el.className="status-pill live";$("dataStatus").textContent="ĐANG HOẠT ĐỘNG"}
   else{el.className="status-pill warn";$("dataStatus").textContent="THIẾU "+missing.join("/")}
 }
 function sourceFreshness(){

@@ -576,26 +576,28 @@ function drawRainPatches(rows){
   ctx.clearRect(0,0,c.width,c.height);
   const pts=(rows||[]).map(r=>{
     const rain=validRange(r.rain_mm,0,500);
-    if(rain===null||rain<.05)return null;
+    if(rain===null||rain<.01)return null;
     const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
     return {x:p.x*s.sx,y:p.y*s.sy,n:fieldNorm(r,"rain"),rain};
   }).filter(Boolean);
   if(!pts.length)return;
 
   const spacing=spatialSupportRadius(pts);
-  const radius=Number.isFinite(spacing)?clamp(spacing*1.18,18,66):34;
+  const radius=Number.isFinite(spacing)
+    ?clamp(spacing*(innerWidth<760?1.42:1.26),innerWidth<760?24:20,innerWidth<760?82:72)
+    :(innerWidth<760?42:36);
 
   ctx.save();
   ctx.globalCompositeOperation="source-over";
   for(const p of pts){
-    if(p.n<.025)continue;
+    if(p.n<.012)continue;
     const rgb=colorAt("rain",p.n);
-    const alpha=clamp(.12+Math.pow(p.n,.72)*.62,.12,.76);
-    const r=radius*(.82+p.n*.42);
+    const alpha=clamp(.22+Math.pow(p.n,.66)*.62,.22,.86);
+    const r=radius*(.88+p.n*.38);
     const g=ctx.createRadialGradient(p.x,p.y,r*.10,p.x,p.y,r);
     g.addColorStop(0,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+alpha.toFixed(3)+")");
-    g.addColorStop(.48,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.72).toFixed(3)+")");
-    g.addColorStop(.78,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.30).toFixed(3)+")");
+    g.addColorStop(.44,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.78).toFixed(3)+")");
+    g.addColorStop(.78,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.34).toFixed(3)+")");
     g.addColorStop(1,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0)");
     ctx.fillStyle=g;
     ctx.beginPath();
@@ -1004,13 +1006,13 @@ function renderField(){
 
   // 24h accumulation is a scalar field: location and amount matter, not motion.
   if(state.layer==="rain24"){
-    drawIDW(rows,"rain24",.58);
+    drawIDW(rows,"rain24",innerWidth<760?.72:.62);
     return;
   }
 
   // Wave height is secondary context; short direction strokes do the explaining.
   if(state.layer==="waves"){
-    drawIDW(rows,"waves",.30);
+    drawIDW(rows,"waves",innerWidth<760?.42:.34);
     return;
   }
 
@@ -1022,7 +1024,7 @@ function renderField(){
 
   // Himawari: cloud mass / cold tops, not a generic weather heatmap.
   if(state.layer==="storm"){
-    drawCloudMass(rows,{clear:true,alphaScale:.78});
+    drawCloudMass(rows,{clear:true,alphaScale:innerWidth<760?.90:.82});
   }
 }
 

@@ -539,7 +539,14 @@ function colocatedRainActual(maxDistanceKm=1.5,maxAgeMinutes=25){
   return {...g,rate_mm_h:rate,state,age_minutes:age};
 }
 function rainActualContext(){
-  const g=nearestRainGauge();if(!g)return "";
+  const field=recentFeedbackFor(current,"RAIN_MORE");
+  const g=nearestRainGauge();
+  if(field){
+    const where=point().name||current;
+    const station=g?(" Trạm "+esc(g.name||"gần nhất")+" cách "+fmt(g.distance_km,1)+" km có thể ghi khác vì mưa cục bộ."):"";
+    return "Phản hồi tại chỗ mới: "+esc(where)+" đang mưa nhiều hơn hệ thống ước tính."+station;
+  }
+  if(!g)return "";
   const name=esc(g.name||"gần nhất"),dist=fmt(g.distance_km,1);
   if(g.rain_observed===true){
     const rate=num(g.rain_intensity_mm_h);
@@ -1832,6 +1839,16 @@ function recentFeedbackFor(pointId,category){
 async function loadRecentFeedback(){
   try{recentFieldFeedback=await getJSON(RECENT_FEEDBACK_ENDPOINT,60*1000)}
   catch{recentFieldFeedback=null}
+  if(critical){
+    renderQuickAlert();
+    renderHazardBoard();
+    renderCurrent();
+    const summary=$("islandSummary");
+    if(summary){
+      const watches=buildQuickWatchEvents().slice(0,2);
+      if(watches.length)summary.innerHTML="<b>Hiện cần chú ý:</b> "+watches.map(x=>esc(x.title)+(x.detail?" - "+esc(x.detail):"")).join("<br>")+"<small>Tin nhanh tự biến mất khi dữ liệu mới cho thấy tình huống đã qua.</small>";
+    }
+  }
   return recentFieldFeedback;
 }
 function saveFeedbackHistory(item){

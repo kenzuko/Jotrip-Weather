@@ -1164,3 +1164,49 @@ footer{font-size:9.5px}
   .command-map .map-box{height:500px}
   .map-note{font-size:7.5px}
 }
+
+
+/* Map comparison strip - reference sources only, kept visually secondary. */
+.command-map .map-compare-tabs{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:5px;
+  margin:0 0 8px;
+  overflow:visible;
+}
+.command-map .map-compare-tabs button{
+  min-width:0;
+  height:30px;
+  padding:0 5px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:9px;
+  background:rgba(244,248,250,.72);
+  border:1px solid rgba(17,61,78,.09);
+  color:#5a7480;
+  font-size:7px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.command-map .map-compare-tabs button.active{
+  background:#153f59;
+  border-color:#153f59;
+  color:#fff;
+}
+@media(max-width:560px){
+  .command-map .map-compare-tabs{
+    display:flex;
+    gap:5px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    padding-bottom:1px;
+  }
+  .command-map .map-compare-tabs::-webkit-scrollbar{display:none}
+  .command-map .map-compare-tabs button{
+    flex:0 0 78px;
+    height:29px;
+    font-size:6.8px;
+  }
+}

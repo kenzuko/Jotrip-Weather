@@ -927,7 +927,10 @@ function chartDataset(layer){
     actual=intradayActual().filter(r=>{const t=Date.parse(r.time);return Number.isFinite(t)&&t>=start&&t<=now+15*60*1000}).map(r=>({time:r.time,value:num(r.temperature_c),kind:"actual",source:"VVPQ"})).filter(r=>r.value!==null);
   }else if(layer==="wave"){
     history=hist.map(r=>({time:r.time,value:num(r.wave_hs_m),kind:"model"})).filter(r=>r.value!==null);
-    forecast=waveForecast72().filter(r=>{const t=Date.parse(r.time);return Number.isFinite(t)&&t>=now-15*60*1000&&t<=end}).map(r=>({time:r.time,value:num(r.wave_hs_m),high:num(r.wave_hmax_m),kind:"forecast",period_s:num(r.period_s)})).filter(r=>r.value!==null);
+    forecast=waveForecast72().filter(r=>{const t=Date.parse(r.time);return Number.isFinite(t)&&t>=now-15*60*1000&&t<=end}).map(r=>({
+      time:r.time,value:num(r.wave_hs_m),high:num(r.wave_hmax_m),kind:"forecast",period_s:num(r.period_s),
+      reference_mode:r.reference_mode||null,reference_point:r.reference_point||null,reference_distance_km:num(r.reference_distance_km)
+    })).filter(r=>r.value!==null);
   }else if(layer==="convective"){
     history=hist.map(r=>({time:r.time,value:num(r.convective_score),kind:"remote"})).filter(r=>r.value!==null);
   }else if(layer==="tide"){
@@ -948,7 +951,11 @@ function intradayTip(r,label,layer){
     label,
     value:chartValueText(layer,r.value),
     high:num(r.high)!==null?chartValueText(layer,r.high):null,
-    period:num(r.period_s)!==null?fmt(r.period_s,1)+" s":null
+    period:num(r.period_s)!==null?fmt(r.period_s,1)+" s":null,
+    reference:r.reference_mode==="NEAREST_MARINE_SERIES"
+      ?("Tham chiếu biển "+(critical?.points?.[r.reference_point]?.name||r.reference_point||"-")+
+        (num(r.reference_distance_km)!==null?" · cách ô biển ~"+fmt(r.reference_distance_km,1)+" km":""))
+      :null
   };
   return encodeURIComponent(JSON.stringify(payload));
 }
@@ -958,7 +965,8 @@ function setIntradayFocus(encoded){
     const p=typeof encoded==="string"?JSON.parse(decodeURIComponent(encoded)):encoded;
     box.innerHTML='<b>'+esc(p.time||"-")+'</b><span>'+esc(p.label||"")+' · '+esc(p.value||"-")+'</span>'+
       (p.high?'<small>Biên q90 / Hmax: '+esc(p.high)+'</small>':'')+
-      (p.period?'<small>Chu kỳ sóng: '+esc(p.period)+'</small>':'');
+      (p.period?'<small>Chu kỳ sóng: '+esc(p.period)+'</small>':'')+
+      (p.reference?'<small>'+esc(p.reference)+'</small>':'');
   }catch{
     box.textContent="Chạm vào một điểm để xem số liệu.";
   }

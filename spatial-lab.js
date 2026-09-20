@@ -1241,8 +1241,11 @@ function renderActual(){
     const ic=L.divIcon({className:"",html:'<div class="actual-pin rain"></div>',iconSize:[15,15],iconAnchor:[7,7]});
     const m=L.marker([g.lat,g.lon],{icon:ic,zIndexOffset:1000}).addTo(state.actualLayer);
     m.on("click",e=>{L.DomEvent.stopPropagation(e);showActualFlag(g.name||"VRain",g,g.lat,g.lon)});
-    const val=num(g.rain_intensity_mm_h)!==null?fmt(g.rain_intensity_mm_h,1)+" mm/h":fmt(g.accum_mm,1)+" mm";
-    const li=L.divIcon({className:"",html:'<div class="actual-label">'+esc(g.name||"VRain")+' · trạm '+val+'</div>',iconSize:[132,20],iconAnchor:[66,-9]});
+    const rate=num(g.rain_intensity_mm_h),chg=num(g.recent_change_mm),chgMin=num(g.recent_change_min),acc=num(g.accum_mm);
+    const val=rate!==null
+      ?fmt(rate,1)+" mm/h"
+      :(chg!==null&&chg>0&&chgMin!==null?("+"+fmt(chg,1)+" mm / "+fmt(chgMin,0)+"p"):"tổng "+fmt(acc,1)+" mm");
+    const li=L.divIcon({className:"",html:'<div class="actual-label">'+esc(g.name||"VRain")+' · '+val+'</div>',iconSize:[142,20],iconAnchor:[71,-9]});
     L.marker([g.lat,g.lon],{icon:li,interactive:false,zIndexOffset:950}).addTo(state.actualLayer);
   });
 }
@@ -1637,9 +1640,10 @@ function showActualFlag(name,g,lat,lon){
   $("probe").classList.add("hidden");
   if(state.flagMarker)state.map.removeLayer(state.flagMarker);
   const isWind=g.wind_kmh!==undefined;
-  const value=isWind?fmt(g.wind_kmh,0):fmt(g.rain_intensity_mm_h??g.accum_mm,1);
-  const unit=isWind?"km/h":(g.rain_intensity_mm_h!=null?"mm/h":"mm");
-  const sub=isWind?"Gió đo thực":((num(g.rain_intensity_mm_h)||0)>0?"Mưa đo tại trạm":"Trạm chưa ghi nhận mưa");
+  const rainRate=num(g.rain_intensity_mm_h),recent=num(g.recent_change_mm),recentMin=num(g.recent_change_min);
+  const value=isWind?fmt(g.wind_kmh,0):(rainRate!==null?fmt(rainRate,1):recent!==null&&recent>0?("+"+fmt(recent,1)):fmt(g.accum_mm,1));
+  const unit=isWind?"km/h":(rainRate!==null?"mm/h":recent!==null&&recent>0?"mm":"mm tổng");
+  const sub=isWind?"Gió đo thực":(rainRate!==null&&rainRate>0?"Mưa đo tại trạm":recent!==null&&recent>0?("Có mưa trong khoảng "+fmt(recentMin,0)+" phút trước"):"Trạm chưa ghi nhận mưa hiện tại");
   const icon=L.divIcon({
     className:"",
     html:'<div class="windy-flag actual-flag"><div class="windy-flag-place">'+esc(name)+'</div><div class="windy-flag-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="windy-flag-sub">'+esc(sub)+' · chạm để xem chi tiết</div><i></i></div>',

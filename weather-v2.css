@@ -1115,3 +1115,52 @@ footer{font-size:9.5px}
   }
 }
 
+
+
+/* V2.11 - JoTrip Map shell cleanup */
+.command-map .map-panel>.panel-head{
+  align-items:center;
+  margin-bottom:10px;
+}
+.command-map #mapState{
+  padding:5px 8px;
+  background:rgba(44,172,109,.10);
+  color:#277b55;
+}
+.command-map .map-box{
+  border-color:rgba(17,61,78,.10);
+  box-shadow:0 10px 28px rgba(18,55,76,.07);
+}
+.map-note{
+  margin:8px 2px 0;
+  color:#748994;
+  font-size:8px;
+  line-height:1.45;
+}
+.map-sources{
+  margin-top:7px;
+  color:#718793;
+  font-size:8px;
+}
+.map-sources summary{
+  width:max-content;
+  cursor:pointer;
+  list-style:none;
+  font-weight:800;
+  color:#557483;
+}
+.map-sources summary::-webkit-details-marker{display:none}
+.map-sources summary:after{content:" +";color:#8ca0aa}
+.map-sources[open] summary:after{content:" −"}
+.map-sources .map-source-links{margin-top:7px}
+.map-sources .map-source-links a{
+  padding:6px 8px;
+  border-radius:8px;
+  background:#f1f7fa;
+  font-size:7px;
+}
+@media(max-width:560px){
+  .command-map .map-panel{padding:13px}
+  .command-map .map-box{height:500px}
+  .map-note{font-size:7.5px}
+}

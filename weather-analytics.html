@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f8fb">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>JoTrip Weather Analytics</title>
+  <meta name="description" content="Private analytics module for JoTrip Weather calibration and verification.">
+  <link rel="icon" type="image/svg+xml" href="/weather-app-icon.svg">
+  <link rel="stylesheet" href="/weather-analytics.css?v=20260920-a1">
+  <script defer src="/weather-analytics.js?v=20260920-a1"></script>
+</head>
+<body>
+  <main>
+    <header class="top">
+      <a href="/" class="brand"><img src="/weather-brand.svg" alt="JoTrip"><span><b>Weather Analytics</b><small>PRIVATE · VERIFICATION LAB</small></span></a>
+      <span id="dataState" class="state">LOCKED</span>
+    </header>
+
+    <section id="gate" class="gate">
+      <div class="lock">W</div>
+      <span>PRIVATE MODULE</span>
+      <h1>Weather Analytics</h1>
+      <p>Theo dõi Ground Truth, sai số dự báo và trạng thái tự hiệu chỉnh của JoTrip Weather.</p>
+      <form id="gateForm" autocomplete="off">
+        <label for="accessKey">Access key</label>
+        <div class="key-row">
+          <input id="accessKey" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" placeholder="Nhập access key">
+          <button type="submit">Mở Analytics</button>
+        </div>
+        <small id="gateMsg">Khóa chỉ dùng cho module Analytics.</small>
+      </form>
+    </section>
+
+    <div id="analytics" class="analytics hidden">
+      <section class="hero">
+        <div>
+          <span class="eyebrow">FORECAST → ACTUAL → ERROR → CALIBRATION</span>
+          <h1>JoTrip Weather Analytics</h1>
+          <p>Chỉ dữ liệu <b>ACTUAL</b> được dùng làm nhãn học. Estimated Now không được phép tự huấn luyện ngược vào forecast.</p>
+        </div>
+        <div class="hero-time"><span>Cập nhật</span><b id="generatedAt">-</b></div>
+      </section>
+
+      <section id="summary" class="summary-grid"></section>
+
+      <div class="section-head">
+        <div><span class="eyebrow">GROUND TRUTH</span><h2>Quan trắc mới nhất</h2></div>
+        <small>Giờ hiển thị UTC+7</small>
+      </div>
+      <section id="actualGrid" class="actual-grid"></section>
+
+      <div class="section-head">
+        <div><span class="eyebrow">SELF-LEARNING</span><h2>Calibration theo nhóm</h2></div>
+        <small>Mặc định cần ≥30 case ACTUAL khớp mới được tác động production</small>
+      </div>
+      <section class="panel">
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Anchor</th><th>Biến</th><th>Lead</th><th>Mẫu</th><th>Trạng thái</th>
+                <th>MAE</th><th>Bias TB</th><th>Hiệu chỉnh</th>
+              </tr>
+            </thead>
+            <tbody id="calibrationRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <div><span class="eyebrow">VERIFICATION</span><h2>Case gần nhất</h2></div>
+        <small>Forecast được lưu trước khi thời điểm thực xảy ra</small>
+      </div>
+      <section class="panel">
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr><th>Valid</th><th>Anchor</th><th>Biến</th><th>Lead</th><th>Forecast</th><th>Actual</th><th>Error</th></tr>
+            </thead>
+            <tbody id="caseRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="method">
+        <h2>Quy tắc học</h2>
+        <div class="method-grid">
+          <article><b>ACTUAL only</b><span>VVPQ và VRain có timestamp, QC hợp lệ. Không học từ Estimated Now.</span></article>
+          <article><b>Không học quá sớm</b><span>Mỗi anchor × biến × lead bucket cần tối thiểu 30 case trước khi coefficient được kích hoạt.</span></article>
+          <article><b>Forecast bất biến</b><span>Forecast được archive theo cycle trước thời điểm valid để tránh leakage khi verification.</span></article>
+          <article><b>Mưa cần coverage</b><span>Chỉ đối chiếu mưa khi quan trắc bao phủ đủ cửa sổ tích lũy của forecast.</span></article>
+        </div>
+      </section>
+
+      <footer>
+        <a href="/">← Weather V2</a>
+        <span>JoTrip Weather Analytics · private operational module</span>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>

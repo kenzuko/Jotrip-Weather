@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260921-prod48">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260921-prod49">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260921-prod48"></script>
+  <script defer src="/weather-v2.js?v=20260921-prod49"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -136,6 +136,14 @@
       <div><span class="eyebrow">BẢN ĐỒ JOTRIP</span><h2>Thời tiết toàn đảo theo không gian</h2></div>
       <span id="mapState" class="badge deferred">CHƯA TẢI</span>
     </div>
+    <nav class="map-tabs map-compare-tabs" aria-label="Đối chiếu bản đồ thời tiết">
+      <button type="button" class="active" data-map="jotrip">JoTrip</button>
+      <button type="button" data-map="radar">Radar</button>
+      <button type="button" data-map="himawari">Himawari IR</button>
+      <button type="button" data-map="wind">Windy Gió</button>
+      <button type="button" data-map="rain">Windy Mưa</button>
+      <button type="button" data-map="waves">Windy Sóng</button>
+    </nav>
     <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip</b><span>Số đo thực tế + ước tính hiện tại + mây Himawari + gió + biển trên cùng một bản đồ.</span></div></div>
     <div id="mapNote" class="map-note">Chọn lớp ngay trên bản đồ. Mỗi lớp dùng cách thể hiện riêng để ưu tiên hướng, vị trí và mức độ thay vì hiệu ứng màu trang trí.</div>
     <div id="mapConvective" class="map-convective">

@@ -2,6 +2,8 @@ import * as maplibregl from 'maplibre-gl';
 
 const DATA_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-poc/gulf-wind.json';
+const CARTO_KEY = 'cb1_3q98_1_d8112ce70cc7ec9b9276b0a0';
+const ENABLE_PARTICLES = false;
 const FALLBACK_URL =
   'https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json';
 
@@ -32,13 +34,23 @@ const BASE_STYLE = {
   sources: {
     base: {
       type: 'raster',
-      tiles: ['https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png'],
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+        'https://d.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+      ],
       tileSize: 256,
       attribution: '&copy; OpenStreetMap &copy; CARTO',
     },
     labels: {
       type: 'raster',
-      tiles: ['https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png'],
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+        'https://d.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png?key=' + CARTO_KEY,
+      ],
       tileSize: 256,
     },
   },
@@ -274,14 +286,7 @@ function colorLut() {
 
 const WIND_LUT = colorLut();
 
-function sampleGrid(arr, nx, ny, gx, gy, smooth) {
-  if (!smooth) {
-    const ix = clamp(Math.round(gx), 0, nx - 1);
-    const iy = clamp(Math.round(gy), 0, ny - 1);
-    const value = arr[iy * nx + ix];
-    return value === null || value === undefined ? NaN : Number(value);
-  }
-
+function sampleGridLinear(arr, nx, ny, gx, gy) {
   const x0 = clamp(Math.floor(gx), 0, nx - 1);
   const y0 = clamp(Math.floor(gy), 0, ny - 1);
   const x1 = clamp(x0 + 1, 0, nx - 1);
@@ -305,10 +310,68 @@ function sampleGrid(arr, nx, ny, gx, gy, smooth) {
   return top * (1 - fy) + bottom * fy;
 }
 
+function cubic1d(p0, p1, p2, p3, t) {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return 0.5 * (
+    (2 * p1) +
+    (-p0 + p2) * t +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+  );
+}
+
+function sampleGridCubic(arr, nx, ny, gx, gy) {
+  const x = Math.floor(gx);
+  const y = Math.floor(gy);
+  const fx = gx - x;
+  const fy = gy - y;
+
+  if (x < 1 || x >= nx - 2 || y < 1 || y >= ny - 2) {
+    return sampleGridLinear(arr, nx, ny, gx, gy);
+  }
+
+  const rows = new Float64Array(4);
+  for (let j = -1; j <= 2; j++) {
+    const base = (y + j) * nx;
+    const p0 = Number(arr[base + x - 1]);
+    const p1 = Number(arr[base + x]);
+    const p2 = Number(arr[base + x + 1]);
+    const p3 = Number(arr[base + x + 2]);
+    if (![p0, p1, p2, p3].every(Number.isFinite)) {
+      return sampleGridLinear(arr, nx, ny, gx, gy);
+    }
+    rows[j + 1] = cubic1d(p0, p1, p2, p3, fx);
+  }
+
+  let value = cubic1d(rows[0], rows[1], rows[2], rows[3], fy);
+
+  // Catmull-Rom can overshoot. Clamp to the native 2x2 cell so smoothing
+  // never invents an intensity outside the local model envelope.
+  const q00 = Number(arr[y * nx + x]);
+  const q10 = Number(arr[y * nx + x + 1]);
+  const q01 = Number(arr[(y + 1) * nx + x]);
+  const q11 = Number(arr[(y + 1) * nx + x + 1]);
+  const lo = Math.min(q00, q10, q01, q11);
+  const hi = Math.max(q00, q10, q01, q11);
+  value = clamp(value, lo, hi);
+  return value;
+}
+
+function sampleGrid(arr, nx, ny, gx, gy, smooth) {
+  if (!smooth) {
+    const ix = clamp(Math.round(gx), 0, nx - 1);
+    const iy = clamp(Math.round(gy), 0, ny - 1);
+    const value = arr[iy * nx + ix];
+    return value === null || value === undefined ? NaN : Number(value);
+  }
+  return sampleGridCubic(arr, nx, ny, gx, gy);
+}
+
 function renderCanvas(frame, kind, smooth) {
   const { nx, ny } = state.pack.grid;
   const mobile = innerWidth < 700;
-  const width = kind === 'scalar' ? (mobile ? 360 : 512) : (mobile ? 220 : 300);
+  const width = kind === 'scalar' ? (mobile ? 512 : 768) : (mobile ? 256 : 384);
   const aspect = Math.max(0.7, Math.min(1.5,
     (state.pack.bounds.north - state.pack.bounds.south) /
     (state.pack.bounds.east - state.pack.bounds.west)));
@@ -489,10 +552,10 @@ function fadeBetween(fromSlot, toSlot, token, duration = 260) {
       const t = clamp((now - start) / duration, 0, 1);
       const eased = t * t * (3 - 2 * t);
       if (fromSlot && map.getLayer(fieldLayerId(fromSlot))) {
-        map.setPaintProperty(fieldLayerId(fromSlot), 'raster-opacity', 0.72 * (1 - eased));
+        map.setPaintProperty(fieldLayerId(fromSlot), 'raster-opacity', 0.66 * (1 - eased));
       }
       if (map.getLayer(fieldLayerId(toSlot))) {
-        map.setPaintProperty(fieldLayerId(toSlot), 'raster-opacity', 0.72 * eased);
+        map.setPaintProperty(fieldLayerId(toSlot), 'raster-opacity', 0.66 * eased);
       }
       if (t < 1) requestAnimationFrame(tick);
       else resolve();
@@ -558,7 +621,7 @@ function updateLabels() {
   $('slider').value = String(state.frameIndex);
   $('status').textContent =
     (state.sourceMode === 'GULF' ? 'GULF FIELD' : 'FALLBACK GRID') +
-    ' · ' + ageText(state.pack.generated_at);
+    ' · CARTO · CUBIC · ' + ageText(state.pack.generated_at);
 }
 
 async function showFrame(index, immediate = false) {
@@ -580,7 +643,7 @@ async function showFrame(index, immediate = false) {
   }
 
   const nextSlot = state.activeSlot === 'a' ? 'b' : 'a';
-  installSlot(nextSlot, assets.scalarUrl, state.activeSlot && !immediate ? 0 : 0.72);
+  installSlot(nextSlot, assets.scalarUrl, state.activeSlot && !immediate ? 0 : 0.66);
 
   if (!state.activeSlot || immediate) {
     if (state.activeSlot) removeSlot(state.activeSlot);
@@ -595,7 +658,7 @@ async function showFrame(index, immediate = false) {
     state.activeSlot = nextSlot;
   }
 
-  updateParticles(assets.vectorUrl);
+  if (ENABLE_PARTICLES) updateParticles(assets.vectorUrl);
   setGridOpacity();
 
   const ahead = Math.min(state.pack.frames.length - 1, state.frameIndex + 1);
@@ -723,7 +786,7 @@ async function boot() {
     addGridOverlay();
     fitGulf();
 
-    await ensureParticleRenderer();
+    if (ENABLE_PARTICLES) await ensureParticleRenderer();
     await showFrame(state.frameIndex, true);
 
     state.loadMs = performance.now() - state.loadStarted;

@@ -47,8 +47,8 @@ const state={
   crosshair:true,
   ensemble:false,
   modelDiff:false,
-  risk:true,
-  actual:true,
+  risk:false,
+  actual:false,
   riskLayer:null,
   actualLayer:null,
   flagMarker:null,
@@ -62,7 +62,8 @@ const state={
   cloudTween:0,
   currentRows:null,
   currentFrame:null,
-  loading:false
+  loading:false,
+  userSelectedLayer:false
 };
 
 const $=id=>document.getElementById(id);
@@ -301,11 +302,11 @@ function setCrosshair(enabled){
 }
 
 function initMap(){
-  const pqBounds=L.latLngBounds([[9.64,103.64],[10.60,104.32]]);
+  const pqBounds=L.latLngBounds([[8.90,102.90],[11.35,105.55]]);
   state.map=L.map("map",{
     zoomControl:false,
     attributionControl:true,
-    minZoom:9,
+    minZoom:8.25,
     maxZoom:13,
     zoomSnap:.25,
     zoomDelta:.5,
@@ -314,7 +315,7 @@ function initMap(){
     maxBoundsViscosity:.28,
     preferCanvas:true
   });
-  state.map.setView([10.19,103.98],EMBED?9.65:10.0);
+  state.map.setView([10.18,104.00],EMBED?8.85:9.15);
 
   // Windy-style render stack:
   // basemap geometry -> weather canvases -> labels -> JoTrip markers/flag.
@@ -332,13 +333,6 @@ function initMap(){
     subdomains:"abcd",
     maxZoom:19,
     attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
-  }).addTo(state.map);
-
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=cb1_3q98_1_d8112ce70cc7ec9b9276b0a0",{
-    subdomains:"abcd",
-    maxZoom:19,
-    pane:"weatherContext",
-    opacity:.22
   }).addTo(state.map);
 
   L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png?key=cb1_3q98_1_d8112ce70cc7ec9b9276b0a0",{
@@ -928,7 +922,7 @@ function renderField(){
     :state.layer==="waves"?"saturate(1.20) contrast(1.10)"
     :state.layer==="current"?"saturate(1.18) contrast(1.10)"
     :"none";
-  fieldCanvas.style.opacity=state.layer==="storm"?"0.94":"1";
+  fieldCanvas.style.opacity=state.layer==="storm"?"0.84":state.layer==="rain"?"0.88":"0.78";
   const rows=activeRows();
   state.currentRows=rows;
   state.currentFrame=state.layer==="storm"
@@ -942,19 +936,19 @@ function renderField(){
     return;
   }
 
-  const alpha=state.layer==="wind"?.86
-    :state.layer==="rain"?.92
-    :state.layer==="rain24"?.94
-    :state.layer==="waves"?.84
-    :state.layer==="current"?.82
-    :.82;
+  const alpha=state.layer==="wind"?.68
+    :state.layer==="rain"?.82
+    :state.layer==="rain24"?.84
+    :state.layer==="waves"?.70
+    :state.layer==="current"?.68
+    :.74;
   drawIDW(rows,state.layer,alpha);
 
   // Near-NOW Rain gets a subtle observed Himawari cloud context, similar to
   // weather-map products that layer precipitation under current cloud cover.
   // Never project a current satellite scan into future forecast frames.
   if(rainGetsObservedCloudContext()){
-    drawCloudMass(latestCloudRows(),{clear:false,alphaScale:.22});
+    drawCloudMass(latestCloudRows(),{clear:false,alphaScale:.34});
   }
 }
 
@@ -1344,9 +1338,10 @@ function riskLabel(v){return v>=3?"CAO":v>=2?"THEO DÕI":v>=1?"LƯU Ý":"ỔN"}
 
 function currentLeadHours(){
   if(state.layer==="storm"||state.layer==="radar"||state.layer==="current")return 0;
+  const t=activeValidTime();
+  if(Number.isFinite(t))return Math.max(0,Math.round((t-Date.now())/3600000));
   const f=activeBaseFrame();
-  if(f&&num(f.lead_hours)!==null)return num(f.lead_hours);
-  const t=activeValidTime();return Number.isFinite(t)?Math.max(0,Math.round((t-Date.now())/3600000)):0;
+  return num(f?.lead_hours)??0;
 }
 function regionalForecastRow(){
   if(!state.forecast)return null;
@@ -1411,7 +1406,7 @@ function updateReadout(){
   }
   const row=nearestRow(state.currentRows,state.selected.lat,state.selected.lon);
   const anchor=state.selected.anchor;
-  $("readoutPlace").textContent=POINTS[anchor]?.name||"Điểm chọn";
+  $("readoutPlace").textContent="";
 
   if(state.layer==="wind"){
     const local=near?localMetric(anchor,"wind"):null;
@@ -1529,6 +1524,23 @@ function togglePlay(){
   }
 }
 
+function chooseInitialLiveLayer(){
+  if(state.userSelectedLayer)return state.layer;
+  const points=Object.entries(state.critical?.points||{});
+  const fieldRain=freshFieldReports().some(x=>{
+    const c=String(x.category||"").toUpperCase()||feedbackCategory(x.note);
+    return c==="RAIN_MORE"||c==="THUNDER";
+  });
+  const gaugeRain=(state.critical?.actual?.rain_gauges||[]).some(g=>
+    g.rain_observed===true&&(num(g.rain_intensity_mm_h)||0)>=1
+  );
+  const maxConv=Math.max(0,...points.map(([,p])=>num(p.nowcast?.convective_score??p.local?.convection_score)||0));
+  const maxLocalRain=Math.max(0,...points.map(([,p])=>num(p.local?.rain_rate_mm_h)||0));
+  if(fieldRain||gaugeRain||(maxConv>=70&&maxLocalRain>=.3))return "rain";
+  if(maxConv>=85)return "storm";
+  return "wind";
+}
+
 async function selectLayer(layer){
   state.layer=layer;
   applyPresentationScene();
@@ -1624,13 +1636,11 @@ function updateSelectionFlag(){
   if(!state.flagMarker)return;
   const ll=state.flagMarker.getLatLng();
   const metric=flagMetric(ll.lat,ll.lng);
-  const anchor=state.selected.anchor;
-  const place=POINTS[anchor]?.name||"Điểm chọn";
   const icon=L.divIcon({
     className:"",
-    html:'<div class="windy-flag"><div class="windy-flag-place">'+esc(place)+'</div><div class="windy-flag-value">'+esc(metric.value)+' <small>'+esc(metric.unit)+'</small></div><div class="windy-flag-sub">'+esc(metric.sub)+' · chạm để xem chi tiết</div><i></i></div>',
-    iconSize:[142,72],
-    iconAnchor:[22,78]
+    html:'<div class="windy-flag"><div class="windy-flag-value">'+esc(metric.value)+' <small>'+esc(metric.unit)+'</small></div><div class="windy-flag-sub">'+esc(metric.sub)+'</div><i></i></div>',
+    iconSize:[126,54],
+    iconAnchor:[20,60]
   });
   state.flagMarker.setIcon(icon);
 }
@@ -1808,6 +1818,14 @@ async function loadAll(){
   if(state.critical&&state.currentBundle)overlayCurrentBundle(state.critical,state.currentBundle);
   setStatus();
   if(state.ecmwf)selectNearestNowFrame();
+  const initial=chooseInitialLiveLayer();
+  if(initial!==state.layer){
+    state.layer=initial;
+    document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("active",b.dataset.layer===initial));
+    if(initial==="storm")state.frameIndex=Math.max(0,cloudFrames().length-1);
+    else selectNearestNowFrame();
+    configureTimeline();
+  }
   renderAlert();
   renderRisk();renderActual();
   renderAll();
@@ -1816,7 +1834,7 @@ async function loadAll(){
 }
 
 function bind(){
-  document.querySelectorAll(".layer").forEach(b=>b.addEventListener("click",()=>selectLayer(b.dataset.layer)));
+  document.querySelectorAll(".layer").forEach(b=>b.addEventListener("click",()=>{state.userSelectedLayer=true;selectLayer(b.dataset.layer)}));
   $("ensembleBtn").addEventListener("click",()=>{
     state.ensemble=!state.ensemble;
     if(state.ensemble&&state.modelDiff){state.modelDiff=false;$("modelDiffBtn").classList.remove("active")}
@@ -1833,7 +1851,7 @@ function bind(){
   $("riskBtn").addEventListener("click",()=>{state.risk=!state.risk;$("riskBtn").classList.toggle("active",state.risk);renderRisk()});
   $("actualBtn").addEventListener("click",()=>{state.actual=!state.actual;$("actualBtn").classList.toggle("active",state.actual);renderActual()});
   $("crosshairBtn").addEventListener("click",()=>setCrosshair(!state.crosshair));
-  $("recenterBtn").addEventListener("click",()=>state.map.setView([10.17,103.98],10.15,{animate:true}));
+  $("recenterBtn").addEventListener("click",()=>state.map.setView([10.18,104.00],EMBED?8.85:9.15,{animate:true}));
   $("probeClose").addEventListener("click",()=>$("probe").classList.add("hidden"));
   $("playBtn").addEventListener("click",togglePlay);
   $("timeSlider").addEventListener("input",e=>{

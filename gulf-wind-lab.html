@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#102a38">
+  <title>JoTrip Gulf Wind Lab</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.10.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="./gulf-wind-lab.css?v=1">
+  <script type="importmap">
+  {
+    "imports": {
+      "maplibre-gl": "https://unpkg.com/maplibre-gl@6.10.0/dist/maplibre-gl.mjs",
+      "@deck.gl/core": "https://esm.sh/@deck.gl/core@9.2.6",
+      "@deck.gl/layers": "https://esm.sh/@deck.gl/layers@9.2.6",
+      "@deck.gl/mapbox": "https://esm.sh/@deck.gl/mapbox@9.2.6",
+      "@luma.gl/core": "https://esm.sh/@luma.gl/core@9.2.6",
+      "@luma.gl/engine": "https://esm.sh/@luma.gl/engine@9.2.6",
+      "@luma.gl/shadertools": "https://esm.sh/@luma.gl/shadertools@9.2.6",
+      "maplibre-gl-wind": "https://esm.sh/maplibre-gl-wind@0.2.1"
+    }
+  }
+  </script>
+</head>
+<body>
+  <main id="app">
+    <div id="map" aria-label="Bản đồ gió Vịnh Thái Lan"></div>
+
+    <header class="top glass">
+      <div class="brand">
+        <img src="./jotrip-logo-wordmark.svg" alt="JoTrip">
+        <div>
+          <b>Gulf Wind Lab</b>
+          <small>RENDERER POC 01 · ECMWF ENGINE</small>
+        </div>
+      </div>
+      <div id="status" class="status">Đang nạp field…</div>
+    </header>
+
+    <aside id="probe" class="probe glass">
+      <small>ECMWF IFS · 10 M WIND</small>
+      <strong id="probeValue">Chạm bản đồ để đọc gió</strong>
+      <span id="probeMeta">Numerical grid 0.25° · smooth chỉ là hiển thị</span>
+    </aside>
+
+    <div class="camera glass">
+      <button id="gulfCamera" class="active" type="button">Vịnh</button>
+      <button id="islandCamera" type="button">Đảo</button>
+    </div>
+
+    <div class="mode glass">
+      <button id="smoothBtn" class="active" type="button">Smooth</button>
+      <button id="gridBtn" type="button">Grid</button>
+    </div>
+
+    <div id="perf" class="perf glass">FPS -- · LOAD -- · PACK --</div>
+
+    <section class="timeline glass">
+      <button id="playBtn" class="play" type="button" aria-label="Phát timeline">▶</button>
+      <div class="time-content">
+        <div class="time-head">
+          <strong id="timeLabel">--:--</strong>
+          <span id="runLabel">ECMWF</span>
+        </div>
+        <input id="slider" type="range" min="0" max="1" value="0" step="1" aria-label="Thời gian dự báo">
+        <div class="ticks"><span>NOW</span><span>+24h</span><span>+48h</span><span>+72h</span></div>
+      </div>
+    </section>
+
+    <div id="errorCard" class="error-card glass hidden">
+      <strong>Wind layer chưa sẵn sàng</strong>
+      <span id="errorText">Basemap vẫn hoạt động. Renderer weather không được phép làm mất bản đồ.</span>
+    </div>
+  </main>
+
+  <script type="module" src="./gulf-wind-lab.js?v=1"></script>
+</body>
+</html>

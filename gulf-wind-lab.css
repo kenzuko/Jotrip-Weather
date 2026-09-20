@@ -104,3 +104,24 @@ button,input{font:inherit}
   .perf{right:7px;bottom:78px;font-size:7px}
   .timeline{left:6px;right:6px;bottom:max(6px,env(safe-area-inset-bottom));min-height:58px}
 }
+
+
+/* POC 06 - flow-first, embeddable surface */
+.top,.camera,.timeline,.perf,.probe{
+  background:rgba(248,252,253,.66);
+}
+.embed-mode body,
+.embed-mode #app{background:transparent}
+.embed-mode .top,
+.embed-mode .probe,
+.embed-mode .camera,
+.embed-mode .perf,
+.embed-mode .timeline,
+.embed-mode .error-card{display:none!important}
+.embed-mode #map,
+.embed-mode #windFlow{inset:0}
+.embed-mode .maplibregl-ctrl-bottom-right,
+.embed-mode .maplibregl-ctrl-bottom-left{display:none!important}
+@media(max-width:700px){
+  .camera{top:74px}
+}

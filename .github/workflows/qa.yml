@@ -56,7 +56,12 @@ jobs:
           grep -q 'weather-v2.js' index.html
           grep -q 'weather-v2.css' index.html
           grep -q 'spatial-lab.html' weather-v2.js
-          grep -q 'Himawari IR' index.html
+          grep -q 'BẢN ĐỒ JOTRIP' index.html
+          grep -q 'data-layer="wind"' spatial-lab.html
+          grep -q 'data-layer="rain"' spatial-lab.html
+          grep -q 'data-layer="waves"' spatial-lab.html
+          grep -q 'data-layer="storm"' spatial-lab.html
+          grep -q 'rainModes' spatial-lab.html
 
       - name: Validate JavaScript syntax
         run: |

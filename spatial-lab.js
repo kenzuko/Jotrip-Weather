@@ -1411,12 +1411,12 @@ function configureTimeline(){
     slider.min=0;slider.max=0;slider.step=1;slider.value=0;slider.disabled=true;
     $("playBtn").disabled=true;
     $("timelineTicks").innerHTML='<span>NOW</span><span>+24H</span>';
-    $("timeLabel").textContent="NEXT 24H";
+    $("timeLabel").textContent="24 GIỜ TỚI";
   }else if(state.layer==="current"){
     slider.min=0;slider.max=0;slider.step=1;slider.value=0;slider.disabled=true;
     $("playBtn").disabled=true;
     $("timelineTicks").innerHTML='<span>NEAR-NOW</span>';
-    $("timeLabel").textContent=state.marine?.current?.sampled_time?localStamp(state.marine.current.sampled_time,false):"NOW";
+    $("timeLabel").textContent=state.marine?.current?.sampled_time?localStamp(state.marine.current.sampled_time,false):"HIỆN TẠI";
   }else if(state.layer==="storm"){
     const fs=cloudFrames();slider.min=0;slider.max=Math.max(0,fs.length-1);slider.step=1;state.frameIndex=clamp(state.frameIndex,0,Math.max(0,fs.length-1));slider.value=state.frameIndex;
     $("timelineTicks").innerHTML=fs.map(f=>"<span>"+localStamp(f.sampled_time,false)+"</span>").join("");
@@ -1424,7 +1424,7 @@ function configureTimeline(){
   }else if(state.layer==="radar"){
     const fs=state.radarMeta?.frames||[];slider.min=0;slider.max=Math.max(0,fs.length-1);slider.step=1;slider.value=state.radarIndex;
     $("timelineTicks").innerHTML=fs.length?'<span>-60m</span><span>-40m</span><span>-20m</span><span>NOW</span>':"";
-    $("timeLabel").textContent="NOW";
+    $("timeLabel").textContent="HIỆN TẠI";
   }else{
     const fs=baseFrames();
     slider.min=0;slider.max=Math.max(0,fs.length-1);slider.step=1;state.frameIndex=clamp(state.frameIndex,0,Math.max(0,fs.length-1));slider.value=state.frameIndex;
@@ -1556,11 +1556,11 @@ function flagMetric(lat,lon){
     const control=productionMetric(state.selected.anchor,"wind");
     return {value:fmt(control??row?.wind_kmh,0),unit:"km/h",sub:"Gió từ "+directionText(row?.wind_direction_deg)};
   }
-  if(state.layer==="rain")return {value:fmt(row?.rain_mm,1),unit:"mm",sub:"Rain"};
+  if(state.layer==="rain")return {value:fmt(row?.rain_mm,1),unit:"mm",sub:"Mưa trong mốc đang chọn"};
   if(state.layer==="rain24")return {value:fmt(row?.rain24_mm,1),unit:"mm",sub:"ECMWF · next 24h"};
   if(state.layer==="waves")return {value:fmt(validWaveHs(row?.wave_hs_m),1),unit:"m",sub:"Sóng từ "+directionText(row?.wave_direction_deg)};
   if(state.layer==="current")return {value:fmt(row?.speed_kmh,2),unit:"km/h",sub:"Chảy về "+directionText(row?.direction_toward_deg)};
-  return {value:fmt(row?.convective_score,0),unit:"/100",sub:"Cloud"};
+  return {value:fmt(row?.convective_score,0),unit:"/100",sub:"Mức phát triển mây"};
 }
 function updateSelectionFlag(){
   if(!state.flagMarker)return;
@@ -1602,7 +1602,7 @@ function showActualFlag(name,g,lat,lon){
   const isWind=g.wind_kmh!==undefined;
   const value=isWind?fmt(g.wind_kmh,0):fmt(g.rain_intensity_mm_h??g.accum_mm,1);
   const unit=isWind?"km/h":(g.rain_intensity_mm_h!=null?"mm/h":"mm");
-  const sub=isWind?"Actual wind":"Actual rain";
+  const sub=isWind?"Gió đo thực":"Mưa đo thực";
   const icon=L.divIcon({
     className:"",
     html:'<div class="windy-flag actual-flag"><div class="windy-flag-place">'+esc(name)+'</div><div class="windy-flag-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="windy-flag-sub">'+esc(sub)+' · chạm để xem chi tiết</div><i></i></div>',
@@ -1643,7 +1643,7 @@ function showMapProbe(lat,lon){
     const iconDelta=ecmwfWind!==null&&iconWind!==null?Math.abs(ecmwfWind-iconWind):null;
     const disagreement=windDisagreement(ecmwfWind,ens);
     items.push(
-      ["ECMWF control",fmt(ecmwfWind,0)+" km/h"],
+      ["ECMWF nền",fmt(ecmwfWind,0)+" km/h"],
       ["Hướng",directionWithDegrees(row?.wind_direction_deg)],
       ["ICON",fmt(iconWind,0)+" km/h"],
       ["Δ ECMWF↔ICON",iconDelta===null?"Chưa có":fmt(iconDelta,0)+" km/h"],
@@ -1660,33 +1660,33 @@ function showMapProbe(lat,lon){
     ["GEFS p90",fmt(ens?.rain?.q90,1)+" mm"],
     ["GEFS p95",fmt(ens?.rain?.q95,1)+" mm"],
     ["P ≥5",ens?.rain?.prob==null?"-":Math.round(ens.rain.prob*100)+"%"],
-    ["Spread",fmt(ens?.rain?.spread,1)+" mm"]
+    ["Độ phân tán",fmt(ens?.rain?.spread,1)+" mm"]
   );
   else if(state.layer==="rain24")items.push(
     ["ECMWF next 24h",fmt(row?.rain24_mm,1)+" mm"],
-    ["Loại dữ liệu","Forecast accumulation"],
-    ["Actual 24h","Chưa có grid quan trắc liên tục"],
-    ["Lưu ý","Không nội suy VRain thành raster actual"]
+    ["Loại dữ liệu","Tích lũy dự báo"],
+    ["Số đo 24h","Chưa có lưới quan trắc liên tục"],
+    ["Lưu ý","Không nội suy VRain thành bản đồ mưa đo thực"]
   );
   else if(state.layer==="waves")items.push(["Hs",fmt(validWaveHs(row?.wave_hs_m),1)+" m"],["Sóng từ",directionWithDegrees(row?.wave_direction_deg)],["Chu kỳ",fmt(validWavePeriod(row?.wave_period_s??row?.wave_mean_period_s??row?.wave_peak_period_s),1)+" s"],["Hmax anchor",fmt(m.wave_hmax_m,1)+" m"]);
   else if(state.layer==="current")items.push(["Dòng",fmt(row?.speed_kmh,2)+" km/h"],["Chảy về",directionWithDegrees(row?.direction_toward_deg)],["U",fmt(row?.u_ms,3)+" m/s"],["V",fmt(row?.v_ms,3)+" m/s"]);
   else items.push(["Đối lưu",fmt(row?.convective_score,0)+"/100"],["Đỉnh mây",fmt(row?.cloud_top_cold_c,1)+"°C"],["Độ cao",fmt(row?.cloud_top_high_m,0)+" m"],["Δ20p",fmt(row?.cooling_c_per_20m_proxy,1)+"°C"]);
   const regional=regionalForecastRow();
   const extra=(POINTS[anchor]?.name||anchor)+
-    " · Local Now gió "+fmt(l.wind_kmh,0)+" km/h"+
+    " · Gió hiện tại "+fmt(l.wind_kmh,0)+" km/h"+
     " · Hmax "+fmt(m.wave_hmax_m,1)+" m"+
     " · dòng "+fmt(m.current_kmh,2)+" km/h"+
     " · triều "+fmt(t.height_m,2)+" m"+
     " · AQI "+fmt(aq.aqi_us,0)+
-    (regional?" · confidence "+fmt(regional.confidence_score,0)+"/100 · variability "+fmt(regional.variability_score,0)+"/100":"");
-  showProbe("Điểm trên bản đồ",state.layer==="storm"?"HIMAWARI":"SPATIAL + ENSEMBLE",items,extra);
+    (regional?" · tin cậy "+fmt(regional.confidence_score,0)+"/100 · biến động "+fmt(regional.variability_score,0)+"/100":"");
+  showProbe("Điểm trên bản đồ",state.layer==="storm"?"HIMAWARI":"BẢN ĐỒ + DỰ BÁO TỔ HỢP",items,extra);
 }
 function showAnchorProbe(id){
   const p=state.critical?.points?.[id]||{},l=p.local||{},m=p.model||{},t=p.tide||{},aq=p.aqi||{},r=riskAt(id);
   state.selected={lat:POINTS[id].lat,lon:POINTS[id].lon,anchor:id};updateReadout();updateConfidence();
   showProbe(POINTS[id].name,"OPERATIONAL ANCHOR",[
-    ["Risk",riskLabel(r.level)],["Local wind",fmt(l.wind_kmh,0)+" km/h"],["Rain",fmt(l.rain_rate_mm_h,2)+" mm/h"],["Hs",fmt(l.wave_hs_m??m.wave_hs_m,1)+" m"],
-    ["Hmax",fmt(m.wave_hmax_m,1)+" m"],["Current",fmt(m.current_kmh,2)+" km/h"],["Tide",fmt(t.height_m,2)+" m"],["AQI",fmt(aq.aqi_us,0)]
+    ["Rủi ro",riskLabel(r.level)],["Gió hiện tại",fmt(l.wind_kmh,0)+" km/h"],["Mưa",fmt(l.rain_rate_mm_h,2)+" mm/h"],["Hs",fmt(l.wave_hs_m??m.wave_hs_m,1)+" m"],
+    ["Hmax",fmt(m.wave_hmax_m,1)+" m"],["Dòng chảy",fmt(m.current_kmh,2)+" km/h"],["Triều",fmt(t.height_m,2)+" m"],["AQI",fmt(aq.aqi_us,0)]
   ],r.reasons.join(" · ")||"Không có cảnh báo nổi bật.");
 }
 function showActualProbe(name,g){
@@ -1695,7 +1695,7 @@ function showActualProbe(name,g){
   if(g.temperature_c!==undefined)items.push(["Nhiệt",fmt(g.temperature_c,1)+"°C"]);
   if(g.accum_mm!==undefined)items.push(["Tích lũy",fmt(g.accum_mm,1)+" mm"]);
   if(g.rain_intensity_mm_h!==undefined&&g.rain_intensity_mm_h!==null)items.push(["Cường độ",fmt(g.rain_intensity_mm_h,1)+" mm/h"]);
-  showProbe(name,"ACTUAL",items,g.observed_at?localStamp(g.observed_at):"");
+  showProbe(name,"ĐO THỰC",items,g.observed_at?localStamp(g.observed_at):"");
 }
 
 function onMapClick(e){
@@ -1712,7 +1712,7 @@ function renderAlert(){
   const ids=state.critical.island_watch_order||Object.keys(POINTS);
   const rows=ids.filter(id=>state.critical.points?.[id]).map(id=>({id,r:riskAt(id)})).sort((a,b)=>b.r.level-a.r.level);
   const w=rows[0];
-  root.className="alert-bar neutral";$("alertTitle").textContent="Chưa thấy tín hiệu vượt ngưỡng chính";$("alertTime").textContent=currentLeadHours()>0?"+"+Math.round(currentLeadHours())+"H":"LIVE";
+  root.className="alert-bar neutral";$("alertTitle").textContent="Chưa thấy tín hiệu vượt ngưỡng chính";$("alertTime").textContent=currentLeadHours()>0?"+"+Math.round(currentLeadHours())+" GIỜ":"HIỆN TẠI";
   if(w?.r.level>=2){
     root.className="alert-bar "+(w.r.level>=3?"alert":"watch");
     $("alertTitle").textContent=(POINTS[w.id]?.name||w.id)+" · "+(w.r.reasons[0]||"cần theo dõi");

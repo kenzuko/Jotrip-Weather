@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod16">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod17">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod16"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod17"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -96,8 +96,8 @@
       <b id="gustNow">--</b><small>km/h</small>
     </article>
     <article class="metric-card">
-      <div><span>Mưa hiện tại</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
-      <b id="rainNow">--</b><small>mm/h · <span id="rainConfidence">--</span>% tin cậy</small>
+      <div><span>Mưa tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
+      <b id="rainNow">--</b><small>mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
     </article>
     <article class="metric-card">
       <div><span>Đối lưu</span><em class="badge remote">VỆ TINH</em></div>
@@ -261,8 +261,8 @@
             <th>Nhiệt độ</th>
             <th>Gió vùng</th>
             <th>Beaufort</th>
-            <th>Mưa ≥5 mm</th>
-            <th>Gió ≥30 km/h</th>
+            <th>P(mưa ≥5 mm)</th>
+            <th>P(gió ≥30 km/h)</th>
             <th>Biến động</th>
             <th>Độ tin cậy</th>
             <th>Điểm rủi ro cao nhất</th>

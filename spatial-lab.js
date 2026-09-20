@@ -1116,7 +1116,8 @@ function resetParticles(){
   const c=$("flowCanvas");
   const lowMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobile=innerWidth<700;
-  const normalCount=kind==="wind"?(mobile?300:500):kind==="current"?(mobile?120:210):(mobile?180:300);
+  const kind=state.layer==="current"?"current":"wind";
+  const normalCount=kind==="wind"?(mobile?300:500):(mobile?120:210);
   const reducedCount=kind==="wind"?(mobile?100:150):(mobile?70:110);
   const count=lowMotion?reducedCount:normalCount;
   state.particles=Array.from({length:count},()=>({

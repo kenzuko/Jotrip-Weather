@@ -1654,7 +1654,7 @@ function stopHimawariLoop(){
 async function startHimawariLoop(box,note,state){
   stopHimawariLoop();
   himawariLoopPlaying=true;
-  box.innerHTML='<div class="himawari-loop"><div class="himawari-focus"><img id="himawariImg" alt="Chuỗi ảnh vệ tinh Himawari IR B13 tập trung khu vực Phú Quốc"><div class="himawari-pq-marker"><i></i><span>PHÚ QUỐC</span></div></div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
+  box.innerHTML='<div class="himawari-loop"><div class="himawari-focus"><img id="himawariImg" alt="Chuỗi ảnh vệ tinh Himawari IR B13 tập trung khu vực Phú Quốc"><div class="himawari-pq-marker"><span>KHU VỰC PHÚ QUỐC</span></div></div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
   const candidates=mapCandidates();
   const checked=await Promise.all(candidates.map(async x=>({...x,ok:await preloadImage(x.url)})));
   const frames=checked.filter(x=>x.ok).slice(0,9).reverse();

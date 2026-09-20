@@ -212,6 +212,19 @@ function rowConfidence(r){
 function leadMoment(row){
   return row?.valid_time?localTime(row.valid_time):("+"+fmt(row?.lead_hours,0)+" giờ");
 }
+function rowValidMs(row){
+  const t=Date.parse(row?.valid_time||"");
+  return Number.isFinite(t)?t:null;
+}
+function isFutureForecastRow(row,graceMinutes=10){
+  const t=rowValidMs(row);
+  return t===null?true:t>=Date.now()-graceMinutes*60000;
+}
+function futureForecastRows(rows){
+  return (Array.isArray(rows)?rows:[])
+    .filter(r=>isFutureForecastRow(r))
+    .sort((a,b)=>(rowValidMs(a)??Infinity)-(rowValidMs(b)??Infinity));
+}
 function setHazard(id,label,meta,level){
   const b=$(id),m=$(id+"Meta");if(!b||!m)return;
   b.textContent=label;m.textContent=meta;
@@ -221,7 +234,7 @@ function setHazard(id,label,meta,level){
 function renderHazardBoard(){
   const points=islandIds().map(id=>({id,p:critical.points[id]}));
   const future=[];
-  points.forEach(x=>(x.p.ensemble?.rows||[]).forEach(r=>future.push({id:x.id,p:x.p,row:r})));
+  points.forEach(x=>futureForecastRows(x.p.ensemble?.rows||[]).forEach(r=>future.push({id:x.id,p:x.p,row:r})));
 
   const rain=future.map(x=>({...x,val:num(x.row.rain?.prob)||0})).sort((a,b)=>b.val-a.val)[0];
   const rainLvl=probabilityLevel(rain?.val);
@@ -570,18 +583,19 @@ function renderQuickAlert(){
   const candidates=[];
   Object.values(regionalForecast?.regions||{}).forEach(region=>{
     (region.rows||[]).forEach(row=>{
-      const lead=num(row.lead_hours);
-      if(lead===null||lead<0||lead>12)return;
+      const validMs=rowValidMs(row);
+      const hoursAhead=validMs===null?num(row.lead_hours):(validMs-Date.now())/3600000;
+      if(hoursAhead===null||hoursAhead<0||hoursAhead>12)return;
       const rain=num(row.rain_prob_5)||0;
       const wind=num(row.wind_prob_30)||0;
       const variability=rowVariability(row)/100;
       const score=Math.max(rain,wind,variability*.7);
       if(rain>=.25||wind>=.15||variability>=.45){
-        candidates.push({region:region.name||"Phú Quốc",row,rain,wind,variability,score});
+        candidates.push({region:region.name||"Phú Quốc",row,rain,wind,variability,score,hoursAhead});
       }
     });
   });
-  candidates.sort((a,b)=>(a.row.lead_hours-b.row.lead_hours)||(b.score-a.score));
+  candidates.sort((a,b)=>(a.hoursAhead-b.hoursAhead)||(b.score-a.score));
 
   let cls="neutral",headline="Chưa thấy nhiễu động đáng kể trong 12 giờ tới";
   let detail="Hệ thống vẫn tiếp tục theo dõi mưa, gió và độ phân tán ensemble.";
@@ -601,7 +615,7 @@ function renderQuickAlert(){
     if(x.variability>=.45)drivers.push("biến động "+Math.round(x.variability*100)+"/100");
     headline=(cls==="alert"?"Có tín hiệu nhiễu động đáng chú ý":"Có dao động thời tiết cần theo dõi");
     detail=x.region+" · "+drivers.join(" · ")+" · mốc "+leadMoment(x.row)+".";
-    when="+"+fmt(x.row.lead_hours,0)+"H";
+    when="+"+fmt(x.hoursAhead,0)+"H";
   }else if(strongestNow&&strongestNow.score>=50){
     cls="watch";
     headline="Đối lưu có tín hiệu phát triển";
@@ -619,7 +633,7 @@ function renderJoTripForecast(){
   const title=$("jotripForecastTitle");
   const body=$("jotripForecastRows");
   const meta=regionMeta();
-  const rows=regionRows();
+  const rows=futureForecastRows(regionRows());
   const cal=regionalForecast?.calibration_status||point().ensemble?.calibration_status||"LEARNING";
   setBadge("ensembleState",cal,viCal(cal));
 
@@ -654,7 +668,7 @@ function renderJoTripForecast(){
     const driver=[r.risk_driver?.rain,r.risk_driver?.wind].filter(Boolean);
     const driverText=[...new Set(driver)].join(" / ")||"-";
     return '<tr class="'+state.cls+'">'+
-      '<td><b>'+esc(r.valid_time?localTime(r.valid_time):("+"+fmt(r.lead_hours,0)+" giờ"))+'</b><small>+'+fmt(r.lead_hours,0)+' giờ</small></td>'+
+      '<td><b>'+esc(r.valid_time?localTime(r.valid_time):("+"+fmt(r.lead_hours,0)+" giờ"))+'</b><small>Giờ Phú Quốc · UTC+7</small></td>'+
       '<td>'+fmt(r.temperature_c,1)+'°C</td>'+
       '<td><b>'+fmt(r.wind_kmh,0)+' km/h</b><small>q90 '+fmt(r.wind_q90_kmh,0)+'</small></td>'+
       '<td><b>Bft '+bft.force+'</b><small>'+esc(bft.label)+'</small></td>'+

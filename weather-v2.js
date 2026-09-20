@@ -791,7 +791,9 @@ function renderForecastDayRibbon(rows){
     const rainQ90=rows.map(r=>num(r.rain_q90_mm)).filter(v=>v!==null);
     const rainProb=Math.max(0,...rows.map(r=>num(r.rain_prob_5)).filter(v=>v!==null));
     const windProb=Math.max(0,...rows.map(r=>num(r.wind_prob_30)).filter(v=>v!==null));
-    const state=forecastCardState(windProb,rainProb);
+    let state=forecastCardState(windProb,rainProb);
+    const hasNowcastHigh=rows.some(r=>["HIGH","ELEVATED"].includes(String(r.nowcast_overlay?.level||"").toUpperCase()));
+    if(hasNowcastHigh)state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
     const windMax=winds.length?Math.max(...winds):null;
     const windHigh=windQ90.length?Math.max(...windQ90):null;
     const rainMax=rains.length?Math.max(...rains):null;
@@ -915,12 +917,17 @@ function renderJoTripForecast(){
 
   let watch=0;
   body.innerHTML=rows.map(r=>{
-    const state=forecastCardState(r.wind_prob_30,r.rain_prob_5);
+    let state=forecastCardState(r.wind_prob_30,r.rain_prob_5);
+    const nowOverlay=r.nowcast_overlay||null;
+    if(nowOverlay&&["HIGH","ELEVATED"].includes(String(nowOverlay.level||"").toUpperCase()))state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
     const variation=variationLevel({spread:r.wind_spread},{spread:r.rain_spread});
     if(state.cls==="watch"||variation.score>=3)watch++;
     const bft=beaufort(r.wind_kmh);
-    const driver=[r.risk_driver?.rain,r.risk_driver?.wind].filter(Boolean);
-    const driverText=[...new Set(driver)].join(" / ")||"-";
+    const driver=[r.risk_driver?.rain,r.risk_driver?.wind,r.risk_driver?.nowcast].filter(Boolean);
+    let driverText=[...new Set(driver)].join(" / ")||"-";
+    if(nowOverlay&&num(nowOverlay.eta_minutes)!==null&&nowOverlay.approaching){
+      driverText+=" · mây tới ~"+Math.round(nowOverlay.eta_minutes)+"p";
+    }
     return '<tr class="'+state.cls+'">'+
       '<td><b>'+esc(r.valid_time?localTime(r.valid_time):("+"+fmt(r.lead_hours,0)+" giờ"))+'</b><small>Giờ Phú Quốc · UTC+7</small></td>'+
       '<td>'+fmt(r.temperature_c,1)+'°C</td>'+
@@ -938,7 +945,7 @@ function renderJoTripForecast(){
     ? "D0-D3 mỗi 6 giờ; D4-D10 mỗi 12 giờ. "
     : "Nguồn hiện tại mới đủ "+Math.round(horizon/24)+" ngày. ")+
     (watch?watch+" mốc trong vùng có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
-    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
+    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Trong 0-12 giờ đầu, Himawari/nowcast được chồng thêm để phát hiện diễn biến cục bộ nhưng không sửa các số q50/q90 gốc của ensemble. Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
 
   $("ensembleMeta").textContent="Dự báo JoTrip theo vùng · dữ liệu đầy đủ "+
     (num(regionalForecast.ensemble_completion_ratio)===null?"-":Math.round(regionalForecast.ensemble_completion_ratio*100)+"%")+

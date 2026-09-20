@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="preconnect" href="https://a.basemaps.cartocdn.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="spatial-lab.css?v=20260920-82">
+  <link rel="stylesheet" href="spatial-lab.css?v=20260921-01">
 </head>
 <body>
 <div class="app">
@@ -80,13 +80,14 @@
   <nav class="layerbar" aria-label="Lớp dữ liệu">
     <button class="layer active" data-layer="wind"><i>↗</i><span>Gió</span></button>
     <button class="layer" data-layer="rain"><i>···</i><span>Mưa</span></button>
-    <button class="layer" data-layer="rain24"><i>24</i><span>24h</span></button>
+    <button class="layer" data-layer="rain24"><i>24</i><span>Mưa 24h</span></button>
     <button class="layer" data-layer="waves"><i>≈</i><span>Sóng</span></button>
     <button class="layer" data-layer="current"><i>⇢</i><span>Dòng</span></button>
     <button class="layer" data-layer="storm"><i>☁</i><span>Mây</span></button>
   </nav>
 
   <div class="scale">
+    <b id="scaleTitle" class="scale-title"></b>
     <div id="scaleGradient" class="scale-gradient"></div>
     <div id="scaleLabels" class="scale-labels"></div>
   </div>
@@ -100,6 +101,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="weather-live-config.js"></script>
 <script src="weather-standalone-data.js"></script>
-<script src="spatial-lab.js?v=20260920-82"></script>
+<script src="spatial-lab.js?v=20260921-01"></script>
 </body>
 </html>

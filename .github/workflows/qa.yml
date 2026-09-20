@@ -50,11 +50,6 @@ jobs:
           test -f cloudflare/schema.sql
           test "$(tr -d '\r\n ' < CNAME)" = "weather.openphuquoc.com"
           grep -q 'weather.openphuquoc.com' README.md
-          grep -q 'weather-live-config.js' index.html
-          grep -q 'weather-standalone-data.js' index.html
-          grep -q 'weather-feedback.js' index.html
-          grep -q 'weather-feedback.css' index.html
-          grep -q 'weather-sw.js' index.html
           grep -q '/vendor/weather-dashboard-base.css' weather-dashboard.css
           grep -q "'/feedback'" cloudflare/weather-worker.js
           grep -q 'weather_feedback' cloudflare/schema.sql

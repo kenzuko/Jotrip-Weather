@@ -745,4 +745,4 @@ async function boot() {
   }
 }
 
-map.on('load', boot);
+map.once('style.load', boot);

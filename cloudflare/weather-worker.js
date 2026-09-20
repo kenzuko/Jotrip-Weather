@@ -140,7 +140,7 @@ async function recentFeedback(env,minutes=90,limit=30){
   if(!env.WEATHER_FEEDBACK)return {ok:false,store:'D1_NOT_BOUND',items:[]};
   const mins=Math.max(5,Math.min(360,Number(minutes)||90));
   const max=Math.max(1,Math.min(100,Number(limit)||30));
-  const since=new Date(Date.now()-mins*60*1000).toISOString();
+  const since=isoUTC7(new Date(Date.now()-mins*60*1000));
   const result=await env.WEATHER_FEEDBACK.prepare(`SELECT id,created_at,observed_at,point_id,point_name,verdict,wind_relation,wave_relation,rain_relation,evidence_type,note,forecast_json,ui_version,calibration_eligible
     FROM weather_feedback
     WHERE observed_at >= ?

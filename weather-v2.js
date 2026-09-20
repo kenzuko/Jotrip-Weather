@@ -482,10 +482,9 @@ function renderCurrent(){
 function renderActual(){
   const a=critical.actual||{},v=a.vvpq||{},g=a.rain_gauges||[],cards=[];
   if(current==="rach_gia"){
-    const rg=a.rach_gia_station||{};
-    cards.push('<article class="actual-card"><header><b>KT Rạch Giá 089907</b><em class="badge model">CHƯA NỐI LIVE</em></header><strong>ACTUAL đang chờ feed số</strong><small>Trạm đã xác minh · '+esc(rg.readiness||"UNCONNECTED")+'. Dữ liệu đang xảy ra phía trên dùng MODEL_ONLY + Himawari, không dùng VVPQ/VRain Phú Quốc.</small></article>');
+    cards.push('<article class="actual-card"><header><b>Rạch Giá</b><em class="badge model">MODEL ONLY</em></header><strong>Chưa có ACTUAL live</strong><small>Chỉ hiển thị các nguồn có feed số đang hoạt động. Dữ liệu hiện tại dùng model + Himawari/AQI/triều có feed; không dùng VVPQ/VRain Phú Quốc.</small></article>');
     $("actualStrip").innerHTML=cards.join("");
-    $("actualState").textContent="Rạch Giá: chưa có numeric ACTUAL trong pipeline";
+    $("actualState").textContent="Không có nguồn ACTUAL live đã kết nối";
     return;
   }
   cards.push('<article class="actual-card"><header><b>VVPQ</b><em class="badge actual">ĐO THỰC</em></header><strong>'+fmt(v.temperature_c,1)+'°C</strong><small>Gió '+fmt(v.wind_kmh,1)+' km/h · '+(v.weather?esc(v.weather)+' · ':'')+ageText(v.observed_at)+'</small></article>');

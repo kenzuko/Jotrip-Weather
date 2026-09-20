@@ -1079,6 +1079,28 @@ function buildQuickWatchEvents(){
     });
   }
 
+  // 2b) Island-wide convective rain signal - plain language, no fake certainty.
+  const islandWet=islandIds().map(id=>{
+    const p=critical?.points?.[id]||{},n=effectiveNowcastFor(id);
+    return {
+      id,name:p.name||id,
+      rain:num(p.local?.rain_rate_mm_h)||0,
+      conv:num(n?.convective_score??p.local?.convection_score)||0
+    };
+  });
+  const convWet=islandWet.filter(x=>x.conv>=70&&x.rain>=.5);
+  if(convWet.length>=4){
+    const rates=convWet.map(x=>x.rain),lo=Math.min(...rates),hi=Math.max(...rates);
+    events.push({
+      key:"island-convective-rain",
+      severity:"watch",
+      when:"HIỆN TẠI",
+      title:"Nhiều khu vực trên đảo đang có mây rất cao kèm tín hiệu mưa",
+      detail:"JoTrip Local Now tại các điểm đang ở khoảng "+fmt(lo,1)+"-"+fmt(hi,1)+" mm/h. Mưa dông cục bộ giữa các điểm có thể mạnh hơn giá trị trung bình này.",
+      sort:1.5
+    });
+  }
+
   // 3) Satellite cloud paths: publish only tracks that pass the backend safety gate.
   const impacts=[];
   islandIds().forEach(id=>{

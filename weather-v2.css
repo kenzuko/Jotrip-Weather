@@ -941,3 +941,66 @@ footer{font-size:9.5px}
 .tide-extreme-label.high{fill:#087d87}
 .tide-extreme-label.low{fill:#5557bd}
 
+/* V2.8 JoTrip Intelligence map + whole-island Quick Watch */
+.command-center{margin-top:24px}
+.quick-watch{
+  margin:14px 0 8px;
+  padding:14px;
+  border:1px solid #d8e6ed;
+  border-radius:18px;
+  background:linear-gradient(145deg,#ffffff,#f5f9fb);
+  box-shadow:0 9px 26px rgba(29,68,92,.055)
+}
+.quick-watch[hidden]{display:none!important}
+.quick-watch-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.quick-watch-head>div{min-width:0}
+.quick-watch-head small{display:block;font-size:8px;font-weight:850;letter-spacing:.12em;color:#6f8897}
+.quick-watch-head b{display:block;margin-top:2px;font-size:14px;color:#173f57}
+.quick-watch-head>span{
+  min-width:27px;height:27px;padding:0 7px;border-radius:999px;
+  display:grid;place-items:center;background:#143f5d;color:#fff;font-size:10px;font-weight:850
+}
+.quick-watch-list{display:grid;gap:8px;margin-top:10px}
+.quick-watch-item{
+  position:relative;display:grid;grid-template-columns:12px minmax(0,1fr);gap:10px;
+  padding:11px 12px;border:1px solid #e0e9ee;border-radius:14px;background:#fff;min-width:0
+}
+.quick-watch-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;background:#7b9aac;box-shadow:0 0 0 4px rgba(123,154,172,.11)}
+.quick-watch-item.watch{border-color:#eadca8;background:#fffdf6}
+.quick-watch-item.watch .quick-watch-dot{background:#d4a227;box-shadow:0 0 0 4px rgba(212,162,39,.12)}
+.quick-watch-item.alert{border-color:#ebc0b8;background:#fff8f6}
+.quick-watch-item.alert .quick-watch-dot{background:#d85e49;box-shadow:0 0 0 4px rgba(216,94,73,.12)}
+.quick-watch-item small{display:block;font-size:7.5px;font-weight:850;letter-spacing:.06em;color:#81939e}
+.quick-watch-item b{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:#254b60}
+.quick-watch-item.alert b{color:#8a3528}
+.quick-watch-item p{margin:4px 0 0;font-size:9px;line-height:1.45;color:#6f8591}
+.quick-watch-foot{display:block;margin-top:9px;font-size:7.5px;line-height:1.45;color:#8799a3}
+
+.jotrip-live-map{width:100%;height:100%;min-height:320px;background:#dfeaf0}
+.jotrip-live-map .leaflet-control-attribution{font-size:8px}
+.jotrip-live-map .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 10px 28px rgba(24,59,80,.18)}
+.jotrip-map-popup{display:grid;gap:4px;min-width:170px}
+.jotrip-map-popup b{font-size:12px;color:#214b63}
+.jotrip-map-popup span{font-size:10px;color:#567180;line-height:1.4}
+.jotrip-map-popup small{font-size:9px;color:#7c8f99;line-height:1.4}
+.command-map .map-tabs{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+.command-map .map-tabs::-webkit-scrollbar{display:none}
+.command-map .map-tabs button{flex:0 0 auto;white-space:nowrap}
+.command-map .map-tabs button[data-map="jotrip"].active{
+  background:linear-gradient(135deg,#143f5d,#1b607d);color:#fff
+}
+
+@media(max-width:760px){
+  .command-center{margin-top:18px;padding:17px;border-radius:24px}
+  .command-map .map-box{height:430px}
+  .quick-watch{padding:12px;border-radius:16px}
+  .quick-watch-head b{font-size:13px}
+  .quick-watch-item{padding:10px}
+  .quick-watch-item b{font-size:11px}
+  .quick-watch-item p{font-size:9.5px}
+}
+@media(max-width:520px){
+  .command-map .map-box{height:390px}
+  .jotrip-live-map{min-height:390px}
+}
+

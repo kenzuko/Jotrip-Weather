@@ -1037,3 +1037,7 @@ footer{font-size:9.5px}
   .himawari-loop-bar{left:7px;right:7px;bottom:7px;padding:6px 7px}
 }
 
+#convectiveNow{font-size:18px!important;line-height:1.08;letter-spacing:-.02em}
+#convectiveMeta{display:block;max-width:100%;line-height:1.35}
+.map-convective strong{line-height:1.25}
+

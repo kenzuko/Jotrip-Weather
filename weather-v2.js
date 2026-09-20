@@ -123,6 +123,9 @@ function overlayFreshLocalNow(base,localNow){
       wind_direction_deg:num(lp.wind_direction_deg),
       rain_rate_mm_h:num(rain.rain_rate_mm_h),
       rain_confidence:num(rain.confidence),
+      rain_imminence_score:num(rain.imminence?.score),
+      rain_imminence_level:rain.imminence?.level||null,
+      rain_imminence_window_min:num(rain.imminence?.window_minutes),
       convection_score:num(rain.convective_score),
       wave_hs_m:num(lp.wave_hs_m),
       temperature_class:temp.data_class||bp.local?.temperature_class,
@@ -236,13 +239,15 @@ function confidenceScore(){
   return Math.round(clamp(score,0,100));
 }
 function pointRisk(p){
-  const m=p.model||{},n=p.nowcast||{},rows=p.ensemble?.rows||[];
-  const conv=num(n.convective_score),gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),hs=num(m.wave_hs_m);
+  const m=p.model||{},n=p.nowcast||{},l=p.local||{},rows=p.ensemble?.rows||[];
+  const conv=num(n.convective_score),imminence=num(l.rain_imminence_score),gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),hs=num(m.wave_hs_m);
   const windProb=Math.max(0,...rows.map(x=>num(x.wind?.prob)).filter(v=>v!==null));
   const rainProb=Math.max(0,...rows.map(x=>num(x.rain?.prob)).filter(v=>v!==null));
   let level=0,reasons=[];
   if(conv!==null&&conv>=75){level=Math.max(level,2);reasons.push("đối lưu cao")}
   else if(conv!==null&&conv>=60){level=Math.max(level,1);reasons.push("đối lưu tăng")}
+  if(imminence!==null&&imminence>=75){level=Math.max(level,2);reasons.push("mưa cục bộ có thể tăng nhanh")}
+  else if(imminence!==null&&imminence>=55){level=Math.max(level,1);reasons.push("mưa ngắn hạn cần theo dõi")}
   if(gust!==null&&gust>=39){level=Math.max(level,3);reasons.push("gió giật mạnh")}
   else if(gust!==null&&gust>=29){level=Math.max(level,2);reasons.push("gió giật cần theo dõi")}
   if(rain!==null&&rain>=25){level=Math.max(level,3);reasons.push("mưa 3 giờ lớn")}
@@ -400,8 +405,10 @@ function renderStatus(){
 
 function summary(p){
   const l=p.local||{},m=p.model||{},bits=[];
-  const rain=num(l.rain_rate_mm_h),conv=num((p.nowcast||{}).convective_score??l.convection_score),wind=num(l.wind_kmh??m.wind_kmh),wave=num(l.wave_hs_m??m.wave_hs_m);
+  const rain=num(l.rain_rate_mm_h),imminence=num(l.rain_imminence_score),conv=num((p.nowcast||{}).convective_score??l.convection_score),wind=num(l.wind_kmh??m.wind_kmh),wave=num(l.wave_hs_m??m.wave_hs_m);
   if(rain!==null)bits.push(rain>=3?"Ước tính mưa hiện tại đáng chú ý":rain>.2?"Ước tính có mưa nhẹ hoặc rải rác":"Ước tính mưa hiện tại thấp");
+  if(imminence!==null&&imminence>=75)bits.push("mưa cục bộ có thể tăng nhanh trong 0-60 phút");
+  else if(imminence!==null&&imminence>=55)bits.push("mưa ngắn hạn cần theo dõi");
   if(conv!==null&&conv>=70)bits.push("mây đối lưu đang hoạt động");
   if(wind!==null)bits.push("gió khoảng "+fmt(wind,0)+" km/h");
   if(wave!==null)bits.push("Hs nền khoảng "+fmt(wave,1)+" m");
@@ -468,10 +475,17 @@ function renderCurrent(){
   setMetric("rainNow",rainNowValue,2);
   const rainConf=num(l.rain_confidence);
   setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
+  const rainImm=num(l.rain_imminence_score),rainImmLevel=String(l.rain_imminence_level||"").toUpperCase();
   if(rainMeta)rainMeta.innerHTML=l.available
-    ?'mm/h · <span id="rainConfidence">'+(rainConf===null?"-":Math.round(rainConf*100))+'</span>% tin cậy'
+    ?'mm/h · <span id="rainConfidence">'+(rainConf===null?"-":Math.round(rainConf*100))+'</span>% tin cậy'+(rainImm!==null&&rainImm>=55?' · nowcast '+Math.round(rainImm)+'/100':'')
     :'mm/h · quy đổi từ mưa mô hình 3h';
-  if(rainCtx)rainCtx.innerHTML=rainActualContext();
+  if(rainCtx){
+    const actualCtx=rainActualContext();
+    const nowCtx=rainImm!==null&&rainImm>=55
+      ?'Nowcast 0-60 phút: '+(rainImmLevel==="HIGH"?"CAO":"THEO DÕI")+' · chỉ số '+Math.round(rainImm)+'/100 · không phải xác suất mưa'
+      :"";
+    rainCtx.innerHTML=[actualCtx,nowCtx].filter(Boolean).join(" · ");
+  }
   $("convectiveNow").textContent=num(n.convective_score??l.convection_score)===null?"-":Math.round(num(n.convective_score??l.convection_score));
   setMetric("waveNow",l.wave_hs_m??m.wave_hs_m,2);setBadge("marineClass",l.marine_class||"MODEL_ONLY");
   setMetric("hmaxNow",m.wave_hmax_m,2);
@@ -718,9 +732,15 @@ function renderQuickAlert(){
 
   const nowSignals=islandIds().map(id=>{
     const p=critical?.points?.[id]||{};
-    return {name:p.name||id,score:num(p.nowcast?.convective_score??p.local?.convection_score)||0};
+    return {
+      name:p.name||id,
+      score:num(p.nowcast?.convective_score??p.local?.convection_score)||0,
+      rainImminence:num(p.local?.rain_imminence_score)||0,
+      rainLevel:String(p.local?.rain_imminence_level||"").toUpperCase()
+    };
   }).sort((a,b)=>b.score-a.score);
   const strongestNow=nowSignals[0];
+  const strongestRainNow=[...nowSignals].sort((a,b)=>b.rainImminence-a.rainImminence)[0];
 
   const candidates=[];
   Object.values(regionalForecast?.regions||{}).forEach(region=>{
@@ -743,7 +763,12 @@ function renderQuickAlert(){
   let detail="Hệ thống vẫn tiếp tục theo dõi mưa, gió và độ phân tán ensemble.";
   let when="12H";
 
-  if(strongestNow&&strongestNow.score>=70){
+  if(strongestRainNow&&strongestRainNow.rainImminence>=75){
+    cls="alert";
+    headline="Mưa cục bộ có thể tăng nhanh trong 0-60 phút";
+    detail=strongestRainNow.name+" · rain-nowcast "+fmt(strongestRainNow.rainImminence,0)+"/100 · đây là tín hiệu heuristic, không phải xác suất mưa.";
+    when="0-60P";
+  }else if(strongestNow&&strongestNow.score>=70){
     cls="alert";
     headline="Đối lưu đang hoạt động mạnh - cần theo dõi ngắn hạn";
     detail=strongestNow.name+" · chỉ số đối lưu "+fmt(strongestNow.score,0)+"/100 · ưu tiên radar/Himawari và quan trắc thực địa.";

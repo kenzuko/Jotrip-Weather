@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod46">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod47">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod46"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod47"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -136,28 +136,23 @@
       <div><span class="eyebrow">BẢN ĐỒ JOTRIP</span><h2>Thời tiết toàn đảo theo không gian</h2></div>
       <span id="mapState" class="badge deferred">CHƯA TẢI</span>
     </div>
-    <div class="map-tabs">
-      <button class="active" data-map="jotrip">Bản đồ JoTrip</button>
-      <button data-map="radar">Radar</button>
-      <button data-map="himawari">Himawari IR</button>
-      <button data-map="wind">Gió</button>
-      <button data-map="rain">Mưa dự báo</button>
-      <button data-map="waves">Sóng</button>
-    </div>
     <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip</b><span>Số đo thực tế + ước tính hiện tại + mây Himawari + gió + biển trên cùng một bản đồ.</span></div></div>
-    <div id="mapNote" class="map-note">Bản đồ JoTrip là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn giữ nguyên để đối chiếu.</div>
+    <div id="mapNote" class="map-note">Chọn lớp ngay trên bản đồ. Mỗi lớp dùng cách thể hiện riêng để ưu tiên hướng, vị trí và mức độ thay vì hiệu ứng màu trang trí.</div>
     <div id="mapConvective" class="map-convective">
       <span><b>Trạng thái mây</b><strong id="mapConvectiveScore">-</strong></span>
       <span><b>Đỉnh mây</b><strong id="mapCloudTop">-</strong></span>
       <span><b>20 phút gần đây</b><strong id="mapCooling">-</strong></span>
       <small>Ảnh vệ tinh cho biết mây đang cao/lạnh và phát triển ra sao. Đây không phải xác suất mưa hay sét.</small>
     </div>
-    <div class="map-source-links">
-      <a href="https://himawari8.nict.go.jp/" target="_blank" rel="noopener noreferrer">NICT Himawari ↗</a>
-      <a href="https://www.data.jma.go.jp/mscweb/data/himawari/" target="_blank" rel="noopener noreferrer">JMA Himawari ↗</a>
-      <a href="https://nchmf.gov.vn/KttvSiteE/vi-VN/1/image-ra-dar-r2.html" target="_blank" rel="noopener noreferrer">NCHMF Radar ↗</a>
-      <a href="https://www.windy.com/?10.20,104.00,8" target="_blank" rel="noopener noreferrer">Windy ↗</a>
-    </div>
+    <details class="map-sources">
+      <summary>Nguồn đối chiếu</summary>
+      <div class="map-source-links">
+        <a href="https://himawari8.nict.go.jp/" target="_blank" rel="noopener noreferrer">NICT Himawari ↗</a>
+        <a href="https://www.data.jma.go.jp/mscweb/data/himawari/" target="_blank" rel="noopener noreferrer">JMA Himawari ↗</a>
+        <a href="https://nchmf.gov.vn/KttvSiteE/vi-VN/1/image-ra-dar-r2.html" target="_blank" rel="noopener noreferrer">NCHMF Radar ↗</a>
+        <a href="https://www.windy.com/?10.20,104.00,8" target="_blank" rel="noopener noreferrer">Windy ↗</a>
+      </div>
+    </details>
   </section>
       </div>
 

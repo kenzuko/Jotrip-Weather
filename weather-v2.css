@@ -1016,3 +1016,24 @@ footer{font-size:9.5px}
 .jotrip-map-legend .lg-rain{background:#168bd0}
 .jotrip-map-legend .lg-cloud{background:rgba(107,95,197,.25);border:1px dashed #6b5fc5}
 
+/* V2.9 near-live Himawari loop */
+.himawari-loop{position:relative;width:100%;height:100%;background:#08131b;overflow:hidden}
+.himawari-loop>img{width:100%;height:100%;object-fit:contain;display:block;transition:opacity .18s ease}
+.himawari-loop-bar{
+  position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:8px;
+  padding:7px 9px;border-radius:11px;background:rgba(11,25,34,.78);color:#fff;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:9px
+}
+.himawari-loop-bar button{
+  width:28px;height:28px;border:0;border-radius:8px;background:#fff;color:#173e51;font-size:9px;font-weight:900
+}
+.himawari-loop-bar span{font-weight:800;flex:1}
+.himawari-loop-bar small{color:#b8cbd4;font-size:8px}
+
+/* Spatial iframe is the primary JoTrip map, so give it a real map viewport. */
+.map-box iframe[data-jotrip-spatial]{width:100%;height:100%;min-height:520px;border:0;background:#284957}
+@media(max-width:760px){
+  .map-box iframe[data-jotrip-spatial]{min-height:500px}
+  .himawari-loop-bar{left:7px;right:7px;bottom:7px;padding:6px 7px}
+}
+

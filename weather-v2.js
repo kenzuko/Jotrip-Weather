@@ -11,6 +11,7 @@ const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weathe
 const JOTRIP_FORECAST="https://kenzuko.github.io/Jotrip-Lab/weather/jotrip-forecast.json";
 const LIVE_REFRESH_MS=2*60*1000;
 const FEEDBACK_ENDPOINT="/feedback";
+const RECENT_FEEDBACK_ENDPOINT="/feedback/recent?minutes=90&limit=30";
 const FEEDBACK_QUEUE_KEY="pq_weather_feedback_queue_v1";
 const FEEDBACK_HISTORY_KEY="pq_weather_field_feedback_v1";
 const WINDY={
@@ -47,6 +48,9 @@ let jotripMap=null;
 let leafletPromise=null;
 let liveRefreshBusy=false;
 let lastLiveRefreshAt=0;
+let recentFieldFeedback=null;
+let himawariLoopTimer=null;
+let himawariLoopPlaying=true;
 
 async function getJSON(url,ttlMs=120000){
   const sep=url.includes("?")?"&":"?";
@@ -529,13 +533,13 @@ function rainActualContext(){
   const name=esc(g.name||"gần nhất"),dist=fmt(g.distance_km,1);
   if(g.rain_observed===true){
     const rate=num(g.rain_intensity_mm_h);
-    return "Trạm mưa gần nhất: "+name+" đang ghi nhận mưa"+(rate!==null?" ~"+fmt(rate,1)+" mm/h":"")+" · cách "+dist+" km.";
+    return "Trạm "+name+" đang ghi nhận mưa"+(rate!==null?" ~"+fmt(rate,1)+" mm/h":"")+" · cách điểm đang xem "+dist+" km.";
   }
   if(g.rain_observed===false||num(g.accum_mm)===0){
-    return "Trạm mưa gần nhất: "+name+" hiện chưa ghi nhận mưa · cách "+dist+" km.";
+    return "Trạm "+name+" chưa ghi nhận mưa ngay tại vị trí trạm · cách "+dist+" km. Điều này không có nghĩa toàn khu vực đều khô.";
   }
   if(num(g.accum_mm)!==null){
-    return "Trạm mưa gần nhất: "+name+" đã ghi nhận tổng "+fmt(g.accum_mm,1)+" mm trong kỳ · cách "+dist+" km.";
+    return "Trạm "+name+" đã ghi nhận tổng "+fmt(g.accum_mm,1)+" mm trong kỳ · cách "+dist+" km.";
   }
   return "Trạm mưa gần nhất: "+name+" · cách "+dist+" km.";
 }
@@ -599,11 +603,11 @@ function renderActual(){
       detail="Lượng mưa "+fmt(inc,2)+" mm / "+fmt(win,0)+" phút";
       if(rate!==null)detail+=" · cường độ "+fmt(rate,2)+" mm/h";
     }else if(x.rain_observed===false){
-      observed="KHÔNG MƯA";
-      detail="Không ghi nhận thêm lượng mưa trong "+fmt(win,0)+" phút gần nhất.";
+      observed="TRẠM CHƯA GHI NHẬN MƯA";
+      detail="Tại đúng vị trí trạm chưa ghi nhận thêm lượng mưa trong "+fmt(win,0)+" phút gần nhất. Không dùng kết quả này để kết luận cả khu vực đều không mưa."
     }else if(acc===0){
-      observed="KHÔNG MƯA";
-      detail="VRain hiện ghi 0 mm trong kỳ quan trắc.";
+      observed="TRẠM CHƯA GHI NHẬN MƯA";
+      detail="VRain tại đúng vị trí trạm hiện ghi 0 mm trong kỳ quan trắc. Mưa cục bộ có thể xảy ra ngoài vị trí trạm."
     }else if(acc!==null&&acc>0){
       observed="ĐÃ CÓ MƯA TRONG KỲ";
       detail="Tổng kỳ "+fmt(acc,1)+" mm · chưa đủ hai mẫu gần nhau để kết luận đang mưa ngay lúc này.";
@@ -1617,11 +1621,11 @@ async function renderJoTripMap(){
     return;
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
-  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260919-62&embed=1"></iframe>';
+  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260920-70&embed=1"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}
-    if(note)note.textContent="JoTrip Spatial V6.2 · bản đồ nội bộ tổng hợp gió, mưa, mưa 24h, sóng, dòng chảy, mây, radar, Actual và Risk. Các lớp Radar/Windy/Himawari riêng vẫn giữ bên cạnh để đối chiếu.";
+    if(note)note.textContent="JoTrip Spatial · bản đồ nội bộ tổng hợp gió, mưa, mưa 24h, sóng, dòng chảy, mây, radar, số đo thực tế và rủi ro. Các lớp Radar/Windy/Himawari riêng vẫn giữ bên cạnh để đối chiếu.";
   };
   frame.onerror=()=>{
     if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}

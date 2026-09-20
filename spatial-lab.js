@@ -1170,6 +1170,33 @@ function playRadar(){
   state.timer=setInterval(()=>showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1)),800);
 }
 
+function pointMetricLabel(id){
+  const p=state.critical?.points?.[id]||{},l=p.local||{},m=p.model||{},lead=currentLeadHours();
+  if(state.layer==="wind"){
+    const v=lead<=3?num(l.wind_kmh):productionMetric(id,"wind");
+    return v===null?"":fmt(v,0)+" km/h";
+  }
+  if(state.layer==="rain"){
+    const v=lead<=3?num(l.rain_rate_mm_h):null;
+    if(v!==null)return fmt(v,1)+" mm/h";
+    const row=nearestRow(state.currentRows,POINTS[id]?.lat,POINTS[id]?.lon);
+    return num(row?.rain_mm)===null?"":fmt(row.rain_mm,1)+" mm";
+  }
+  if(state.layer==="waves"){
+    const v=num(l.wave_hs_m??m.wave_hs_m);
+    return v===null?"":fmt(v,1)+" m";
+  }
+  if(state.layer==="current"){
+    const v=num(m.current_kmh);
+    return v===null?"":fmt(v,2)+" km/h";
+  }
+  if(state.layer==="storm"){
+    const score=num(p.nowcast?.convective_score??l.convection_score);
+    return score===null?"":(score>=75?"Mây rất cao":score>=50?"Mây phát triển":"Mây thấp");
+  }
+  return riskLabel(riskAt(id).level);
+}
+
 function renderRisk(){
   state.riskLayer.clearLayers();
   if(!state.risk||!state.critical)return;
@@ -1188,7 +1215,8 @@ function renderRisk(){
     const zoomed=zoom>=12&&r.level>=2;
     const major=["duong_dong","ganh_dau","an_thoi"].includes(id)&&zoom<=11.3;
     if(selected||severe||zoomed||major){
-      const li=L.divIcon({className:"",html:'<div class="risk-label">'+esc(cfg.name)+' · '+riskLabel(r.level)+'</div>',iconSize:[118,20],iconAnchor:[59,-9]});
+      const metric=pointMetricLabel(id),text=cfg.name+(metric?" · "+metric:"");
+      const li=L.divIcon({className:"",html:'<div class="risk-label">'+esc(text)+'</div>',iconSize:[146,20],iconAnchor:[73,-9]});
       L.marker([cfg.lat,cfg.lon],{icon:li,interactive:false,zIndexOffset:850}).addTo(state.riskLayer);
     }
   });

@@ -293,10 +293,15 @@ function initMap(){
     maxBoundsViscosity:.28,
     preferCanvas:true
   });
-  state.map.setView([10.17,103.98],10.15);
+  state.map.setView([10.19,103.98],EMBED?9.65:10.0);
 
   // Windy-style render stack:
   // basemap geometry -> weather canvases -> labels -> JoTrip markers/flag.
+  state.map.createPane("weatherContext");
+  const contextPane=state.map.getPane("weatherContext");
+  contextPane.style.zIndex="430";
+  contextPane.style.pointerEvents="none";
+
   state.map.createPane("weatherLabels");
   const labelPane=state.map.getPane("weatherLabels");
   labelPane.style.zIndex="580";
@@ -306,6 +311,13 @@ function initMap(){
     subdomains:"abcd",
     maxZoom:19,
     attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
+  }).addTo(state.map);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=cb1_3q98_1_d8112ce70cc7ec9b9276b0a0",{
+    subdomains:"abcd",
+    maxZoom:19,
+    pane:"weatherContext",
+    opacity:.22
   }).addTo(state.map);
 
   L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png?key=cb1_3q98_1_d8112ce70cc7ec9b9276b0a0",{
@@ -1693,6 +1705,7 @@ function bind(){
 }
 
 async function start(){
+  if(EMBED)document.body.classList.add("embed-mode");
   initMap();bind();setCrosshair(true);applyPresentationScene();await loadAll();
   setInterval(async()=>{
     const [nowcast,marine,critical,forecast,current,feedback]=await Promise.all([

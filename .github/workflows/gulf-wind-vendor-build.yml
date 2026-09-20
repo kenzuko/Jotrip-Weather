@@ -1,0 +1,55 @@
+name: Build Gulf Wind vendor bundle
+
+on:
+  push:
+    paths:
+      - "gulf-wind-deck-entry.js"
+      - ".github/workflows/gulf-wind-vendor-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pinned renderer dependencies
+        run: |
+          npm install --no-save             esbuild@0.25.9             @deck.gl/core@9.2.6             @deck.gl/layers@9.2.6             @deck.gl/mapbox@9.2.6             @luma.gl/core@9.2.6             @luma.gl/engine@9.2.6             @luma.gl/shadertools@9.2.6             maplibre-gl-wind@0.2.1
+
+      - name: Bundle renderer adapter
+        run: |
+          mkdir -p vendor
+          npx esbuild gulf-wind-deck-entry.js             --bundle             --format=esm             --platform=browser             --target=es2022             --minify             --legal-comments=eof             --outfile=vendor/gulf-wind-deck-vendor.js
+
+      - name: Publish bundle
+        shell: bash
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          # rebuild after reset so the generated file is based on the latest source
+          mkdir -p vendor
+          npx esbuild gulf-wind-deck-entry.js             --bundle             --format=esm             --platform=browser             --target=es2022             --minify             --legal-comments=eof             --outfile=vendor/gulf-wind-deck-vendor.js
+
+          git config user.name "jotrip-weather-bundle"
+          git config user.email "jotrip-weather-bundle@users.noreply.github.com"
+          git add vendor/gulf-wind-deck-vendor.js
+
+          if git diff --cached --quiet; then
+            echo "Vendor bundle unchanged"
+            exit 0
+          fi
+
+          git commit -m "build: refresh Gulf Wind renderer vendor [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

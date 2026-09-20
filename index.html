@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod37">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260920-prod38">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260920-prod37"></script>
+  <script defer src="/weather-v2.js?v=20260920-prod38"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -62,9 +62,9 @@
     </div>
   </section>
 
-  <section id="quickAlert" class="quick-watch" aria-live="polite" aria-label="Quick Watch thời tiết toàn đảo" hidden>
+  <section id="quickAlert" class="quick-watch" aria-live="polite" aria-label="Tin nhanh thời tiết toàn đảo" hidden>
     <div class="quick-watch-head">
-      <div><small>QUICK WATCH · TOÀN ĐẢO</small><b>Đang cần chú ý</b></div>
+      <div><small>TIN NHANH · TOÀN ĐẢO</small><b>Đang cần chú ý</b></div>
       <span id="quickWatchCount">0</span>
     </div>
     <div id="quickAlertList" class="quick-watch-list"></div>
@@ -83,7 +83,7 @@
 
   <div class="section-intro">
     <div><span class="eyebrow">ĐANG XẢY RA</span><h2>Thời tiết tại điểm đang chọn</h2></div>
-    <small>PQ Local Now kết hợp quan trắc và phân tích địa phương</small>
+    <small>JoTrip kết hợp số đo thực tế và ước tính hiện tại tại từng khu vực</small>
   </div>
   <section class="now-grid" aria-label="Tình hình hiện tại">
     <article class="metric-card">
@@ -126,7 +126,7 @@
         <span class="eyebrow">PHÚ QUỐC WEATHER INTELLIGENCE</span>
         <h2>Tình hình toàn đảo</h2>
       </div>
-      <span class="command-kicker">OBSERVE · ASSESS · FORECAST</span>
+      <span class="command-kicker">QUAN TRẮC · ĐÁNH GIÁ · DỰ BÁO</span>
     </div>
 
     <div class="command-center-grid">
@@ -137,14 +137,14 @@
       <span id="mapState" class="badge deferred">CHƯA TẢI</span>
     </div>
     <div class="map-tabs">
-      <button class="active" data-map="jotrip">JoTrip Spatial</button>
+      <button class="active" data-map="jotrip">Bản đồ JoTrip</button>
       <button data-map="radar">Radar</button>
       <button data-map="himawari">Himawari IR</button>
       <button data-map="wind">Gió</button>
       <button data-map="rain">Mưa dự báo</button>
       <button data-map="waves">Sóng</button>
     </div>
-    <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip Intelligence</b><span>Actual + Estimated Now + Himawari + gió + biển trên cùng một mặt bản đồ.</span></div></div>
+    <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip</b><span>Số đo thực tế + ước tính hiện tại + mây Himawari + gió + biển trên cùng một bản đồ.</span></div></div>
     <div id="mapNote" class="map-note">JoTrip Intelligence là lớp tổng hợp mặc định. Radar, Windy, Himawari IR, gió, mưa dự báo và sóng vẫn được giữ nguyên để đối chiếu.</div>
     <div id="mapConvective" class="map-convective">
       <span><b>Mây phát triển Himawari</b><strong id="mapConvectiveScore">-</strong></span>
@@ -225,7 +225,7 @@
       <div id="intradayLegend" class="intraday-legend"></div>
       <div id="intradayFocus" class="intraday-focus"><b>Chạm một điểm</b><span>Xem giờ và số liệu chi tiết</span></div>
     </div>
-    <small id="intradayNote" class="panel-foot">Estimated Now gần hiện tại và forecast 72 giờ được tách lớp rõ ràng.</small>
+    <small id="intradayNote" class="panel-foot">Ước tính hiện tại và dự báo 72 giờ được tách rõ để không nhầm số đang xảy ra với số dự báo.</small>
   </section>
 
   <details class="number-guide">

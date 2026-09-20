@@ -127,6 +127,8 @@ function overlayFreshLocalNow(base,localNow){
       rain_imminence_level:rain.imminence?.level||null,
       rain_imminence_window_min:num(rain.imminence?.window_minutes),
       rain_imminence_motion:rain.imminence?.cloud_motion||null,
+      rain_impact_label:rain.imminence?.rain_impact_label||rain.rain_impact_label||null,
+      rain_impact_background_mm_h:num(rain.imminence?.background_model_rate_mm_h??rain.background_model_rate_mm_h),
       convection_score:num(rain.convective_score),
       wave_hs_m:num(lp.wave_hs_m),
       temperature_class:temp.data_class||bp.local?.temperature_class,
@@ -699,20 +701,38 @@ function motionHeadingText(m){
   return "Về "+m.motion_heading+(speed!==null?" · "+fmt(speed,0)+" km/h":" · tốc độ chưa chắc");
 }
 function motionEtaText(m){
-  if(!m)return "Chưa tính được";
-  const st=String(m.status||"").toUpperCase(),eta=num(m.eta_minutes),dist=num(m.distance_to_target_km),speed=num(m.motion_speed_kmh);
-  if(st==="NEARBY"||eta===0)return "Đang ở gần";
-  if(st==="APPROACHING"&&eta!==null)return "~"+Math.max(1,Math.round(eta))+" phút";
-  if(st==="APPROACHING"&&dist!==null&&speed!==null&&speed>0){
-    const rough=dist/speed*60;
-    if(rough>180)return "Đang hướng vào nhưng còn xa (>3 giờ)";
-    return "~"+Math.max(1,Math.round(rough))+" phút";
+  if(!m)return "Chưa đủ dữ liệu";
+  const st=String(m.status||"").toUpperCase(),eta=num(m.eta_minutes);
+  if(st==="NEARBY"||eta===0)return "Đang ảnh hưởng khu vực";
+  if(m.predicted_impact&&m.arrival_time){
+    const start=localTime(m.arrival_time).split(" ").pop();
+    const end=m.exit_time?localTime(m.exit_time).split(" ").pop():null;
+    return end&&end!==start?("Khoảng "+start+"-"+end):("Khoảng "+start);
   }
-  if(st==="APPROACHING")return "Đang hướng vào, chưa đủ tốc độ để tính";
-  if(st==="MOVING_AWAY")return "Đang rời xa khu vực";
+  if(m.predicted_impact&&eta!==null){
+    const d=new Date(Date.now()+eta*60000);
+    return "Khoảng "+d.toLocaleTimeString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",minute:"2-digit",hour12:false});
+  }
+  if(st==="PASSING_BY")return "Dự kiến đi lệch khu vực";
+  if(st==="MOVING_AWAY")return "Đang rời xa";
+  if(st==="BEYOND_HORIZON")return "Chưa dự kiến ảnh hưởng trong 3 giờ";
+  if(st==="TRACK_UNCERTAIN")return "Chưa đủ dữ liệu để tính";
+  if(st==="TRACKED")return "Chưa dự kiến ảnh hưởng trong 3 giờ";
   if(st==="NO_TRACKABLE_CONVECTIVE_CLOUD")return "Chưa có cụm mây rõ";
-  if(st==="TRACKED")return "Chưa thấy hướng thẳng vào khu vực";
-  return "Chưa đủ để tính";
+  return "Chưa đủ dữ liệu để tính";
+}
+function cloudImpactText(id,n){
+  const p=critical?.points?.[id]||{},l=p.local||{},m=p.model||{},motion=n?.cloud_motion||{};
+  if(!(motion.predicted_impact||String(motion.status||"").toUpperCase()==="NEARBY")){
+    if(String(motion.status||"").toUpperCase()==="PASSING_BY")return "Không dự kiến tác động trực tiếp";
+    return "Chưa phát cường độ";
+  }
+  if(l.rain_impact_label)return l.rain_impact_label;
+  const avg=Math.max(0,(num(m.rain_3h_mm)||0)/3),score=num(n?.convective_score)||0;
+  let label=avg>=7.5?"Mưa mạnh":avg>=2.5?"Mưa vừa":avg>=.5?"Mưa nhẹ đến vừa":avg>.05?"Mưa nhẹ":"Nền model ít mưa";
+  if(score>=75&&avg<2.5)label+=", cục bộ có thể mạnh hơn";
+  else if(score>=75)label+=", cục bộ có thể mưa mạnh";
+  return label;
 }
 function nowcastPlainText(n,rainImm){
   const m=n?.cloud_motion||{};
@@ -749,13 +769,14 @@ function renderCloudMotionTable(){
   }
   body.innerHTML=rows.map(r=>{
     const m=r.motion||{},eta=motionEtaText(m),cloud=cloudStateLabel(r.nowcast||{convective_score:r.score});
+    const id=Object.keys(critical?.points||{}).find(k=>(critical.points[k]?.name||k)===r.name)||null;
     return '<tr>'+
       '<td><b>'+esc(r.name)+'</b></td>'+
       '<td><b>'+esc(cloud.label)+'</b><small>'+esc(cloud.detail)+'</small></td>'+
       '<td>'+esc(motionSourceText(m))+'</td>'+
-      '<td>'+esc(motionHeadingText(m))+'</td>'+
+      '<td>'+esc(m.public_track_usable===false?"Chưa đủ dữ liệu đường đi":motionHeadingText(m))+'</td>'+
       '<td><b>'+esc(eta)+'</b></td>'+
-      '<td>'+esc(motionConfidenceLabel(m.tracking_confidence))+'</td>'+
+      '<td>'+esc(id?cloudImpactText(id,r.nowcast):"Theo dõi hành lang mây")+'</td>'+
     '</tr>';
   }).join("");
   if(age)age.textContent="Himawari · "+ageText(fullNowcast?.sampled_time||rows[0]?.sampled);

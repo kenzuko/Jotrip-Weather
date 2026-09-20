@@ -48,7 +48,7 @@ const state={
   ensemble:false,
   modelDiff:false,
   risk:true,
-  actual:false,
+  actual:true,
   riskLayer:null,
   actualLayer:null,
   flagMarker:null,
@@ -1210,7 +1210,7 @@ function renderActual(){
     const m=L.marker([g.lat,g.lon],{icon:ic,zIndexOffset:1000}).addTo(state.actualLayer);
     m.on("click",e=>{L.DomEvent.stopPropagation(e);showActualFlag(g.name||"VRain",g,g.lat,g.lon)});
     const val=num(g.rain_intensity_mm_h)!==null?fmt(g.rain_intensity_mm_h,1)+" mm/h":fmt(g.accum_mm,1)+" mm";
-    const li=L.divIcon({className:"",html:'<div class="actual-label">'+esc(g.name||"VRain")+' · '+val+'</div>',iconSize:[120,20],iconAnchor:[60,-9]});
+    const li=L.divIcon({className:"",html:'<div class="actual-label">'+esc(g.name||"VRain")+' · trạm '+val+'</div>',iconSize:[132,20],iconAnchor:[66,-9]});
     L.marker([g.lat,g.lon],{icon:li,interactive:false,zIndexOffset:950}).addTo(state.actualLayer);
   });
 }
@@ -1602,7 +1602,7 @@ function showActualFlag(name,g,lat,lon){
   const isWind=g.wind_kmh!==undefined;
   const value=isWind?fmt(g.wind_kmh,0):fmt(g.rain_intensity_mm_h??g.accum_mm,1);
   const unit=isWind?"km/h":(g.rain_intensity_mm_h!=null?"mm/h":"mm");
-  const sub=isWind?"Gió đo thực":"Mưa đo thực";
+  const sub=isWind?"Gió đo thực":((num(g.rain_intensity_mm_h)||0)>0?"Mưa đo tại trạm":"Trạm chưa ghi nhận mưa");
   const icon=L.divIcon({
     className:"",
     html:'<div class="windy-flag actual-flag"><div class="windy-flag-place">'+esc(name)+'</div><div class="windy-flag-value">'+esc(value)+' <small>'+esc(unit)+'</small></div><div class="windy-flag-sub">'+esc(sub)+' · chạm để xem chi tiết</div><i></i></div>',

@@ -40,7 +40,7 @@ try {
   await page.waitForFunction(
     () => {
       const s = document.getElementById('status')?.textContent || '';
-      return s.includes('GULF FIELD');
+      return s.includes('ECMWF GULF');
     },
     { timeout: 120000 },
   );

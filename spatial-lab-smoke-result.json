@@ -14,9 +14,9 @@
         "w": 702,
         "h": 1519,
         "samples": 66647,
-        "visible": 11243,
-        "strong": 1487,
-        "meanAlpha": 4.168619742824133
+        "visible": 11490,
+        "strong": 1549,
+        "meanAlpha": 4.28403378996804
       },
       "readout": "9 km/h",
       "time": "07:00 21-09"
@@ -94,9 +94,9 @@
         "w": 702,
         "h": 1519,
         "samples": 66647,
-        "visible": 1046,
-        "strong": 133,
-        "meanAlpha": 0.368538718922082
+        "visible": 828,
+        "strong": 125,
+        "meanAlpha": 0.3179888066979759
       },
       "readout": "0.47 km/h",
       "time": "07:00"
@@ -139,22 +139,22 @@
     "Failed to load resource: the server responded with a status of 404 (File not found)",
     "Failed to load resource: the server responded with a status of 404 (File not found)",
     "Failed to load resource: the server responded with a status of 404 (File not found)",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-icon.json?t=1789950192915' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/jotrip-forecast.json?t=1789950195466' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-marine.json?t=1789950192917' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-ecmwf.json?t=1789950195444' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/jotrip-forecast.json?t=1789950192931' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/critical.json?t=1789950195463' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/critical.json?t=1789950192916' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-icon.json?t=1789950195455' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-ecmwf.json?t=1789950192917' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
-    "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/dashboard-data.json?t=1789950192903' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-marine.json?t=1789950195459' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
     "Failed to load resource: the server responded with a status of 404 ()",
     "Failed to load resource: the server responded with a status of 404 ()",
     "Failed to load resource: the server responded with a status of 404 ()",
-    "Failed to load resource: the server responded with a status of 404 ()"
+    "Failed to load resource: the server responded with a status of 404 ()",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/dashboard-data.json?t=1789950195431' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Failed to load resource: net::ERR_FAILED"
   ],
   "failure": null
 }

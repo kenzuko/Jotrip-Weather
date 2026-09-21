@@ -69,7 +69,7 @@
       <div class="weather-now-facts" aria-label="Thông tin nhanh">
         <div><span>Mưa tại điểm</span><b id="heroRain">--</b><small>mm/h</small></div>
         <div><span>Gió</span><b id="heroWind">--</b><small>km/h</small></div>
-        <div><span>Sóng Hs</span><b id="heroWave">--</b><small>m</small></div>
+        <div><span>Sóng biển</span><b id="heroWave">--</b><small>m Hs</small></div>
       </div>
     </div>
   </section>
@@ -240,7 +240,7 @@
     <nav id="intradayTabs" class="intraday-tabs" aria-label="Chọn lớp biểu đồ">
       <button class="active" type="button" data-intraday="wind">Gió</button>
       <button type="button" data-intraday="rain">Mưa</button>
-      <button type="button" data-intraday="temperature">Nhiệt</button>
+      <button type="button" data-intraday="temperature">Nhiệt độ</button>
       <button type="button" data-intraday="wave">Sóng</button>
       <button type="button" data-intraday="convective">Mây</button>
       <button type="button" data-intraday="tide">Triều</button>
@@ -334,25 +334,28 @@
     <div id="forecastDayRibbon" class="forecast-day-ribbon" aria-label="Tóm tắt dự báo 10 ngày">
       <span class="inline-loader">Đang tổng hợp 10 ngày...</span>
     </div>
-    <div class="forecast-table-shell">
-      <table class="jotrip-forecast-table">
-        <thead>
-          <tr>
-            <th>Thời điểm</th>
-            <th>Nhiệt độ</th>
-            <th>Gió ước tính</th>
-            <th>Beaufort</th>
-            <th>Mưa ước tính</th>
-            <th>Biến động</th>
-            <th>Độ tin cậy</th>
-            <th>Điểm nhạy nhất</th>
-          </tr>
-        </thead>
-        <tbody id="jotripForecastRows">
-          <tr><td colspan="8"><span class="inline-loader">Đang tổng hợp dự báo JoTrip 10 ngày...</span></td></tr>
-        </tbody>
-      </table>
-    </div>
+    <details class="forecast-detail-toggle">
+      <summary>Xem dự báo chi tiết theo giờ</summary>
+      <div class="forecast-table-shell">
+        <table class="jotrip-forecast-table">
+          <thead>
+            <tr>
+              <th>Thời điểm</th>
+              <th>Nhiệt độ</th>
+              <th>Gió ước tính</th>
+              <th>Beaufort</th>
+              <th>Mưa ước tính</th>
+              <th>Biến động</th>
+              <th>Độ tin cậy</th>
+              <th>Điểm nhạy nhất</th>
+            </tr>
+          </thead>
+          <tbody id="jotripForecastRows">
+            <tr><td colspan="8"><span class="inline-loader">Đang tổng hợp dự báo JoTrip 10 ngày...</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
     <small id="ensembleMeta" class="panel-foot"></small>
     <details class="forecast-method">
       <summary>JoTrip tính dự báo theo khu vực như thế nào?</summary>

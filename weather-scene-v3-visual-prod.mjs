@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const target='https://weather.openphuquoc.com/weather-scene-v3.html?visualqa='+Date.now();
-const result={target,ok:false,scenes:{},pageErrors:[],consoleErrors:[],failure:null};
+const result={target,ok:false,scenes:{},runtime:{},pageErrors:[],consoleErrors:[],failure:null};
 
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
@@ -30,6 +30,13 @@ try{
   await page.goto(target,{waitUntil:'domcontentloaded',timeout:120000});
   await page.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),{timeout:120000});
   await page.waitForTimeout(1500);
+  result.runtime=await page.evaluate(()=>({
+    scripts:[...document.scripts].map(s=>s.src),
+    rendererLoaded:!!window.JoTripSceneRenderer,
+    rendererKeys:window.JoTripSceneRenderer?Object.keys(window.JoTripSceneRenderer):[],
+    appScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-v3.js'))||null,
+    renderScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-render-v1.js'))||null
+  }));
 
   for(const scene of ['cloud','rain','wind','wave']){
     await page.locator('.tabs button[data-scene="'+scene+'"]').click();

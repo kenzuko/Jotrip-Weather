@@ -30,6 +30,7 @@ try{
   await page.goto(base+'/?mergeqa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
   const overview=page.locator('.weather-overview');
   await overview.waitFor({state:'visible',timeout:30000});
+  await page.waitForFunction(()=>document.getElementById('heroTemp')?.textContent.trim()!=='--',null,{timeout:45000});
   result.overview=await overview.evaluate(el=>({
     width:el.getBoundingClientRect().width,
     scrollWidth:el.scrollWidth,

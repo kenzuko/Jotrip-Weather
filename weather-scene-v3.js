@@ -495,6 +495,17 @@ function nearestCell(rows,lat,lon){
   }
   return best;
 }
+function nearestValidCell(rows,lat,lon,predicate){
+  let best=null,dist=Infinity;
+  for(const r of rows||[]){
+    if(predicate&&!predicate(r)) continue;
+    const rlat=Number(r.lat),rlon=Number(r.lon);
+    if(!Number.isFinite(rlat)||!Number.isFinite(rlon)) continue;
+    const d=(rlat-lat)**2+(rlon-lon)**2;
+    if(d<dist){dist=d;best=r}
+  }
+  return best;
+}
 function ramp(stops,t){
   t=clamp(t,0,1);
   for(let i=1;i<stops.length;i++){
@@ -572,12 +583,12 @@ function rainStyle(mm){
 }
 function waveStyle(hs){
   if(hs===null||hs<.05) return [0,0,0,0];
-  const t=clamp(hs/3.0,0,1);
+  const t=clamp(hs/1.6,0,1);
   const rgb=ramp([
-    [0,[231,244,247]],[.22,[139,203,213]],[.45,[75,165,189]],
-    [.68,[57,122,171]],[.86,[75,86,154]],[1,[92,61,137]]
+    [0,[226,244,247]],[.15,[170,222,229]],[.30,[105,194,208]],
+    [.48,[61,158,187]],[.66,[48,113,170]],[.84,[76,79,149]],[1,[103,50,133]]
   ],t);
-  return [...rgb,Math.round((.10+.58*Math.pow(t,.72))*255)];
+  return [...rgb,Math.round((.14+.60*Math.pow(t,.68))*255)];
 }
 function sizeCanvas(c){
   const r=$("map").getBoundingClientRect();
@@ -731,7 +742,14 @@ function nearestLocalPoint(lat,lon){
 }
 function selectionHtml(lat,lon){
   const f=frame();
-  const cell=nearestCell(f?.cells||[],lat,lon);
+  const cells=f?.cells||[];
+  const cell=state.scene==="wave"
+    ? nearestValidCell(cells,lat,lon,r=>num(r.wave_hs_m)!==null)
+    : state.scene==="rain"
+      ? nearestValidCell(cells,lat,lon,r=>num(r.rain_mm)!==null)
+      : state.scene==="wind"
+        ? nearestValidCell(cells,lat,lon,r=>num(r.wind_kmh)!==null||(num(r.u10_ms)!==null&&num(r.v10_ms)!==null))
+        : nearestCell(cells,lat,lon);
   const local=nearestLocalPoint(lat,lon);
   const frameIso=f?.sampled_time||f?.valid_time||null;
   const rows=['<div class="selection-title">Điểm chọn</div>'];
@@ -750,9 +768,10 @@ function selectionHtml(lat,lon){
   }else if(state.scene==="wave"){
     if(local?.wave_hs_m!=null) rows.push('<b>JoTrip Now:</b> Hs '+Number(local.wave_hs_m).toFixed(2)+' m');
     if(local?.wave_period_s!=null) rows.push('Chu kỳ now '+Number(local.wave_period_s).toFixed(1)+' s');
-    if(cell?.wave_hs_m!=null) rows.push('<b>JoTrip Forecast:</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
+    if(cell?.wave_hs_m!=null) rows.push('<b>Dự báo ô biển gần nhất:</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
     if(cell?.wave_period_s!=null) rows.push('Chu kỳ '+Number(cell.wave_period_s).toFixed(1)+' s');
     if(cell?.wave_direction_deg!=null) rows.push('Hướng '+Math.round(Number(cell.wave_direction_deg))+'°');
+    if(cell?.wave_hs_m==null) rows.push('<span class="selection-near">Chưa có ô dự báo biển hợp lệ tại vùng này.</span>');
   }
 
   if(local?.name) rows.push('<span class="selection-near">Điểm JoTrip gần nhất: '+local.name+'</span>');
@@ -780,6 +799,8 @@ function placeSelectionFlag(lat,lon){
       maxWidth:230
     })
     .addTo(state.map);
+  state.selectedMarker.on("popupopen",()=>document.querySelector(".map-shell")?.classList.add("has-selection"));
+  state.selectedMarker.on("popupclose",()=>document.querySelector(".map-shell")?.classList.remove("has-selection"));
   state.selectedMarker.openPopup();
 }
 function refreshSelectionFlag(){

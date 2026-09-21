@@ -50,12 +50,26 @@ async function fetchJSON(url){
   if(!r.ok) throw new Error("HTTP "+r.status+" "+url);
   return r.json();
 }
-async function fetchFirst(urls){
-  let last;
-  for(const url of urls){
-    try{return await fetchJSON(url)}catch(err){last=err}
+function payloadTime(payload){
+  const candidates=[
+    payload?.sampled_time,
+    payload?.generated_at,
+    payload?.spatial?.short_run_time,
+    payload?.run_time,
+    payload?.valid_time
+  ];
+  for(const value of candidates){
+    const t=Date.parse(value||"");
+    if(Number.isFinite(t)) return t;
   }
-  throw last||new Error("No source");
+  return -Infinity;
+}
+async function fetchFreshest(urls){
+  const results=await Promise.allSettled(urls.map(fetchJSON));
+  const good=results.filter(r=>r.status==="fulfilled").map(r=>r.value);
+  if(!good.length) throw new Error("No source");
+  good.sort((a,b)=>payloadTime(b)-payloadTime(a));
+  return good[0];
 }
 function stamp(iso){
   if(!iso) return "--";
@@ -139,6 +153,7 @@ function setTabAvailability(){
 function setScene(scene){
   if(!sceneAvailable(scene)) return;
   state.scene=scene;
+  document.querySelector(".map-shell").dataset.scene=scene;
   stop();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.scene===scene));
   state.frames=scene==="cloud"?cloudFrames():forecastFrames();
@@ -409,32 +424,38 @@ function ramp(stops,t){
 function between(v,a,b){return clamp((v-a)/(b-a),0,1)}
 
 function cloudStyle(c){
-  if(c===null||c>15) return [0,0,0,0];
+  if(c===null||c>-8) return [0,0,0,0];
 
-  // Natural-cloud-first. Strong chroma appears only for cold/high cloud tops.
-  if(c>-20){
-    const t=between(c,15,-20);
-    const rgb=ramp([[0,[193,202,207]],[1,[225,231,233]]],t);
-    return [...rgb,Math.round((.04+t*.14)*255)];
+  // On the darker satellite basemap, warm/low cloud stays pale while colder
+  // cloud gains both luminance contrast and chroma. No contours or fake relief.
+  if(c>-22){
+    const t=between(c,-8,-22);
+    const rgb=ramp([[0,[221,228,231]],[1,[239,244,245]]],t);
+    return [...rgb,Math.round((.10+t*.16)*255)];
   }
-  if(c>-45){
-    const t=between(c,-20,-45);
-    const rgb=ramp([[0,[225,231,233]],[1,[174,207,224]]],t);
-    return [...rgb,Math.round((.18+t*.18)*255)];
+  if(c>-38){
+    const t=between(c,-22,-38);
+    const rgb=ramp([[0,[236,243,244]],[1,[154,207,229]]],t);
+    return [...rgb,Math.round((.26+t*.20)*255)];
   }
-  if(c>-55){
-    const t=between(c,-45,-55);
-    const rgb=ramp([[0,[174,207,224]],[1,[225,211,102]]],t);
-    return [...rgb,Math.round((.36+t*.12)*255)];
+  if(c>-48){
+    const t=between(c,-38,-48);
+    const rgb=ramp([[0,[154,207,229]],[1,[86,177,215]]],t);
+    return [...rgb,Math.round((.46+t*.10)*255)];
   }
-  if(c>-67){
-    const t=between(c,-55,-67);
-    const rgb=ramp([[0,[225,211,102]],[1,[232,143,73]]],t);
-    return [...rgb,Math.round((.48+t*.12)*255)];
+  if(c>-58){
+    const t=between(c,-48,-58);
+    const rgb=ramp([[0,[86,177,215]],[1,[231,211,91]]],t);
+    return [...rgb,Math.round((.56+t*.09)*255)];
   }
-  const t=between(c,-67,-82);
-  const rgb=ramp([[0,[232,143,73]],[1,[190,72,84]]],t);
-  return [...rgb,Math.round((.60+t*.10)*255)];
+  if(c>-68){
+    const t=between(c,-58,-68);
+    const rgb=ramp([[0,[231,211,91]],[1,[238,137,68]]],t);
+    return [...rgb,Math.round((.65+t*.07)*255)];
+  }
+  const t=between(c,-68,-82);
+  const rgb=ramp([[0,[238,137,68]],[1,[191,67,82]]],t);
+  return [...rgb,Math.round((.72+t*.06)*255)];
 }
 function rainStyle(mm){
   if(mm===null||mm<.10) return [0,0,0,0];
@@ -640,10 +661,10 @@ async function boot(){
   bind();
 
   const [n,c,cur,e]=await Promise.allSettled([
-    fetchFirst(URLS.nowcast),
-    fetchFirst(URLS.compact),
-    fetchFirst(URLS.current),
-    fetchFirst(URLS.ecmwf)
+    fetchFreshest(URLS.nowcast),
+    fetchFreshest(URLS.compact),
+    fetchFreshest(URLS.current),
+    fetchFreshest(URLS.ecmwf)
   ]);
 
   if(n.status==="fulfilled"){state.nowcast=n.value;state.sources.nowcast=true}

@@ -114,12 +114,10 @@ function initMap(){
     minZoom:8.1,maxZoom:12.2,zoomSnap:.25,zoomDelta:.5,preferCanvas:true
   });
   if(EMBED&&innerWidth>=760){
-    // The Weather card is very wide on desktop. A fixed zoom 9 exposed
-    // Cambodia / mainland Vietnam and made the Phu Quoc field look broken.
-    // Fit the island envelope; the vertical island extent controls the view.
-    state.map.fitBounds([[9.82,103.78],[10.49,104.13]],{
-      padding:[18,18],maxZoom:10.6,animate:false
-    });
+    // The Weather card is extremely wide. fitBounds preserves the full island
+    // vertically but exposes several degrees of mainland horizontally.
+    // Use a deliberate island-first desktop view instead.
+    state.map.setView([10.205,103.985],10.25,{animate:false});
   }else{
     state.map.setView([10.18,103.98],innerWidth<760?8.65:9);
   }

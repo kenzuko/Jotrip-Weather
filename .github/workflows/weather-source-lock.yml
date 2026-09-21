@@ -1,0 +1,28 @@
+name: Weather source lock
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "weather-runtime-config.js"
+      - "weather-scene-v3.html"
+      - "weather-scene-v3.js"
+      - "weather-scene-render-v1.js"
+      - "weather-source-lock.mjs"
+      - ".github/workflows/weather-source-lock.yml"
+      - "data/weather-runtime/**"
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-source-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Enforce canonical JoTrip Weather runtime
+        run: node weather-source-lock.mjs

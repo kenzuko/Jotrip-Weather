@@ -122,14 +122,17 @@ function initMap(){
     {subdomains:"abcd",maxZoom:19,pane:"sceneLabels"}
   ).addTo(state.map);
 
-  // Weather canvases must live inside Leaflet mapPane.
-  // This puts them above base tiles but below labels/markers.
-  const mapPane=state.map.getPanes().mapPane;
+  // Dedicated Leaflet pane keeps weather above base tiles and below labels/markers.
+  state.map.createPane("weatherCanvas");
+  const weatherPane=state.map.getPane("weatherCanvas");
+  weatherPane.classList.add("weather-canvas-pane");
+  weatherPane.style.zIndex="350";
+  weatherPane.style.pointerEvents="none";
   const field=$("fieldCanvas"), motion=$("motionCanvas");
-  mapPane.appendChild(field);
-  mapPane.appendChild(motion);
-  field.style.zIndex="350";
-  motion.style.zIndex="365";
+  weatherPane.appendChild(field);
+  weatherPane.appendChild(motion);
+  field.style.zIndex="1";
+  motion.style.zIndex="2";
   field.style.pointerEvents="none";
   motion.style.pointerEvents="none";
 

@@ -41,6 +41,7 @@ const state={
   raf:null,
   particles:[],
   actualLayer:null,
+  selectedMarker:null,
   probe:null,
   sources:{nowcast:false,compact:false,current:false,ecmwf:false}
 };
@@ -124,6 +125,7 @@ function initMap(){
   state.map.on("move zoom resize",queueRender);
   state.map.on("click",e=>{
     state.probe={lat:e.latlng.lat,lon:e.latlng.lng};
+    placeSelectionFlag(e.latlng.lat,e.latlng.lng);
     updateSourcePanel();
   });
 }
@@ -174,6 +176,7 @@ function setScene(scene){
   seedParticles();
   renderActualStations();
   updateCopy();
+  refreshSelectionFlag();
   queueRender();
 }
 function frame(){return state.frames[state.index]||null}
@@ -248,6 +251,9 @@ function maxRainInFrame(f){
 function maxWindInFrame(f){
   return Math.max(0,...(f?.cells||[]).map(c=>Number(c.wind_kmh)||0));
 }
+function maxWaveInFrame(f){
+  return Math.max(0,...(f?.cells||[]).map(c=>Number(c.wave_hs_m)||0));
+}
 
 function updateCopy(){
   const f=frame();
@@ -296,15 +302,33 @@ function updateCopy(){
     const peak=maxWindInFrame(f);
     $("eyebrow").textContent="DỰ BÁO";
     $("headline").textContent="Gió mặt đất 10 m";
-    $("summary").textContent="Particle biểu diễn trường gió ECMWF ở 10 m. Đây không phải hướng dịch chuyển của mây.";
-    $("facts").innerHTML="<span>Gió mạnh nhất trên khung ≈ "+Math.round(peak)+" km/h</span><span>u10/v10</span>";
+    $("summary").textContent="Particle biểu diễn trường gió JoTrip Weather ở 10 m. Đây không phải hướng dịch chuyển của mây.";
+    $("facts").innerHTML="<span>Gió mạnh nhất trên khung ≈ "+Math.round(peak)+" km/h</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
-    $("timeMeta").textContent="ECMWF · surface wind";
+    $("timeMeta").textContent="JoTrip Weather · forecast";
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
     kind="forecast";
     $("legend").innerHTML='<b>Gió 10 m</b><div class="scale"><span>particle = hướng trường gió</span></div>';
+  }
+
+  if(state.scene==="wave"){
+    const peak=maxWaveInFrame(f);
+    $("eyebrow").textContent="DỰ BÁO BIỂN";
+    $("headline").textContent="Sóng quanh Phú Quốc";
+    $("summary").textContent="Màu là độ cao sóng có nghĩa Hs trong JoTrip Weather. Hướng và chu kỳ được đọc tại điểm chọn.";
+    $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>JoTrip Weather</span>";
+    $("timeLabel").textContent=stamp(f?.valid_time);
+    $("timeMeta").textContent="JoTrip Weather · marine forecast";
+    $("timeClass").textContent="FORECAST";
+    $("timeClass").className="time-class forecast";
+    sourceTime=state.ecmwf?.generated_at||f?.valid_time;
+    kind="forecast";
+    $("legend").innerHTML=
+      '<b>Sóng Hs</b>'+
+      '<div class="bar" style="background:linear-gradient(90deg,#e7f4f7,#8bcbd5,#4ba5bd,#397aab,#57569a)"></div>'+
+      '<div class="scale"><span>êm</span><span>cao</span></div>';
   }
 
   const fresh=freshnessText(sourceTime,kind);
@@ -336,13 +360,21 @@ function updateSourcePanel(){
       "VRain: "+(state.current?.groundtruth?.rainfall?.status||"không sẵn sàng"),
       "Không tạo chi tiết mưa nhỏ hơn source grid"
     ];
-  }else{
-    title="ECMWF · surface wind";
-    text="Particle chỉ phục vụ đọc hướng của trường u10/v10 và luôn để basemap nhìn thấy. Không dùng particle gió mặt đất để diễn đạt cloud motion.";
+  }else if(state.scene==="wind"){
+    title="JoTrip Weather · surface wind";
+    text="Particle chỉ phục vụ đọc hướng trường gió 10 m và luôn để basemap nhìn thấy. Không dùng gió mặt đất để suy diễn cloud motion.";
     meta=[
       "Độ cao: 10 m",
       "Source grid: "+(state.ecmwf?.spatial?.requested_grid_deg||0.25)+"°",
-      "Data class: MODEL FORECAST"
+      "Data class: JoTrip Weather forecast"
+    ];
+  }else{
+    title="JoTrip Weather · marine";
+    text="Sóng dùng Hs, hướng sóng và chu kỳ từ nền dự báo biển JoTrip Weather. Đây là model data, không phải phao quan trắc.";
+    meta=[
+      "Biến: Hs / hướng / chu kỳ",
+      "Source grid: "+(state.ecmwf?.spatial?.requested_grid_deg||0.25)+"°",
+      "Data class: JoTrip Weather marine forecast"
     ];
   }
 
@@ -357,6 +389,11 @@ function updateSourcePanel(){
       }
       if(state.scene==="wind"&&nearest.wind_kmh!=null){
         meta.push("Điểm chạm gần nhất: "+Math.round(Number(nearest.wind_kmh))+" km/h");
+      }
+      if(state.scene==="wave"&&nearest.wave_hs_m!=null){
+        meta.push("Điểm chạm gần nhất: Hs "+Number(nearest.wave_hs_m).toFixed(2)+" m");
+        if(nearest.wave_period_s!=null) meta.push("Chu kỳ "+Number(nearest.wave_period_s).toFixed(1)+" s");
+        if(nearest.wave_direction_deg!=null) meta.push("Hướng sóng "+Math.round(Number(nearest.wave_direction_deg))+"°");
       }
     }
   }
@@ -467,6 +504,15 @@ function rainStyle(mm){
   const alpha=.08+Math.pow(t,.72)*.68;
   return [...rgb,Math.round(alpha*255)];
 }
+function waveStyle(hs){
+  if(hs===null||hs<.05) return [0,0,0,0];
+  const t=clamp(hs/3.0,0,1);
+  const rgb=ramp([
+    [0,[231,244,247]],[.22,[139,203,213]],[.45,[75,165,189]],
+    [.68,[57,122,171]],[.86,[75,86,154]],[1,[92,61,137]]
+  ],t);
+  return [...rgb,Math.round((.10+.58*Math.pow(t,.72))*255)];
+}
 function sizeCanvas(c){
   const r=$("map").getBoundingClientRect();
   const scale=innerWidth<760?.58:.50;
@@ -493,7 +539,8 @@ function renderScalar(){
   }
 
   const rows=f.cells||[];
-  const g=grid(rows,state.scene==="cloud"?"cloud_top_cold_c":"rain_mm");
+  const key=state.scene==="cloud"?"cloud_top_cold_c":state.scene==="rain"?"rain_mm":"wave_hs_m";
+  const g=grid(rows,key);
   if(!g) return;
 
   const img=ctx.createImageData(w,h);
@@ -505,7 +552,7 @@ function renderScalar(){
     for(let x=0;x<w;x++){
       const lon=west+(east-west)*(x/(w-1));
       const v=sampleGrid(g,lat,lon);
-      const col=state.scene==="cloud"?cloudStyle(v):rainStyle(v);
+      const col=state.scene==="cloud"?cloudStyle(v):state.scene==="rain"?rainStyle(v):waveStyle(v);
       const k=(y*w+x)*4;
       img.data[k]=col[0];img.data[k+1]=col[1];img.data[k+2]=col[2];img.data[k+3]=col[3];
     }
@@ -581,6 +628,73 @@ function drawParticles(ctx,w,h,scale){
   }
 
   state.raf=requestAnimationFrame(renderScalar);
+}
+
+function nearestLocalPoint(lat,lon){
+  const points=Object.values(state.current?.local_now?.points||{});
+  let best=null,dist=Infinity;
+  for(const p of points){
+    if(p.lat==null||p.lon==null) continue;
+    const d=(Number(p.lat)-lat)**2+(Number(p.lon)-lon)**2;
+    if(d<dist){dist=d;best=p}
+  }
+  return best;
+}
+function selectionHtml(lat,lon){
+  const f=frame();
+  const cell=nearestCell(f?.cells||[],lat,lon);
+  const local=nearestLocalPoint(lat,lon);
+  const rows=['<div class="selection-title">Điểm chọn</div>'];
+
+  if(state.scene==="cloud"){
+    if(cell?.cloud_top_cold_c!=null) rows.push('<b>JoTrip Cloud:</b> '+Number(cell.cloud_top_cold_c).toFixed(1)+'°C đỉnh mây');
+    if(cell?.cloud_top_high_m!=null) rows.push('Đỉnh cao ≈ '+(Number(cell.cloud_top_high_m)/1000).toFixed(1)+' km');
+    if(cell?.convective_level) rows.push('Đối lưu: '+cell.convective_level);
+  }else if(state.scene==="rain"){
+    if(local?.rain?.rain_rate_mm_h!=null) rows.push('<b>JoTrip Now:</b> '+Number(local.rain.rain_rate_mm_h).toFixed(2)+' mm/h');
+    if(cell?.rain_mm!=null) rows.push('<b>JoTrip Forecast:</b> '+Number(cell.rain_mm).toFixed(2)+' mm / bước');
+  }else if(state.scene==="wind"){
+    if(local?.wind_kmh!=null) rows.push('<b>JoTrip Now:</b> '+Number(local.wind_kmh).toFixed(1)+' km/h');
+    if(cell?.wind_kmh!=null) rows.push('<b>JoTrip Forecast:</b> '+Number(cell.wind_kmh).toFixed(1)+' km/h');
+  }else if(state.scene==="wave"){
+    if(local?.wave_hs_m!=null) rows.push('<b>JoTrip Now:</b> Hs '+Number(local.wave_hs_m).toFixed(2)+' m');
+    if(local?.wave_period_s!=null) rows.push('Chu kỳ now '+Number(local.wave_period_s).toFixed(1)+' s');
+    if(cell?.wave_hs_m!=null) rows.push('<b>JoTrip Forecast:</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
+    if(cell?.wave_period_s!=null) rows.push('Chu kỳ '+Number(cell.wave_period_s).toFixed(1)+' s');
+    if(cell?.wave_direction_deg!=null) rows.push('Hướng '+Math.round(Number(cell.wave_direction_deg))+'°');
+  }
+
+  if(local?.name) rows.push('<span class="selection-near">Điểm JoTrip gần nhất: '+local.name+'</span>');
+  rows.push('<span class="selection-coord">'+lat.toFixed(4)+', '+lon.toFixed(4)+'</span>');
+  return rows.join('<br>');
+}
+function placeSelectionFlag(lat,lon){
+  if(state.selectedMarker){
+    state.map.removeLayer(state.selectedMarker);
+    state.selectedMarker=null;
+  }
+  const icon=L.divIcon({
+    className:"selection-flag-wrap",
+    html:'<div class="selection-flag"><span class="flag-cloth"></span><span class="flag-pole"></span><span class="flag-dot"></span></div>',
+    iconSize:[28,38],
+    iconAnchor:[6,35],
+    popupAnchor:[8,-30]
+  });
+  state.selectedMarker=L.marker([lat,lon],{icon,pane:"sceneLabels",zIndexOffset:1200})
+    .bindPopup(selectionHtml(lat,lon),{
+      className:"selection-popup",
+      closeButton:false,
+      offset:[0,-2],
+      autoPan:true,
+      maxWidth:230
+    })
+    .addTo(state.map);
+  state.selectedMarker.openPopup();
+}
+function refreshSelectionFlag(){
+  if(!state.selectedMarker||!state.probe) return;
+  state.selectedMarker.setPopupContent(selectionHtml(state.probe.lat,state.probe.lon));
+  if(state.selectedMarker.isPopupOpen()) state.selectedMarker.openPopup();
 }
 
 function renderActualStations(){

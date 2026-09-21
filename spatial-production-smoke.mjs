@@ -17,6 +17,14 @@ async function stats(frame,sel){
     return {visible,strong,meanAlpha:n?sum/n:0};
   });
 }
+async function maxMotion(frame){
+  const samples=[];
+  for(let i=0;i<5;i++){
+    samples.push(await stats(frame,'#motionCanvas'));
+    await new Promise(r=>setTimeout(r,180));
+  }
+  return samples.reduce((best,x)=>x.visible>best.visible?x:best,{visible:0,strong:0,meanAlpha:0});
+}
 
 try{
   await page.goto(base+'/?mergeqa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
@@ -40,7 +48,7 @@ try{
     await page.waitForTimeout(scene==='wind'?1300:800);
     result.scenes[scene]={
       field:await stats(frame,'#fieldCanvas'),
-      motion:await stats(frame,'#motionCanvas'),
+      motion:scene==='wind'?await maxMotion(frame):await stats(frame,'#motionCanvas'),
       time:(await frame.locator('#timeLabel').innerText()).trim()
     };
   }

@@ -25,6 +25,45 @@ async function measureCanvas(sel){
     };
   });
 }
+async function measurePaint(sel){
+  return page.locator(sel).evaluate(canvas=>{
+    const ctx=canvas.getContext('2d');
+    const {data}=ctx.getImageData(0,0,canvas.width,canvas.height);
+    let alphaPixels=0,sumAlpha=0,maxAlpha=0;
+    for(let i=3;i<data.length;i+=4){
+      const a=data[i];
+      if(a>4) alphaPixels++;
+      sumAlpha+=a;
+      if(a>maxAlpha) maxAlpha=a;
+    }
+    const total=Math.max(1,data.length/4);
+    return {
+      alphaPixels,
+      coverage:alphaPixels/total,
+      meanAlpha:sumAlpha/total,
+      maxAlpha
+    };
+  });
+}
+async function seekPaint(scene){
+  const targetSel=scene==='wind'?'#motionCanvas':'#fieldCanvas';
+  const slider=page.locator('#slider');
+  const max=Number(await slider.getAttribute('max')||0);
+  const cur=Number(await slider.inputValue()||0);
+  const tries=[cur,0,Math.floor(max/2),max].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
+  let best=null;
+  for(const v of tries){
+    await slider.evaluate((el,value)=>{
+      el.value=String(value);
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+    },v);
+    await page.waitForTimeout(scene==='wind'?900:450);
+    const paint=await measurePaint(targetSel);
+    if(!best||paint.alphaPixels>best.paint.alphaPixels) best={index:v,paint};
+    if(paint.alphaPixels>40&&paint.maxAlpha>8) return {index:v,paint};
+  }
+  return best;
+}
 
 try{
   await page.goto(target,{waitUntil:'domcontentloaded',timeout:120000});
@@ -36,12 +75,15 @@ try{
     rendererKeys:window.JoTripSceneRenderer?Object.keys(window.JoTripSceneRenderer):[],
     rendererVersion:window.JoTripSceneRenderer?.version||null,
     appScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-v3.js'))||null,
-    renderScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-render-v1.js'))||null
+    renderScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-render-v2.js'))||null
   }));
 
   for(const scene of ['cloud','rain','wind','wave']){
     await page.locator('.tabs button[data-scene="'+scene+'"]').click();
-    await page.waitForTimeout(scene==='wind'?1800:900);
+    await page.waitForTimeout(scene==='wind'?1200:700);
+    const paintSeek=await seekPaint(scene);
+    const fieldPaint=await measurePaint('#fieldCanvas');
+    const motionPaint=await measurePaint('#motionCanvas');
 
     const before=await sampleComposite();
     await writeFile('/tmp/'+scene+'-visible.png',before);
@@ -64,14 +106,25 @@ try{
       motion:await measureCanvas('#motionCanvas'),
       time:(await page.locator('#timeLabel').innerText()).trim(),
       meta:(await page.locator('#timeMeta').innerText()).trim(),
+      selectedFrame:paintSeek?.index??null,
+      fieldPaint,
+      motionPaint,
       visiblePngBytes:before.length,
-      hiddenPngBytes:hidden.length
+      hiddenPngBytes:hidden.length,
+      pngDeltaBytes:Math.abs(before.length-hidden.length)
     };
   }
 
-  // Use browser screenshot entropy proxy: if hiding canvases barely changes PNG size for all scenes,
-  // the rendered weather is likely visually ineffective.
-  result.ok=Object.values(result.scenes).some(s=>Math.abs(s.visiblePngBytes-s.hiddenPngBytes)>1500) &&
+  const scenePaintOk=Object.entries(result.scenes).every(([scene,s])=>{
+    const paint=scene==='wind'?s.motionPaint:s.fieldPaint;
+    return paint.alphaPixels>40 && paint.maxAlpha>8;
+  });
+  const compositeOk=Object.values(result.scenes).every(s=>s.pngDeltaBytes>500);
+  result.ok=
+    result.runtime.rendererLoaded===true &&
+    String(result.runtime.renderScript||'').includes('weather-scene-render-v2.js') &&
+    scenePaintOk &&
+    compositeOk &&
     result.pageErrors.length===0;
 }catch(e){result.failure=String(e?.stack||e)}
 

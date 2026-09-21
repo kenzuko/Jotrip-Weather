@@ -76,6 +76,9 @@ function ageMinutes(iso){
 function liveTimestamp(){
   return critical?.local_generated_at||critical?.generated_at||null;
 }
+function localDataFresh(maxMinutes=45){
+  return freshEnough(liveTimestamp(),maxMinutes);
+}
 function ageText(iso){
   const m=ageMinutes(iso);
   if(!Number.isFinite(m))return "không rõ";
@@ -255,7 +258,11 @@ function confidenceScore(){
 }
 function pointRisk(p){
   const m=p.model||{},n=p.nowcast||{},l=p.local||{},rows=p.ensemble?.rows||[];
-  const conv=num(n.convective_score),imminence=num(l.rain_imminence_score),gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),hs=num(m.wave_hs_m);
+  const localFresh=localDataFresh();
+  const nowFresh=freshEnough(fullNowcast?.sampled_time||n.sampled_time,75);
+  const conv=nowFresh?num(n.convective_score):null;
+  const imminence=localFresh?num(l.rain_imminence_score):null;
+  const gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),hs=num(m.wave_hs_m);
   const windProb=Math.max(0,...rows.map(x=>num(x.wind?.prob)).filter(v=>v!==null));
   const rainProb=Math.max(0,...rows.map(x=>num(x.rain?.prob)).filter(v=>v!==null));
   let level=0,reasons=[];
@@ -377,8 +384,8 @@ function renderHazardBoard(){
       1
     );
   }else{
-    const localRain=points.map(x=>({name:x.p.name,rate:num(x.p.local?.rain_rate_mm_h)||0,cls:x.p.local?.rain_class}))
-      .sort((a,b)=>b.rate-a.rate)[0];
+    const localRain=localDataFresh()?points.map(x=>({name:x.p.name,rate:num(x.p.local?.rain_rate_mm_h)||0,cls:x.p.local?.rain_class}))
+      .sort((a,b)=>b.rate-a.rate)[0]:null;
     if(localRain&&localRain.rate>=0.5){
       setHazard("hazardRain",
         localRain.name+" ước tính ~"+fmt(localRain.rate,1)+" mm/h",
@@ -436,9 +443,10 @@ function renderHazardBoard(){
   }
 
   // Gió & biển hiện tại: số hiện tại, không dùng xác suất.
-  const windNow=points.map(x=>({name:x.p.name,wind:num(x.p.local?.wind_kmh??x.p.model?.wind_kmh)||0,gust:num(x.p.model?.gust_kmh)}))
+  const useLocal=localDataFresh();
+  const windNow=points.map(x=>({name:x.p.name,wind:num(useLocal?(x.p.local?.wind_kmh??x.p.model?.wind_kmh):x.p.model?.wind_kmh)||0,gust:num(x.p.model?.gust_kmh)}))
     .sort((a,b)=>b.wind-a.wind)[0];
-  const waveNow=points.map(x=>({name:x.p.name,hs:num(x.p.local?.wave_hs_m??x.p.model?.wave_hs_m)||0}))
+  const waveNow=points.map(x=>({name:x.p.name,hs:num(useLocal?(x.p.local?.wave_hs_m??x.p.model?.wave_hs_m):x.p.model?.wave_hs_m)||0}))
     .sort((a,b)=>b.hs-a.hs)[0];
   const windLabel=windNow?("Gió mạnh nhất "+windNow.name+" ~"+fmt(windNow.wind,0)+" km/h"):"Chưa đủ số gió";
   const windMeta=(waveNow?("Sóng Hs cao nhất ~"+fmt(waveNow.hs,1)+" m tại "+waveNow.name):"")+
@@ -527,7 +535,13 @@ function renderStatus(){
 
 function summary(p){
   const l=p.local||{},m=p.model||{},bits=[];
-  const rain=num(l.rain_rate_mm_h),imminence=num(l.rain_imminence_score),conv=num((p.nowcast||{}).convective_score??l.convection_score),wind=num(l.wind_kmh??m.wind_kmh),wave=num(l.wave_hs_m??m.wave_hs_m);
+  const localFresh=localDataFresh();
+  const nowFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
+  const rain=localFresh?num(l.rain_rate_mm_h):null;
+  const imminence=localFresh?num(l.rain_imminence_score):null;
+  const conv=nowFresh?num((p.nowcast||{}).convective_score??l.convection_score):null;
+  const wind=localFresh?num(l.wind_kmh??m.wind_kmh):num(m.wind_kmh);
+  const wave=localFresh?num(l.wave_hs_m??m.wave_hs_m):num(m.wave_hs_m);
   if(rain!==null)bits.push(rain>=3?"Ước tính mưa hiện tại đáng chú ý":rain>.2?"Ước tính có mưa nhẹ hoặc rải rác":"Ước tính mưa hiện tại thấp");
   if(imminence!==null&&imminence>=75)bits.push("mưa cục bộ có thể tăng nhanh trong 0-60 phút");
   else if(imminence!==null&&imminence>=55)bits.push("mưa ngắn hạn cần theo dõi");
@@ -588,14 +602,15 @@ function rainActualContext(){
 function renderHero(){
   const p=point(),l=p.local||{},m=p.model||{},n=p.nowcast||{};
   $("placeName").textContent=p.name||current;
-  const t=num(l.temperature_c)??num(m.temperature_c);
+  const localFresh=localDataFresh();
+  const t=localFresh?(num(l.temperature_c)??num(m.temperature_c)):num(m.temperature_c);
   $("heroTemp").textContent=t===null?"--":fmt(t,1)+"°";
-  $("heroTempClass").textContent=l.available?"ƯỚC TÍNH":"MÔ HÌNH";
+  $("heroTempClass").textContent=localFresh&&l.available?"ƯỚC TÍNH":"MÔ HÌNH";
   $("heroSummary").textContent=summary(p);
   $("updatedAt").textContent="Cập nhật "+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
   if($("scenePoint"))$("scenePoint").textContent=p.name||current;
   if($("sceneTemp"))$("sceneTemp").textContent=t===null?"--":fmt(t,1)+"°";
-  if($("sceneUpdated"))$("sceneUpdated").textContent="JoTrip Local Now · "+ageText(liveTimestamp());
+  if($("sceneUpdated"))$("sceneUpdated").textContent=(localFresh?"JoTrip Local Now":"JoTrip gần nhất")+" · "+ageText(liveTimestamp());
   const rain=num(l.rain_rate_mm_h)||0,conv=num(n.convective_score??l.convection_score)||0,wind=num(l.wind_kmh??m.wind_kmh)||0;
   const mood=(conv>=70||rain>=3)?"storm":(conv>=50||rain>=.5||wind>=28)?"watch":"calm";
   document.querySelector(".hero")?.setAttribute("data-mood",mood);
@@ -603,17 +618,19 @@ function renderHero(){
 
 function renderCurrent(){
   const l=localPoint(),m=modelPoint(),n=effectiveNowcast();
-  setMetric("windNow",l.wind_kmh??m.wind_kmh,1);setBadge("windClass",l.wind_class||"MODEL_ONLY");
+  const localFresh=localDataFresh();
+  setMetric("windNow",localFresh?(l.wind_kmh??m.wind_kmh):m.wind_kmh,1);
+  setBadge("windClass",localFresh?(l.wind_class||"ESTIMATED_NOW"):"MODEL_ONLY",localFresh?null:"MÔ HÌNH");
   setMetric("gustNow",m.gust_kmh,1);
   const rainMeta=$("rainMeta"),rainCtx=$("rainActualContext");
-  const rainNowValue=l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
+  const rainNowValue=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
   setMetric("rainNow",rainNowValue,2);
-  const rainConf=num(l.rain_confidence);
-  setBadge("rainClass",l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY");
+  const rainConf=localFresh?num(l.rain_confidence):null;
+  setBadge("rainClass",localFresh&&l.available?(l.rain_class||"ESTIMATED_NOW"):"MODEL_ONLY",localFresh?null:"MÔ HÌNH");
   const rainImm=num(l.rain_imminence_score),rainImmLevel=String(l.rain_imminence_level||"").toUpperCase();
-  if(rainMeta)rainMeta.innerHTML=l.available
+  if(rainMeta)rainMeta.innerHTML=localFresh&&l.available
     ?'mm/h · <span id="rainConfidence">'+(rainConf===null?"-":Math.round(rainConf*100))+'</span>% tin cậy'
-    :'mm/h · quy đổi từ mưa mô hình 3h';
+    :'mm/h · quy đổi từ mưa mô hình 3h · local '+ageText(liveTimestamp());
   if(rainCtx){
     const actualCtx=rainActualContext();
     const nowCtx=rainImm!==null&&rainImm>=55?nowcastPlainText(n,rainImm):"";
@@ -623,7 +640,8 @@ function renderCurrent(){
   $("convectiveNow").textContent=cloudNow.label==="Chưa đủ dữ liệu mây"?"-":
     (num(n.convective_score)>=75?"MÂY RẤT CAO":num(n.convective_score)>=50?"ĐANG PHÁT TRIỂN":num(n.convective_score)>=25?"CÓ MÂY ĐÁNG CHÚ Ý":"ÍT TÍN HIỆU");
   if($("convectiveMeta"))$("convectiveMeta").textContent=cloudNow.detail||"Himawari · chưa đủ chi tiết";
-  setMetric("waveNow",l.wave_hs_m??m.wave_hs_m,2);setBadge("marineClass",l.marine_class||"MODEL_ONLY");
+  setMetric("waveNow",localFresh?(l.wave_hs_m??m.wave_hs_m):m.wave_hs_m,2);
+  setBadge("marineClass",localFresh?(l.marine_class||"MODEL_ONLY"):"MODEL_ONLY",localFresh?null:"MÔ HÌNH");
   setMetric("hmaxNow",m.wave_hmax_m,2);
   setMetric("periodNow",m.period_s,1);
   setMetric("currentNow",m.current_kmh,2);
@@ -662,10 +680,13 @@ function renderActual(){
     }
 
     if(acc!==null&&x.rain_observed!==true&&!(acc>0&&x.rain_observed===null))detail+=" · tổng kỳ "+fmt(acc,1)+" mm";
+    detail+=" · "+ageText(x.observed_at);
     cards.push('<article class="actual-card rain-actual"><header><b>'+esc(x.name)+'</b><em class="badge actual">ĐO THỰC</em></header><strong>'+observed+'</strong><small>'+detail+'</small></article>');
   });
   $("actualStrip").innerHTML=cards.join("");
-  $("actualState").textContent=(critical.source_state?.vvpq==="FRESH"&&critical.source_state?.vrain==="FRESH")?"VVPQ + VRain vừa cập nhật":"Có nguồn cập nhật chậm";
+  const vFresh=freshEnough(v.observed_at,45);
+  const rainFresh=g.some(x=>freshEnough(x.observed_at,45));
+  $("actualState").textContent=(vFresh&&rainFresh)?"VVPQ + VRain vừa cập nhật":"Có nguồn cập nhật chậm";
 }
 
 function renderFeedbackPoint(){

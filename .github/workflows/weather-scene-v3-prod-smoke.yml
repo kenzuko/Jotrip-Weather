@@ -1,0 +1,33 @@
+name: Weather Scene V3 production browser smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "weather-scene-v3-prod-smoke.mjs"
+      - ".github/workflows/weather-scene-v3-prod-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  production-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Test live weather.openphuquoc.com
+        run: node weather-scene-v3-prod-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weather-scene-v3-prod-smoke
+          path: /tmp/weather-scene-v3-prod-smoke.json
+          retention-days: 7

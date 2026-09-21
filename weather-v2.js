@@ -1676,7 +1676,7 @@ function stopHimawariLoop(){
 async function startHimawariLoop(box,note,state){
   stopHimawariLoop();
   himawariLoopPlaying=true;
-  box.innerHTML='<div class="himawari-loop"><div class="himawari-focus"><img id="himawariImg" alt="Chuỗi ảnh vệ tinh Himawari IR B13 tập trung khu vực Phú Quốc"><div class="himawari-pq-marker"><span>KHU VỰC PHÚ QUỐC</span></div></div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
+  box.innerHTML='<div class="himawari-loop himawari-raw"><div class="himawari-focus"><img id="himawariImg" alt="Ảnh vệ tinh Himawari IR Band 13 - JMA Asia 1"><div class="himawari-ir-badge">JMA · IR B13 · ASIA 1</div></div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
   const candidates=mapCandidates();
   const checked=await Promise.all(candidates.map(async x=>({...x,ok:await preloadImage(x.url)})));
   const frames=checked.filter(x=>x.ok).slice(0,9).reverse();
@@ -1701,7 +1701,7 @@ async function startHimawariLoop(box,note,state){
     play.textContent=himawariLoopPlaying?"❚❚":"▶";
     play.setAttribute("aria-label",himawariLoopPlaying?"Tạm dừng ảnh vệ tinh":"Chạy ảnh vệ tinh");
   });
-  if(note)note.textContent="Himawari IR B13 · đã phóng to vùng Vịnh Thái Lan quanh Phú Quốc để theo dõi mây có ảnh hưởng tới đảo. Chuỗi ảnh gần-live khoảng 10 phút mỗi khung, không phải radar mưa.";
+  if(note)note.textContent="Himawari IR B13 · ảnh JMA Asia 1 nguyên bản, không crop/đặt marker thủ công. Dùng để đối chiếu cấu trúc mây tổng thể; lớp Mây trong Bản đồ JoTrip mới là lớp đã đưa về tọa độ Phú Quốc.";
   if(state){state.textContent="GẦN-LIVE";state.className="badge remote"}
 }
 function ensureLeaflet(){

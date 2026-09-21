@@ -287,15 +287,20 @@ function rainActualState(){
   const rain=state.current?.groundtruth?.rainfall;
   const stations=Object.values(rain?.stations||{});
   if(!stations.length) return {label:"VRain chưa sẵn sàng",wet:0,known:0,unknown:0};
+  const recent=stations.filter(g=>{
+    const a=ageMinutes(g.observed_at);
+    return a!==null&&a<=45;
+  });
+  if(!recent.length) return {label:"VRain đang chờ dữ liệu mới",wet:0,known:0,unknown:stations.length};
 
   let wet=0,known=0,unknown=0;
-  for(const g of stations){
+  for(const g of recent){
     if(g.rain_recently_observed===true){wet++;known++;continue}
     if(g.rain_recently_observed===false && g.increment_qc!=="WINDOW_TOO_OLD_FOR_CURRENT_RAIN"){known++;continue}
     unknown++;
   }
-  if(wet>0) return {label:wet+"/"+stations.length+" trạm ghi nhận mưa gần đây",wet,known,unknown};
-  if(known===stations.length) return {label:"Các trạm VRain đang nối chưa ghi nhận mưa gần đây",wet,known,unknown};
+  if(wet>0) return {label:wet+"/"+recent.length+" trạm mới ghi nhận mưa",wet,known,unknown};
+  if(known===recent.length) return {label:"Các trạm VRain mới cập nhật chưa ghi nhận mưa",wet,known,unknown};
   return {label:"VRain có dữ liệu nhưng cửa sổ mưa hiện tại chưa đủ ở một số trạm",wet,known,unknown};
 }
 function maxRainInFrame(f){
@@ -760,6 +765,15 @@ function nearestLocalPoint(lat,lon){
   }
   return best;
 }
+function localCurrentState(){
+  const iso=state.current?.local_now?.generated_at||state.current?.generated_at||null;
+  const age=ageMinutes(iso);
+  return {
+    iso,
+    fresh:age!==null&&age<=45,
+    label:age!==null&&age<=45?"JoTrip hiện tại":"JoTrip gần nhất"
+  };
+}
 function selectionHtml(lat,lon){
   const f=frame();
   const cells=f?.cells||[];
@@ -771,6 +785,8 @@ function selectionHtml(lat,lon){
         ? nearestValidCell(cells,lat,lon,r=>num(r.wind_kmh)!==null||(num(r.u10_ms)!==null&&num(r.v10_ms)!==null))
         : nearestCell(cells,lat,lon);
   const local=nearestLocalPoint(lat,lon);
+  const localState=localCurrentState();
+  let localRendered=false;
   const frameIso=f?.sampled_time||f?.valid_time||null;
   const rows=['<div class="selection-title">Điểm chọn</div>'];
   if(frameIso) rows.push('<span class="selection-frame">Frame '+stamp(frameIso)+'</span>');
@@ -780,14 +796,14 @@ function selectionHtml(lat,lon){
     if(cell?.cloud_top_high_m!=null) rows.push('Đỉnh cao ≈ '+(Number(cell.cloud_top_high_m)/1000).toFixed(1)+' km');
     if(cell?.convective_level) rows.push('Đối lưu: '+cell.convective_level);
   }else if(state.scene==="rain"){
-    if(local?.rain?.rain_rate_mm_h!=null) rows.push('<b>JoTrip Now:</b> '+Number(local.rain.rain_rate_mm_h).toFixed(2)+' mm/h');
+    if(local?.rain?.rain_rate_mm_h!=null){ rows.push('<b>'+localState.label+':</b> '+Number(local.rain.rain_rate_mm_h).toFixed(2)+' mm/h'); localRendered=true; }
     if(cell?.rain_mm!=null) rows.push('<b>JoTrip Forecast:</b> '+Number(cell.rain_mm).toFixed(2)+' mm / bước');
   }else if(state.scene==="wind"){
-    if(local?.wind_kmh!=null) rows.push('<b>JoTrip Now:</b> '+Number(local.wind_kmh).toFixed(1)+' km/h');
+    if(local?.wind_kmh!=null){ rows.push('<b>'+localState.label+':</b> '+Number(local.wind_kmh).toFixed(1)+' km/h'); localRendered=true; }
     if(cell?.wind_kmh!=null) rows.push('<b>JoTrip Forecast:</b> '+Number(cell.wind_kmh).toFixed(1)+' km/h');
   }else if(state.scene==="wave"){
-    if(local?.wave_hs_m!=null) rows.push('<b>JoTrip Now:</b> Hs '+Number(local.wave_hs_m).toFixed(2)+' m');
-    if(local?.wave_period_s!=null) rows.push('Chu kỳ now '+Number(local.wave_period_s).toFixed(1)+' s');
+    if(local?.wave_hs_m!=null){ rows.push('<b>'+localState.label+':</b> Hs '+Number(local.wave_hs_m).toFixed(2)+' m'); localRendered=true; }
+    if(local?.wave_period_s!=null) rows.push('Chu kỳ gần nhất '+Number(local.wave_period_s).toFixed(1)+' s');
     if(cell?.wave_hs_m!=null) rows.push('<b>Dự báo ô biển gần nhất:</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
     if(cell?.wave_period_s!=null) rows.push('Chu kỳ '+Number(cell.wave_period_s).toFixed(1)+' s');
     if(cell?.wave_direction_deg!=null){
@@ -798,6 +814,7 @@ function selectionHtml(lat,lon){
     if(cell?.wave_hs_m==null) rows.push('<span class="selection-near">Chưa có ô dự báo biển hợp lệ tại vùng này.</span>');
   }
 
+  if(localRendered&&localState.iso&&!localState.fresh) rows.push('<span class="selection-near">Số gần nhất cập nhật '+stamp(localState.iso)+'</span>');
   if(local?.name) rows.push('<span class="selection-near">Điểm JoTrip gần nhất: '+local.name+'</span>');
   rows.push('<span class="selection-coord">'+lat.toFixed(4)+', '+lon.toFixed(4)+'</span>');
   return rows.join('<br>');
@@ -840,6 +857,8 @@ function renderActualStations(){
 
   const stations=Object.values(state.current?.groundtruth?.rainfall?.stations||{});
   for(const g of stations){
+    const a=ageMinutes(g.observed_at);
+    if(a===null||a>45) continue;
     const wet=g.rain_recently_observed===true;
     const currentWindow=g.increment_qc!=="WINDOW_TOO_OLD_FOR_CURRENT_RAIN";
     const stateLabel=wet?"Có mưa gần đây":currentWindow&&g.rain_recently_observed===false?"Chưa ghi nhận mưa gần đây":"Cửa sổ hiện tại chưa đủ";

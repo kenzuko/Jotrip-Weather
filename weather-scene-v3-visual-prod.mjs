@@ -1,4 +1,4 @@
-// rerun after projected renderer wiring fix
+// rerun after V2 renderer production deploy
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 

@@ -122,9 +122,16 @@ function initMap(){
     {subdomains:"abcd",maxZoom:19,pane:"sceneLabels"}
   ).addTo(state.map);
 
-  // Move renderer canvases inside Leaflet's stacking context so labels can sit above weather.
-  state.map.getContainer().appendChild($("fieldCanvas"));
-  state.map.getContainer().appendChild($("motionCanvas"));
+  // Weather canvases must live inside Leaflet mapPane.
+  // This puts them above base tiles but below labels/markers.
+  const mapPane=state.map.getPanes().mapPane;
+  const field=$("fieldCanvas"), motion=$("motionCanvas");
+  mapPane.appendChild(field);
+  mapPane.appendChild(motion);
+  field.style.zIndex="350";
+  motion.style.zIndex="365";
+  field.style.pointerEvents="none";
+  motion.style.pointerEvents="none";
 
   state.actualLayer=L.layerGroup().addTo(state.map);
 

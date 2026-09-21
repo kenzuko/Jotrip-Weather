@@ -7,7 +7,7 @@ on:
       - "weather-scene-v3.html"
       - "weather-scene-v3.css"
       - "weather-scene-v3.js"
-      - "weather-scene-render-v1.js"
+      - "weather-scene-render-v2.js"
       - "weather-scene-v3-smoke.mjs"
       - "data/weather-scene/**"
       - ".github/workflows/weather-scene-v3-smoke.yml"

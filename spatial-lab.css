@@ -1268,3 +1268,14 @@ body.embed-mode #flowCanvas{opacity:.88!important}
     width:min(220px,66%);
   }
 }
+
+
+/* V6.12 - make non-wind layers readable on pale CARTO without decorative wash */
+body.embed-mode .map[data-weather-layer="rain"] #fieldCanvas{opacity:1!important}
+body.embed-mode .map[data-weather-layer="rain24"] #fieldCanvas{opacity:.96!important}
+body.embed-mode .map[data-weather-layer="waves"] #fieldCanvas{opacity:.90!important}
+body.embed-mode .map[data-weather-layer="storm"] #fieldCanvas{
+  opacity:1!important;
+  filter:contrast(1.12) saturate(1.04)!important;
+}
+body.embed-mode .map[data-weather-layer="current"] #flowCanvas{opacity:1!important}

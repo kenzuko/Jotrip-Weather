@@ -33,7 +33,7 @@ try{
 
   const iframe=page.locator('iframe[data-jotrip-scene]');
   await iframe.waitFor({state:'visible',timeout:120000});
-  const frame=page.frames().find(f=>f.url().includes('/weather-scene-v3.html'));
+  const frame=await iframe.contentFrame();
   if(!frame)throw new Error('Scene V3 iframe missing');
   await frame.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:120000});
 
@@ -94,7 +94,7 @@ try{
   await desktop.locator('[data-map="jotrip"]').click();
   const desktopIframe=desktop.locator('iframe[data-jotrip-scene]');
   await desktopIframe.waitFor({state:'visible',timeout:120000});
-  const desktopFrame=desktop.frames().find(f=>f.url().includes('/weather-scene-v3.html'));
+  const desktopFrame=await desktopIframe.contentFrame();
   if(!desktopFrame)throw new Error('Desktop Scene V3 iframe missing');
   await desktopFrame.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:120000});
   await desktop.waitForTimeout(500);

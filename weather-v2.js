@@ -622,7 +622,7 @@ function renderHero(){
   const condition=weatherCondition(rain,conv,wind);
 
   $("heroTemp").textContent=t===null?"--":fmt(t,1)+"°";
-  $("heroTempClass").textContent=localFresh&&l.available?"ƯỚC TÍNH HIỆN TẠI":"MÔ HÌNH";
+  $("heroTempClass").textContent=localFresh&&l.available?"LÚC NÀY":"DỰ BÁO GẦN NHẤT";
   $("heroCondition").textContent=condition.label;
   $("heroWeatherIcon").textContent=condition.icon;
   $("heroRain").textContent=rain===null?"--":fmt(rain,1);
@@ -1078,8 +1078,9 @@ function renderForecastDayRibbon(rows){
       rainMax===null?null:"Mưa ~"+fmt(rainMax,1)+" mm",
       windMax===null?null:"Gió "+fmt(windMax,0)+" km/h"
     ].filter(Boolean).join(" · ");
+    const dayLabel=index===0?"Hôm nay":index===1?"Ngày mai":day.label;
     return '<article class="forecast-day '+state.cls+(index===0?' selected':'')+'">'+
-      '<header><b>'+esc(day.date)+'</b><span>'+esc(day.label)+'</span></header>'+
+      '<header><b>'+esc(day.date)+'</b><span>'+esc(dayLabel)+'</span></header>'+
       '<div class="forecast-day-icon" aria-hidden="true">'+state.icon+'</div>'+
       '<strong>'+tempText+'</strong>'+
       '<h4>'+esc(state.label)+'</h4>'+
@@ -1288,7 +1289,7 @@ function renderJoTripForecast(){
   const metaBox=$("forecastRegionMeta");
   if(metaBox){
     const placeNames=(meta.points||[]).map(id=>critical?.points?.[id]?.name||NAMES[id]||id.replaceAll("_"," "));
-    metaBox.innerHTML='<b>'+esc(regionName)+'</b><span>Điểm theo dõi: '+esc(placeNames.join(" · "))+'</span>';
+    metaBox.innerHTML='<b>'+esc(regionName)+'</b><span>'+esc(placeNames.join(" · "))+'</span>';
   }
 
   if(!rows.length){
@@ -1326,18 +1327,18 @@ function renderJoTripForecast(){
 
   const horizon=regionalForecast.horizon_hours||0;
   const nowcastContext=regionalForecast?.nowcast_context||{};
-  const nowcastCopy=nowcastContext.applied
-    ?"Trong 0-12 giờ đầu, Himawari/nowcast mới đủ độ tươi được chồng thêm để phát hiện diễn biến cục bộ, nhưng không sửa các số q50/q90 gốc của ensemble. "
-    :"Nowcast hiện chưa đủ mới để chồng vào 0-12 giờ đầu; phần này tạm chỉ dùng dự báo tổ hợp cho tới khi có ảnh vệ tinh mới. ";
+  const horizonText=horizon>=240
+    ?"Xem nhanh xu hướng 10 ngày; 3 ngày đầu được theo dõi dày hơn."
+    :"Hiện hệ thống có khoảng "+Math.round(horizon/24)+" ngày dự báo cho khu vực này.";
+  const watchText=watch
+    ?" Có "+watch+" mốc đáng chú ý hơn bình thường."
+    :" Chưa thấy mốc nổi bật cần cảnh báo thêm.";
+  const nowcastText=nowcastContext.applied
+    ?" Mây vệ tinh mới nhất cũng được dùng để kiểm tra phần rất gần."
+    :" Phần rất gần đang chờ ảnh vệ tinh mới hơn.";
   $("jotripForecastSummary").textContent=(fresh.stale
-    ? fresh.text+". Các mốc vẫn được giữ để tham khảo nhưng không dùng tạo cảnh báo nhanh cho đến khi có chu kỳ mới. "
-    : "")+(horizon>=240
-    ? "D0-D3 mỗi 6 giờ; D4-D10 mỗi 12 giờ. "
-    : "Nguồn hiện tại mới đủ "+Math.round(horizon/24)+" ngày. ")+
-    (watch?watch+" mốc trong khu vực có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
-    "Mỗi khu vực được tổng hợp từ các điểm theo dõi tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. "+
-    nowcastCopy+
-    "Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
+    ?"Dữ liệu dự báo đang cập nhật lại. Các ngày bên dưới chỉ nên xem như tham khảo lúc này. "
+    :"")+horizonText+watchText+nowcastText;
 
   $("ensembleMeta").textContent="Dự báo JoTrip theo khu vực · "+
     fresh.text+" · dữ liệu đầy đủ "+

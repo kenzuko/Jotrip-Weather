@@ -15,6 +15,12 @@ const URLS={
   ecmwf:[
     "/spatial-ecmwf.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json"
+  ],
+  dashboard:[
+    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/dashboard-data.json"
+  ],
+  marine:[
+    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-marine.json"
   ]
 };
 
@@ -33,6 +39,8 @@ const state={
   compact:null,
   current:null,
   ecmwf:null,
+  dashboard:null,
+  marine:null,
   scene:"cloud",
   frames:[],
   index:0,
@@ -43,7 +51,7 @@ const state={
   actualLayer:null,
   selectedMarker:null,
   probe:null,
-  sources:{nowcast:false,compact:false,current:false,ecmwf:false}
+  sources:{nowcast:false,compact:false,current:false,ecmwf:false,dashboard:false,marine:false}
 };
 
 async function fetchJSON(url){
@@ -80,6 +88,32 @@ function stamp(iso){
     timeZone:"Asia/Ho_Chi_Minh",day:"2-digit",month:"2-digit",
     hour:"2-digit",minute:"2-digit",hour12:false
   }).format(d).replace(","," ·");
+}
+function utcCycleLabel(iso){
+  const t=Date.parse(iso||"");
+  if(!Number.isFinite(t)) return "--";
+  const d=new Date(t);
+  return String(d.getUTCHours()).padStart(2,"0")+"Z";
+}
+function localRunLabel(iso){
+  if(!iso) return "--";
+  return stamp(iso);
+}
+function modelRunIso(scene){
+  const cycles=state.dashboard?.source_cycles||{};
+  if(scene==="rain"||scene==="wind"||scene==="wave") return cycles.ECMWF||state.ecmwf?.run_time||state.ecmwf?.spatial?.short_run_time||null;
+  return null;
+}
+function modelName(scene){
+  if(scene==="rain"||scene==="wind") return "ECMWF IFS";
+  if(scene==="wave") return "ECMWF Wave";
+  return "Himawari-9";
+}
+function modelCycleBadge(scene){
+  const run=modelRunIso(scene);
+  if(!run) return {text:"run --",stale:true};
+  const a=ageMinutes(run);
+  return {text:"run "+utcCycleLabel(run)+" · "+Math.round(a/60)+"h",stale:a>18*60};
 }
 function ageMinutes(iso){
   const t=Date.parse(iso||"");
@@ -266,7 +300,7 @@ function updateCopy(){
     $("summary").textContent=x.summary;
     $("facts").innerHTML=x.facts.map(v=>"<span>"+v+"</span>").join("");
     $("timeLabel").textContent=stamp(f?.sampled_time);
-    $("timeMeta").textContent="Himawari-9 · observed";
+    $("timeMeta").textContent="JoTrip Weather · Himawari-9 · observed";
     $("timeClass").textContent="OBSERVED";
     $("timeClass").className="time-class observed";
     sourceTime=f?.sampled_time||state.nowcast?.sampled_time;
@@ -287,7 +321,7 @@ function updateCopy(){
       "<span>"+actual.label+"</span>"+
       "<span>Đỉnh ô model "+peak.toFixed(1)+" mm</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
-    $("timeMeta").textContent="ECMWF · forecast";
+    $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("rain"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -305,7 +339,7 @@ function updateCopy(){
     $("summary").textContent="Particle biểu diễn trường gió JoTrip Weather ở 10 m. Đây không phải hướng dịch chuyển của mây.";
     $("facts").innerHTML="<span>Gió mạnh nhất trên khung ≈ "+Math.round(peak)+" km/h</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
-    $("timeMeta").textContent="JoTrip Weather · forecast";
+    $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("wind"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -320,7 +354,7 @@ function updateCopy(){
     $("summary").textContent="Màu là độ cao sóng có nghĩa Hs trong JoTrip Weather. Hướng và chu kỳ được đọc tại điểm chọn.";
     $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
-    $("timeMeta").textContent="JoTrip Weather · marine forecast";
+    $("timeMeta").textContent="JoTrip Weather · ECMWF Wave · run "+utcCycleLabel(modelRunIso("wave"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -331,7 +365,9 @@ function updateCopy(){
       '<div class="scale"><span>êm</span><span>cao</span></div>';
   }
 
-  const fresh=freshnessText(sourceTime,kind);
+  const fresh=state.scene==="cloud"
+    ? freshnessText(sourceTime,kind)
+    : modelCycleBadge(state.scene);
   $("freshness").textContent=fresh.text;
   $("freshness").classList.toggle("stale",fresh.stale);
   $("slider").value=String(state.index);
@@ -346,32 +382,40 @@ function updateSourcePanel(){
     title="JoTrip Weather · Himawari cloud";
     text="Observed satellite qua JoTrip Weather. Thân mây dùng median cloud-top để giữ hình khối; lõi lạnh dùng cold cloud-top để nhấn phần phát triển mạnh. Không có icon sét vì lightning feed trực tiếp chưa được nối.";
     meta=[
-      "Nguồn: "+(state.nowcast?.source||"JMA Himawari-9 via NOAA Open Data"),
+      "Pipeline: JoTrip Weather",
+      "Nguồn gốc: "+(state.nowcast?.source||"JMA Himawari-9 via NOAA Open Data"),
       "Native source: "+(state.nowcast?.observation_resolution||"~2 km ở nadir"),
       "Render grid hiện tại: "+(state.nowcast?.spatial?.display_grid_deg||0.05)+"°",
       "Motion public: tạm khóa cho đến khi feature tracking được xác minh"
     ];
   }else if(state.scene==="rain"){
-    title="ECMWF + VRain";
-    text="Raster màu là MODEL FORECAST. Điểm trạm là ACTUAL khi cửa sổ quan trắc đủ điều kiện. Hai lớp giữ tách biệt.";
+    title="JoTrip Weather · ECMWF IFS";
+    text="Raster màu là forecast field của JoTrip Weather từ ECMWF IFS. Điểm VRain là ACTUAL và vẫn giữ tách biệt.";
     meta=[
+      "Model cycle: "+localRunLabel(modelRunIso("rain"))+" ("+utcCycleLabel(modelRunIso("rain"))+")",
+      "File build: "+localRunLabel(state.ecmwf?.generated_at),
       "ECMWF source grid: "+(state.ecmwf?.spatial?.requested_grid_deg||0.25)+"°",
       "Interpolation: render only",
       "VRain: "+(state.current?.groundtruth?.rainfall?.status||"không sẵn sàng"),
       "Không tạo chi tiết mưa nhỏ hơn source grid"
     ];
   }else if(state.scene==="wind"){
-    title="JoTrip Weather · surface wind";
-    text="Particle chỉ phục vụ đọc hướng trường gió 10 m và luôn để basemap nhìn thấy. Không dùng gió mặt đất để suy diễn cloud motion.";
+    title="JoTrip Weather · ECMWF IFS";
+    text="Particle dùng forecast field u10/v10 của JoTrip Weather từ ECMWF IFS. Không dùng gió mặt đất để suy diễn cloud motion.";
     meta=[
+      "Model cycle: "+localRunLabel(modelRunIso("wind"))+" ("+utcCycleLabel(modelRunIso("wind"))+")",
+      "File build: "+localRunLabel(state.ecmwf?.generated_at),
       "Độ cao: 10 m",
       "Source grid: "+(state.ecmwf?.spatial?.requested_grid_deg||0.25)+"°",
       "Data class: JoTrip Weather forecast"
     ];
   }else{
-    title="JoTrip Weather · marine";
-    text="Sóng dùng Hs, hướng sóng và chu kỳ từ nền dự báo biển JoTrip Weather. Đây là model data, không phải phao quan trắc.";
+    title="JoTrip Weather · Marine";
+    text="Forecast timeline dùng ECMWF Wave. Trạng thái biển gần hiện tại được JoTrip Marine đối chiếu thêm Copernicus Marine khi feed sẵn sàng.";
     meta=[
+      "Forecast cycle: "+localRunLabel(modelRunIso("wave"))+" ("+utcCycleLabel(modelRunIso("wave"))+")",
+      "Forecast build: "+localRunLabel(state.ecmwf?.generated_at),
+      "Copernicus sampled: "+localRunLabel(state.marine?.wave?.sampled_time),
       "Biến: Hs / hướng / chu kỳ",
       "Source grid: "+(state.ecmwf?.spatial?.requested_grid_deg||0.25)+"°",
       "Data class: JoTrip Weather marine forecast"
@@ -804,17 +848,21 @@ async function boot(){
   initMap();
   bind();
 
-  const [n,c,cur,e]=await Promise.allSettled([
+  const [n,c,cur,e,d,m]=await Promise.allSettled([
     fetchFreshest(URLS.nowcast),
     fetchFreshest(URLS.compact),
     fetchFreshest(URLS.current),
-    fetchFreshest(URLS.ecmwf)
+    fetchFreshest(URLS.ecmwf),
+    fetchFreshest(URLS.dashboard),
+    fetchFreshest(URLS.marine)
   ]);
 
   if(n.status==="fulfilled"){state.nowcast=n.value;state.sources.nowcast=true}
   if(c.status==="fulfilled"){state.compact=c.value;state.sources.compact=true}
   if(cur.status==="fulfilled"){state.current=cur.value;state.sources.current=true}
   if(e.status==="fulfilled"){state.ecmwf=e.value;state.sources.ecmwf=true}
+  if(d.status==="fulfilled"){state.dashboard=d.value;state.sources.dashboard=true}
+  if(m.status==="fulfilled"){state.marine=m.value;state.sources.marine=true}
 
   setTabAvailability();
 

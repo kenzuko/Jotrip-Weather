@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const base='https://weather.openphuquoc.com';
-const result={ok:false,embed:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
+const result={ok:false,overview:null,embed:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
 page.on('pageerror',e=>result.pageErrors.push(String(e)));
@@ -28,6 +28,18 @@ async function maxMotion(frame){
 
 try{
   await page.goto(base+'/?mergeqa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+  const overview=page.locator('.weather-overview');
+  await overview.waitFor({state:'visible',timeout:30000});
+  result.overview=await overview.evaluate(el=>({
+    width:el.getBoundingClientRect().width,
+    scrollWidth:el.scrollWidth,
+    condition:(document.getElementById('heroCondition')?.textContent||'').trim(),
+    temp:(document.getElementById('heroTemp')?.textContent||'').trim(),
+    rain:(document.getElementById('heroRain')?.textContent||'').trim(),
+    wind:(document.getElementById('heroWind')?.textContent||'').trim(),
+    wave:(document.getElementById('heroWave')?.textContent||'').trim()
+  }));
+  await overview.screenshot({path:'/tmp/prod-weather-overview-mobile.png'});
   await page.locator('.map-panel').scrollIntoViewIfNeeded();
   await page.locator('[data-map="jotrip"]').click();
 
@@ -89,6 +101,9 @@ try{
 
   const desktop=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
   await desktop.goto(base+'/?desktopqa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+  const desktopOverview=desktop.locator('.weather-overview');
+  await desktopOverview.waitFor({state:'visible',timeout:30000});
+  await desktopOverview.screenshot({path:'/tmp/prod-weather-overview-desktop.png'});
   await desktop.locator('.map-panel').scrollIntoViewIfNeeded();
   await desktop.locator('[data-map="jotrip"]').click();
   const desktopIframe=desktop.locator('iframe[data-jotrip-scene]');
@@ -111,6 +126,10 @@ try{
     result.scenes.wave.field.visible>20;
 
   result.ok=
+    result.overview?.width>0 &&
+    result.overview?.scrollWidth<=result.overview?.width+2 &&
+    result.overview?.condition.length>0 &&
+    result.overview?.temp!=='--' &&
     result.embed?.embedMode===true &&
     result.embed?.topbarDisplay==='none' &&
     String(result.embed?.renderer||'').includes('wave-direction-convention') &&

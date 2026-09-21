@@ -155,7 +155,10 @@ function wave(rows,map,field,motion){
     const deg=num(p.wave_direction_deg);
     const drawArrow=deg!==null && (innerWidth<760 ? i%2===0 : true);
     if(drawArrow){
-      const ang=(deg-90)*Math.PI/180,len=7+t*8;
+      // ECMWF mwd is archived as the direction waves are coming FROM.
+      // Convert to propagation direction before drawing the arrow.
+      const toDeg=(deg+180)%360;
+      const ang=(toDeg-90)*Math.PI/180,len=7+t*8;
       const x0=p.x-Math.cos(ang)*len*.42,y0=p.y-Math.sin(ang)*len*.42;
       const x1=p.x+Math.cos(ang)*len*.58,y1=p.y+Math.sin(ang)*len*.58;
       ctx.strokeStyle=`rgba(18,64,91,${(.42+t*.38).toFixed(3)})`;
@@ -247,5 +250,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"1.9-wave-readable",render,stop};
+window.JoTripSceneRenderer={version:"2.0-wave-direction-convention",render,stop};
 })();

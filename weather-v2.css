@@ -1248,3 +1248,27 @@ footer{font-size:9.5px}
   -webkit-backdrop-filter:blur(6px);
   pointer-events:none;
 }
+
+
+/* Himawari georeferenced comparison map */
+.himawari-georef .himawari-map{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  background:#071018;
+}
+.himawari-georef .leaflet-container{background:#071018}
+.himawari-georef .leaflet-image-layer{
+  image-rendering:auto;
+  filter:contrast(1.12) brightness(1.04);
+}
+.himawari-georef .leaflet-control-attribution{
+  font-size:6px!important;
+  background:rgba(255,255,255,.62)!important;
+}
+.himawari-georef .himawari-loop-bar{
+  z-index:700;
+  background:rgba(9,24,32,.58);
+}
+.himawari-georef .himawari-ir-badge{z-index:700}

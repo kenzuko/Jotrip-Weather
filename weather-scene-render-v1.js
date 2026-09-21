@@ -14,15 +14,20 @@ function ramp(stops,t){
   }
   return stops.at(-1)[1];
 }
-function fit(canvas,scale){
-  const r=canvas.getBoundingClientRect();
-  canvas.width=Math.max(180,Math.round(r.width*scale));
-  canvas.height=Math.max(220,Math.round(r.height*scale));
-  canvas.style.width=r.width+"px";canvas.style.height=r.height+"px";
-  return {sx:canvas.width/Math.max(1,r.width),sy:canvas.height/Math.max(1,r.height)};
+function fit(canvas,scale,map){
+  const size=map?.getSize?.();
+  const cssW=Math.max(1,Number(size?.x)||canvas.parentElement?.parentElement?.clientWidth||window.innerWidth);
+  const cssH=Math.max(1,Number(size?.y)||canvas.parentElement?.parentElement?.clientHeight||window.innerHeight);
+  canvas.width=Math.max(180,Math.round(cssW*scale));
+  canvas.height=Math.max(220,Math.round(cssH*scale));
+  canvas.style.width=cssW+"px";
+  canvas.style.height=cssH+"px";
+  canvas.style.left="0px";
+  canvas.style.top="0px";
+  return {sx:canvas.width/cssW,sy:canvas.height/cssH};
 }
 function project(rows,map,canvas,scale){
-  const s=fit(canvas,scale);
+  const s=fit(canvas,scale,map);
   return (rows||[]).map(r=>{
     const p=map.latLngToLayerPoint([Number(r.lat),Number(r.lon)]);
     return {...r,x:p.x*s.sx,y:p.y*s.sy};
@@ -162,7 +167,7 @@ function vectorAt(x,y,pv){
 }
 function wind(rows,map,field,motion){
   stop();
-  fit(field,innerWidth<760?.58:.50);fit(motion,innerWidth<760?.58:.50);
+  fit(field,innerWidth<760?.58:.50,map);fit(motion,innerWidth<760?.58:.50,map);
   const fctx=field.getContext("2d"),mctx=motion.getContext("2d");
   fctx.clearRect(0,0,field.width,field.height);mctx.clearRect(0,0,motion.width,motion.height);
   const pv=windVectors(rows,map,field);if(!pv.length)return;

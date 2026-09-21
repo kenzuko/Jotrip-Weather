@@ -1786,10 +1786,10 @@ footer{font-size:9.5px}
 .weather-overview:after{
   content:"";
   position:absolute;
-  width:190px;height:190px;
-  right:-74px;top:-92px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(77,174,190,.10),rgba(77,174,190,0) 68%);
+  width:132px;height:132px;
+  right:0;top:0;
+  border-radius:0 28px 0 100%;
+  background:radial-gradient(circle at 100% 0,rgba(77,174,190,.10),rgba(77,174,190,0) 72%);
   pointer-events:none;
 }
 .weather-overview[data-mood="watch"],

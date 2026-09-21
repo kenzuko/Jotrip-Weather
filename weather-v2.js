@@ -884,7 +884,7 @@ function nowcastPlainText(n,rainImm){
 }
 function renderCloudMotionTable(){
   const body=$("cloudMotionRows"),age=$("cloudMotionAge");if(!body)return;
-  const ids=[...new Set([...islandIds(),...(critical?.points?.rach_gia?["rach_gia"]:[])])];
+  const ids=[...islandIds()];
   const rows=ids.map(id=>{
     const p=critical.points[id]||{},n=effectiveNowcastFor(id),m=n.cloud_motion||{};
     return {
@@ -903,19 +903,26 @@ function renderCloudMotionTable(){
     body.innerHTML='<tr><td colspan="6">Chưa có dữ liệu chuyển động mây.</td></tr>';
     return;
   }
+  const nowcastRef=fullNowcast?.sampled_time||rows[0]?.sampled;
+  const nowcastFresh=freshEnough(nowcastRef,75);
   body.innerHTML=rows.map(r=>{
-    const m=r.motion||{},eta=motionEtaText(m),cloud=cloudStateLabel(r.nowcast||{convective_score:r.score});
+    const m=r.motion||{},cloud=cloudStateLabel(r.nowcast||{convective_score:r.score});
     const id=Object.keys(critical?.points||{}).find(k=>(critical.points[k]?.name||k)===r.name)||null;
+    const eta=nowcastFresh?motionEtaText(m):"Chờ ảnh mới";
+    const heading=nowcastFresh
+      ?(m.public_track_usable===false?"Chưa đủ dữ liệu đường đi":motionHeadingText(m))
+      :"Dữ liệu vệ tinh đang trễ";
+    const impact=nowcastFresh?(id?cloudImpactText(id,r.nowcast):"Theo dõi hành lang mây"):"Không phát ETA từ ảnh cũ";
     return '<tr>'+
       '<td><b>'+esc(r.name)+'</b></td>'+
       '<td><b>'+esc(cloud.label)+'</b><small>'+esc(cloud.detail)+'</small></td>'+
       '<td>'+esc(motionSourceText(m))+'</td>'+
-      '<td>'+esc(m.public_track_usable===false?"Chưa đủ dữ liệu đường đi":motionHeadingText(m))+'</td>'+
+      '<td>'+esc(heading)+'</td>'+
       '<td><b>'+esc(eta)+'</b></td>'+
-      '<td>'+esc(id?cloudImpactText(id,r.nowcast):"Theo dõi hành lang mây")+'</td>'+
+      '<td>'+esc(impact)+'</td>'+
     '</tr>';
   }).join("");
-  if(age)age.textContent="Himawari · "+ageText(fullNowcast?.sampled_time||rows[0]?.sampled);
+  if(age)age.textContent="Himawari · "+ageText(nowcastRef)+(nowcastFresh?"":" · dữ liệu đang trễ");
 }
 function renderMapConvective(){
   const n=effectiveNowcast();
@@ -1112,8 +1119,11 @@ function buildQuickWatchEvents(){
       conv:num(n?.convective_score??p.local?.convection_score)||0
     };
   });
+  const convContextFresh=
+    freshEnough(liveTimestamp(),30)&&
+    freshEnough(fullNowcast?.sampled_time||effectiveNowcast()?.sampled_time,75);
   const convWet=islandWet.filter(x=>x.conv>=70&&x.rain>=.5);
-  if(convWet.length>=4){
+  if(convContextFresh&&convWet.length>=4){
     const rates=convWet.map(x=>x.rain),lo=Math.min(...rates),hi=Math.max(...rates);
     events.push({
       key:"island-convective-rain",

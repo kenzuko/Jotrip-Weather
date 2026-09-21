@@ -1006,34 +1006,18 @@ function startSceneParticles(rows){
 }
 function renderScalar(){
   const c=$("fieldCanvas"),m=$("motionCanvas");
-  sceneCanvasSize(c,innerWidth<760?.58:.50);
-  sceneCanvasSize(m,innerWidth<760?.58:.50);
   const f=frame();
   if(!f)return;
-  const rows=f.cells||[];
-
-  if(state.scene==="cloud"){
-    stopSceneParticles();
-    drawCloudProjected(rows);
-    m.getContext("2d").clearRect(0,0,m.width,m.height);
-    return;
+  if(!window.JoTripSceneRenderer){
+    throw new Error("Active JoTrip Scene renderer is not loaded");
   }
-  if(state.scene==="rain"){
-    stopSceneParticles();
-    drawRainProjected(rows);
-    m.getContext("2d").clearRect(0,0,m.width,m.height);
-    return;
-  }
-  if(state.scene==="wave"){
-    stopSceneParticles();
-    drawWaveProjected(rows);
-    m.getContext("2d").clearRect(0,0,m.width,m.height);
-    return;
-  }
-  if(state.scene==="wind"){
-    drawWindTexture(rows);
-    startSceneParticles(rows);
-  }
+  window.JoTripSceneRenderer.render({
+    scene:state.scene,
+    rows:f.cells||[],
+    map:state.map,
+    fieldCanvas:c,
+    motionCanvas:m
+  });
 }
 
 function queueRender(){

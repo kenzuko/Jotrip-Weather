@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/weather-scene data/weather-scene
+          mkdir -p /tmp/weather-scene data/weather-runtime data/weather-scene
 
           LAB_FEATURE='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
           LAB_DATA='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data'
@@ -90,7 +90,7 @@ jobs:
           from pathlib import Path
 
           src=Path('/tmp/weather-scene')
-          out=Path('data/weather-scene')
+          out=Path('data/weather-runtime')
           out.mkdir(parents=True,exist_ok=True)
 
           cloud=json.loads((src/'cloud-full.json').read_text())
@@ -164,7 +164,7 @@ jobs:
           }
 
           meta={
-            'schema_version':'weather-scene-meta-v1',
+            'schema_version':'weather-runtime-meta-v1',
             'generated_at':dashboard.get('generated_at'),
             'source_cycles':dashboard.get('source_cycles',{}),
             'sources':dashboard.get('sources',{}),
@@ -179,14 +179,46 @@ jobs:
           (out/'marine.json').write_text(json.dumps(marine,ensure_ascii=False,separators=(',',':')))
           (out/'meta.json').write_text(json.dumps(meta,ensure_ascii=False,separators=(',',':')))
 
-          print('Weather Scene runtime built',
+          manifest={
+            'schema_version':'weather-runtime-manifest-v1',
+            'generated_at':datetime.now(timezone.utc).isoformat(),
+            'pipeline_version':'JOTRIP_WEATHER_RUNTIME_V1',
+            'status':'READY',
+            'policy':{
+              'frontend_source':'SAME_ORIGIN_CANONICAL_ONLY',
+              'browser_fallback':'DISABLED',
+              'legacy_fallback':'DISABLED'
+            },
+            'files':{
+              'cloud':'/data/weather-runtime/cloud.json',
+              'compact':'/data/weather-runtime/compact.json',
+              'current':'/data/weather-runtime/current.json',
+              'forecast':'/data/weather-runtime/forecast.json',
+              'marine':'/data/weather-runtime/marine.json',
+              'meta':'/data/weather-runtime/meta.json'
+            },
+            'source_times':{
+              'cloud_sampled_time':cloud_out.get('sampled_time'),
+              'forecast_run_time':forecast_out.get('run_time'),
+              'marine_sampled_time':marine.get('wave',{}).get('sampled_time')
+            }
+          }
+          (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,separators=(',',':')))
+
+          # Temporary compatibility mirror. Production consumers must use weather-runtime.
+          legacy=Path('data/weather-scene')
+          legacy.mkdir(parents=True,exist_ok=True)
+          for name in ('cloud.json','compact.json','current.json','forecast.json','marine.json','meta.json'):
+            (legacy/name).write_text((out/name).read_text())
+
+          print('Canonical Weather runtime built',
                 'cloud_frames=',len(cloud_out['spatial']['frames']),
                 'forecast_frames=',len(fc_frames),
                 'sampled=',cloud_out.get('sampled_time'),
                 'run=',forecast_out.get('run_time'))
           PY
 
-          for file in data/weather-scene/*.json; do
+          for file in data/weather-runtime/*.json data/weather-scene/*.json; do
             python -m json.tool "$file" >/dev/null
           done
 

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#edf2f3">
+<title>JoTrip Weather Scene V3</title>
+<link rel="icon" href="/weather-app-icon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/weather-scene-v3.css?v=20260921-1">
+</head>
+<body>
+<main class="app">
+<header class="topbar">
+  <a class="brand" href="/" aria-label="JoTrip Weather"><img src="/weather-brand.svg" alt="JoTrip Weather"></a>
+  <div class="title"><b>WEATHER SCENE V3</b><span>live semantic scene</span></div>
+  <a class="back" href="/spatial-lab.html">Bản hiện tại</a>
+</header>
+
+<section class="map-shell">
+  <div id="map"></div>
+  <canvas id="fieldCanvas" aria-hidden="true"></canvas>
+  <canvas id="motionCanvas" aria-hidden="true"></canvas>
+
+  <nav class="tabs" role="tablist" aria-label="Lớp thời tiết">
+    <button class="active" data-scene="cloud" type="button">Mây</button>
+    <button data-scene="rain" type="button">Mưa</button>
+    <button data-scene="wind" type="button">Gió</button>
+    <button data-scene="wave" type="button">Sóng</button>
+  </nav>
+
+  <aside class="status-card" aria-live="polite">
+    <div class="status-top">
+      <span id="eyebrow">QUAN TRẮC</span>
+      <span id="freshness" class="freshness">--</span>
+    </div>
+    <h1 id="headline">Đang đọc thời tiết quanh Phú Quốc</h1>
+    <p id="summary">Đang tải dữ liệu...</p>
+    <div class="facts" id="facts"></div>
+  </aside>
+
+  <button id="infoBtn" class="info-btn" type="button" aria-expanded="false" aria-controls="sourcePanel">i</button>
+  <aside id="sourcePanel" class="source-panel" hidden>
+    <b id="sourceTitle">Nguồn dữ liệu</b>
+    <p id="sourceText"></p>
+    <div id="sourceMeta" class="source-meta"></div>
+  </aside>
+
+  <div id="legend" class="legend"></div>
+
+  <section class="timeline" aria-label="Dòng thời gian">
+    <button id="playBtn" type="button" aria-label="Phát">▶</button>
+    <div class="timecopy"><b id="timeLabel">--</b><small id="timeMeta">--</small></div>
+    <input id="slider" type="range" min="0" max="0" value="0" step="1" aria-label="Thời gian">
+    <div id="timeClass" class="time-class">--</div>
+  </section>
+
+  <div id="loading" class="loading">Đang nạp Weather Scene V3...</div>
+</section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/weather-scene-v3.js?v=20260921-1"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-name: Spatial production browser smoke
+name: Weather map production browser smoke
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
       - "index.html"
       - "weather-v2.js"
       - "weather-v2.css"
+      - "weather-scene-v3.html"
+      - "weather-scene-v3.css"
+      - "weather-scene-v3.js"
+      - "weather-scene-render-v2.js"
+      - "weather-runtime-config.js"
       - "spatial-lab.html"
       - "spatial-lab.css"
       - "spatial-lab.js"

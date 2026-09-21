@@ -15,9 +15,9 @@ function ramp(stops,t){
   return stops.at(-1)[1];
 }
 function fit(canvas,scale,map){
-  const size=map?.getSize?.();
-  const cssW=Math.max(1,Number(size?.x)||canvas.parentElement?.parentElement?.clientWidth||window.innerWidth);
-  const cssH=Math.max(1,Number(size?.y)||canvas.parentElement?.parentElement?.clientHeight||window.innerHeight);
+  const r=map?.getContainer?.()?.getBoundingClientRect?.();
+  const cssW=Math.max(1,Number(r?.width)||window.innerWidth);
+  const cssH=Math.max(1,Number(r?.height)||window.innerHeight);
   canvas.width=Math.max(180,Math.round(cssW*scale));
   canvas.height=Math.max(220,Math.round(cssH*scale));
   canvas.style.width=cssW+"px";
@@ -206,5 +206,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={render,stop};
+window.JoTripSceneRenderer={version:"1.4-map-pane",render,stop};
 })();

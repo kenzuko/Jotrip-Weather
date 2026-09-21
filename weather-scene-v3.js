@@ -1,30 +1,15 @@
 (()=>{"use strict";
 
+const RUNTIME=window.JOTRIP_WEATHER_RUNTIME;
+if(!RUNTIME) throw new Error("JoTrip Weather canonical runtime registry missing");
 const URLS={
-  nowcast:[
-    "/data/weather-scene/cloud.json",
-    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/latest.json"
-  ],
-  compact:[
-    "/data/weather-scene/compact.json",
-    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"
-  ],
-  current:[
-    "/data/weather-scene/current.json",
-    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-current/latest.json"
-  ],
-  ecmwf:[
-    "/data/weather-scene/forecast.json",
-    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json"
-  ],
-  dashboard:[
-    "/data/weather-scene/meta.json",
-    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/dashboard-data.json"
-  ],
-  marine:[
-    "/data/weather-scene/marine.json",
-    "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-marine.json"
-  ]
+  manifest:RUNTIME.manifest,
+  nowcast:RUNTIME.cloud,
+  compact:RUNTIME.compact,
+  current:RUNTIME.current,
+  ecmwf:RUNTIME.forecast,
+  dashboard:RUNTIME.meta,
+  marine:RUNTIME.marine
 };
 
 const CARTO_KEY="cb1_3q98_1_d8112ce70cc7ec9b9276b0a0";
@@ -55,7 +40,8 @@ const state={
   actualLayer:null,
   selectedMarker:null,
   probe:null,
-  sources:{nowcast:false,compact:false,current:false,ecmwf:false,dashboard:false,marine:false}
+  runtimeManifest:null,
+  sources:{manifest:false,nowcast:false,compact:false,current:false,ecmwf:false,dashboard:false,marine:false}
 };
 
 async function fetchJSON(url){
@@ -63,26 +49,8 @@ async function fetchJSON(url){
   if(!r.ok) throw new Error("HTTP "+r.status+" "+url);
   return r.json();
 }
-function payloadTime(payload){
-  const candidates=[
-    payload?.sampled_time,
-    payload?.generated_at,
-    payload?.spatial?.short_run_time,
-    payload?.run_time,
-    payload?.valid_time
-  ];
-  for(const value of candidates){
-    const t=Date.parse(value||"");
-    if(Number.isFinite(t)) return t;
-  }
-  return -Infinity;
-}
-async function fetchFreshest(urls){
-  const results=await Promise.allSettled(urls.map(fetchJSON));
-  const good=results.filter(r=>r.status==="fulfilled").map(r=>r.value);
-  if(!good.length) throw new Error("No source");
-  good.sort((a,b)=>payloadTime(b)-payloadTime(a));
-  return good[0];
+async function fetchCanonical(url){
+  return fetchJSON(url);
 }
 function stamp(iso){
   if(!iso) return "--";
@@ -1111,15 +1079,25 @@ async function boot(){
   initMap();
   bind();
 
-  const [n,c,cur,e,d,m]=await Promise.allSettled([
-    fetchFreshest(URLS.nowcast),
-    fetchFreshest(URLS.compact),
-    fetchFreshest(URLS.current),
-    fetchFreshest(URLS.ecmwf),
-    fetchFreshest(URLS.dashboard),
-    fetchFreshest(URLS.marine)
+  const [mf,n,c,cur,e,d,m]=await Promise.allSettled([
+    fetchCanonical(URLS.manifest),
+    fetchCanonical(URLS.nowcast),
+    fetchCanonical(URLS.compact),
+    fetchCanonical(URLS.current),
+    fetchCanonical(URLS.ecmwf),
+    fetchCanonical(URLS.dashboard),
+    fetchCanonical(URLS.marine)
   ]);
 
+  if(mf.status==="fulfilled"){
+    state.runtimeManifest=mf.value;
+    state.sources.manifest=true;
+    if(mf.value?.policy?.browser_fallback!=="DISABLED" || mf.value?.policy?.frontend_source!=="SAME_ORIGIN_CANONICAL_ONLY"){
+      throw new Error("Weather runtime source policy mismatch");
+    }
+  }else{
+    throw new Error("Canonical Weather runtime manifest unavailable");
+  }
   if(n.status==="fulfilled"){state.nowcast=n.value;state.sources.nowcast=true}
   if(c.status==="fulfilled"){state.compact=c.value;state.sources.compact=true}
   if(cur.status==="fulfilled"){state.current=cur.value;state.sources.current=true}

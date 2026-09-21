@@ -50,6 +50,7 @@ const state={
   playing:false,
   timer:null,
   raf:null,
+  particleRaf:null,
   particles:[],
   actualLayer:null,
   selectedMarker:null,
@@ -194,6 +195,7 @@ function setScene(scene){
   state.scene=scene;
   document.querySelector(".map-shell").dataset.scene=scene;
   stop();
+  stopSceneParticles();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.scene===scene));
   state.frames=scene==="cloud"?cloudFrames():forecastFrames();
 
@@ -304,6 +306,7 @@ function updateCopy(){
     $("facts").innerHTML=x.facts.map(v=>"<span>"+v+"</span>").join("");
     $("timeLabel").textContent=stamp(f?.sampled_time);
     $("timeMeta").textContent="JoTrip Weather · Himawari-9 · observed";
+    $("modelBadge").textContent="HIMAWARI-9 · OBSERVED";
     $("timeClass").textContent="OBSERVED";
     $("timeClass").className="time-class observed";
     sourceTime=f?.sampled_time||state.nowcast?.sampled_time;
@@ -325,6 +328,7 @@ function updateCopy(){
       "<span>Đỉnh ô model "+peak.toFixed(1)+" mm</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("rain"));
+    $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("rain"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -343,6 +347,7 @@ function updateCopy(){
     $("facts").innerHTML="<span>Gió mạnh nhất trên khung ≈ "+Math.round(peak)+" km/h</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("wind"));
+    $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("wind"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -358,6 +363,7 @@ function updateCopy(){
     $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF Wave · run "+utcCycleLabel(modelRunIso("wave"));
+    $("modelBadge").textContent="ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -798,6 +804,244 @@ function renderActualStations(){
       {className:"scene-tip",direction:"top",opacity:.96}
     );
     marker.addTo(state.actualLayer);
+  }
+}
+
+function sceneCanvasSize(c,scale=.44){
+  const r=c.getBoundingClientRect();
+  const w=Math.max(180,Math.round(r.width*scale));
+  const h=Math.max(220,Math.round(r.height*scale));
+  c.width=w;c.height=h;
+  c.style.width=r.width+"px";c.style.height=r.height+"px";
+  return {w,h,sx:w/Math.max(1,r.width),sy:h/Math.max(1,r.height)};
+}
+function medianScene(values){
+  const a=values.filter(Number.isFinite).sort((x,y)=>x-y);
+  if(!a.length)return 0;
+  const m=Math.floor(a.length/2);
+  return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+function projectedRows(rows,c,scale=.44){
+  const s=sceneCanvasSize(c,scale);
+  const pts=(rows||[]).map(r=>{
+    const p=state.map.latLngToContainerPoint([Number(r.lat),Number(r.lon)]);
+    return {...r,x:p.x*s.sx,y:p.y*s.sy};
+  }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+  return {pts,...s};
+}
+function projectedSpacing(pts){
+  if(pts.length<3)return 28;
+  const ds=[];
+  for(let i=0;i<pts.length;i++){
+    let best=Infinity;
+    for(let j=0;j<pts.length;j++){
+      if(i===j)continue;
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y;
+      best=Math.min(best,Math.hypot(dx,dy));
+    }
+    if(Number.isFinite(best))ds.push(best);
+  }
+  return clamp(medianScene(ds),10,80);
+}
+function cloudCoreRgb(cold){
+  const t=clamp((-cold-38)/38,0,1);
+  return ramp([
+    [0,[99,184,221]],[.28,[72,174,215]],[.50,[86,199,163]],
+    [.68,[226,211,89]],[.84,[238,142,70]],[1,[191,67,84]]
+  ],t);
+}
+function drawCloudProjected(rows){
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),{pts}=projectedRows(rows,c,innerWidth<760?.52:.44);
+  ctx.clearRect(0,0,c.width,c.height);
+  if(!pts.length)return;
+  const spacing=projectedSpacing(pts),radius=clamp(spacing*1.38,18,72);
+
+  ctx.save();
+  for(const p of pts){
+    const med=num(p.cloud_top_median_c),cold=num(p.cloud_top_cold_c),high=num(p.cloud_top_high_m);
+    if(med===null&&cold===null&&high===null)continue;
+
+    const presence=clamp(
+      .08+
+      (med===null?0:clamp((-med-2)/42,0,1)*.38)+
+      (high===null?0:clamp((high-1800)/10000,0,1)*.34),
+      0,.72
+    );
+
+    if(presence>.10){
+      const cool=med===null?0:clamp((-med-12)/32,0,1);
+      const rgb=ramp([[0,[231,237,240]],[1,[176,214,230]]],cool);
+      const a=clamp(.09+presence*.34,.09,.34);
+      const r=radius*(.92+presence*.36);
+      const g=ctx.createRadialGradient(p.x,p.y,r*.08,p.x,p.y,r);
+      g.addColorStop(0,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+a.toFixed(3)+")");
+      g.addColorStop(.55,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(a*.72).toFixed(3)+")");
+      g.addColorStop(1,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0)");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+    }
+
+    if(cold!==null&&cold<=-38){
+      const rgb=cloudCoreRgb(cold),t=clamp((-cold-38)/38,0,1);
+      const a=.22+t*.50,r=radius*(.46+t*.28);
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+      g.addColorStop(0,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+a.toFixed(3)+")");
+      g.addColorStop(.45,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(a*.72).toFixed(3)+")");
+      g.addColorStop(1,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0)");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+function drawRainProjected(rows){
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),{pts}=projectedRows(rows,c,innerWidth<760?.58:.50);
+  ctx.clearRect(0,0,c.width,c.height);
+  const wet=pts.filter(p=>num(p.rain_mm)!==null&&num(p.rain_mm)>=.05);
+  if(!wet.length)return;
+  const radius=clamp(projectedSpacing(wet)*1.45,18,78);
+  ctx.save();
+  for(const p of wet){
+    const mm=num(p.rain_mm)||0,t=clamp(Math.log1p(mm)/Math.log(31),0,1);
+    const rgba=rainStyle(mm),a=clamp(.18+t*.62,.18,.80),r=radius*(.92+t*.42);
+    const g=ctx.createRadialGradient(p.x,p.y,r*.05,p.x,p.y,r);
+    g.addColorStop(0,"rgba("+rgba[0]+","+rgba[1]+","+rgba[2]+","+a.toFixed(3)+")");
+    g.addColorStop(.50,"rgba("+rgba[0]+","+rgba[1]+","+rgba[2]+","+(a*.70).toFixed(3)+")");
+    g.addColorStop(1,"rgba("+rgba[0]+","+rgba[1]+","+rgba[2]+",0)");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+function drawWaveProjected(rows){
+  const c=$("fieldCanvas"),ctx=c.getContext("2d"),{pts}=projectedRows(rows,c,innerWidth<760?.54:.46);
+  ctx.clearRect(0,0,c.width,c.height);
+  const sea=pts.filter(p=>num(p.wave_hs_m)!==null);
+  if(!sea.length)return;
+  const radius=clamp(projectedSpacing(sea)*1.28,16,66);
+  ctx.save();
+  sea.forEach((p,i)=>{
+    const hs=num(p.wave_hs_m)||0,t=clamp(hs/2.2,0,1),col=waveStyle(hs);
+    const a=.10+t*.42,r=radius*(.86+t*.30);
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+    g.addColorStop(0,"rgba("+col[0]+","+col[1]+","+col[2]+","+a.toFixed(3)+")");
+    g.addColorStop(1,"rgba("+col[0]+","+col[1]+","+col[2]+",0)");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+
+    const deg=num(p.wave_direction_deg);
+    if(deg!==null&&i%2===0){
+      const ang=(deg-90)*Math.PI/180,len=5+t*6;
+      ctx.strokeStyle="rgba(20,67,91,"+(.28+t*.34).toFixed(3)+")";
+      ctx.lineWidth=.8;ctx.beginPath();
+      ctx.moveTo(p.x-Math.cos(ang)*len*.35,p.y-Math.sin(ang)*len*.35);
+      ctx.lineTo(p.x+Math.cos(ang)*len*.65,p.y+Math.sin(ang)*len*.65);
+      ctx.stroke();
+    }
+  });
+  ctx.restore();
+}
+function projectWindVectors(rows,c){
+  const {pts}=projectedRows(rows,c,innerWidth<760?.58:.50);
+  return pts.map(p=>({
+    x:p.x,y:p.y,u:num(p.u10_ms),v:num(p.v10_ms),mag:Math.hypot(num(p.u10_ms)||0,num(p.v10_ms)||0)
+  })).filter(p=>p.u!==null&&p.v!==null);
+}
+function vectorAt(x,y,pv){
+  if(!pv.length)return null;
+  const nearest=[];
+  for(const p of pv){
+    const d2=(x-p.x)*(x-p.x)+(y-p.y)*(y-p.y)+10;
+    let k=0;
+    while(k<nearest.length&&nearest[k].d2<d2)k++;
+    nearest.splice(k,0,{p,d2});
+    if(nearest.length>4)nearest.pop();
+  }
+  let sw=0,u=0,v=0,mag=0;
+  for(const n of nearest){
+    const w=1/n.d2;sw+=w;u+=n.p.u*w;v+=n.p.v*w;mag+=n.p.mag*w;
+  }
+  return sw?{u:u/sw,v:v/sw,mag:mag/sw}:null;
+}
+function drawWindTexture(rows){
+  const c=$("fieldCanvas"),ctx=c.getContext("2d");
+  sceneCanvasSize(c,innerWidth<760?.58:.50);
+  ctx.clearRect(0,0,c.width,c.height);
+  const pv=projectWindVectors(rows,c);
+  if(!pv.length)return pv;
+  ctx.save();ctx.lineCap="round";
+  for(let y=8;y<c.height;y+=15){
+    for(let x=8;x<c.width;x+=15){
+      const n=vectorAt(x,y,pv);if(!n)continue;
+      const m=Math.max(.001,Math.hypot(n.u,n.v)),ux=n.u/m,uy=-n.v/m;
+      const strength=clamp(n.mag/10,0,1),len=5+strength*6;
+      ctx.strokeStyle="rgba(17,70,92,"+(.18+strength*.30).toFixed(3)+")";
+      ctx.lineWidth=.65+strength*.45;
+      ctx.beginPath();ctx.moveTo(x-ux*len*.4,y-uy*len*.4);ctx.lineTo(x+ux*len*.6,y+uy*len*.6);ctx.stroke();
+    }
+  }
+  ctx.restore();
+  return pv;
+}
+function stopSceneParticles(){
+  if(state.particleRaf)cancelAnimationFrame(state.particleRaf);
+  state.particleRaf=null;
+  const c=$("motionCanvas");
+  if(c){const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);}
+}
+function startSceneParticles(rows){
+  stopSceneParticles();
+  const c=$("motionCanvas"),ctx=c.getContext("2d");
+  sceneCanvasSize(c,innerWidth<760?.58:.50);
+  const pv=projectWindVectors(rows,c);
+  if(!pv.length)return;
+  const count=innerWidth<760?95:180;
+  state.particles=Array.from({length:count},()=>({x:Math.random()*c.width,y:Math.random()*c.height,age:Math.random()*80}));
+  const tick=()=>{
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.lineCap="round";
+    for(const p of state.particles){
+      const n=vectorAt(p.x,p.y,pv);
+      if(!n){p.x=Math.random()*c.width;p.y=Math.random()*c.height;continue;}
+      const m=Math.max(.001,Math.hypot(n.u,n.v)),ux=n.u/m,uy=-n.v/m;
+      const speed=.55+clamp(n.mag/8,0,1)*1.7;
+      const ox=p.x,oy=p.y;
+      p.x+=ux*speed;p.y+=uy*speed;p.age+=1;
+      if(p.x<0||p.y<0||p.x>c.width||p.y>c.height||p.age>110){
+        p.x=Math.random()*c.width;p.y=Math.random()*c.height;p.age=0;continue;
+      }
+      ctx.strokeStyle="rgba(17,70,92,"+(.30+clamp(n.mag/12,0,1)*.38).toFixed(3)+")";
+      ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(p.x,p.y);ctx.stroke();
+    }
+    state.particleRaf=requestAnimationFrame(tick);
+  };
+  tick();
+}
+function renderScalar(){
+  const c=$("fieldCanvas"),m=$("motionCanvas");
+  sceneCanvasSize(c,innerWidth<760?.58:.50);
+  sceneCanvasSize(m,innerWidth<760?.58:.50);
+  const f=frame();
+  if(!f)return;
+  const rows=f.cells||[];
+
+  if(state.scene==="cloud"){
+    stopSceneParticles();
+    drawCloudProjected(rows);
+    m.getContext("2d").clearRect(0,0,m.width,m.height);
+    return;
+  }
+  if(state.scene==="rain"){
+    stopSceneParticles();
+    drawRainProjected(rows);
+    m.getContext("2d").clearRect(0,0,m.width,m.height);
+    return;
+  }
+  if(state.scene==="wave"){
+    stopSceneParticles();
+    drawWaveProjected(rows);
+    m.getContext("2d").clearRect(0,0,m.width,m.height);
+    return;
+  }
+  if(state.scene==="wind"){
+    drawWindTexture(rows);
+    startSceneParticles(rows);
   }
 }
 

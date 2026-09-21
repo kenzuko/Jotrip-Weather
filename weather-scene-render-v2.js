@@ -129,22 +129,36 @@ function rain(rows,map,field,motion){
 }
 function wave(rows,map,field,motion){
   stop();clear(motion);
-  const pts=project(rows,map,field,innerWidth<760?.54:.46).filter(p=>num(p.wave_hs_m)!==null);
+  const pts=project(rows,map,field,innerWidth<760?.56:.48)
+    .filter(p=>num(p.wave_hs_m)!==null&&num(p.wave_hs_m)>=.05);
   const ctx=field.getContext("2d");ctx.clearRect(0,0,field.width,field.height);
   if(!pts.length)return;
-  const r0=clamp(spacing(pts)*1.28,16,66);
+  const r0=clamp(spacing(pts)*1.42,18,74);
   ctx.save();
   pts.forEach((p,i)=>{
-    const hs=num(p.wave_hs_m)||0,t=clamp(hs/2.2,0,1),rgb=waveRgb(hs),a=.10+t*.44,r=r0*(.86+t*.30);
-    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+    const hs=num(p.wave_hs_m)||0,t=clamp(hs/1.5,0,1),rgb=waveRgb(hs),a=.20+t*.52,r=r0*(.92+t*.34);
+    const g=ctx.createRadialGradient(p.x,p.y,r*.05,p.x,p.y,r);
     g.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`);
+    g.addColorStop(.58,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(a*.68).toFixed(3)})`);
     g.addColorStop(1,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
     ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+
     const deg=num(p.wave_direction_deg);
-    if(deg!==null&&i%2===0){
-      const ang=(deg-90)*Math.PI/180,len=5+t*6;
-      ctx.strokeStyle=`rgba(20,67,91,${(.28+t*.34).toFixed(3)})`;ctx.lineWidth=.8;
-      ctx.beginPath();ctx.moveTo(p.x-Math.cos(ang)*len*.35,p.y-Math.sin(ang)*len*.35);ctx.lineTo(p.x+Math.cos(ang)*len*.65,p.y+Math.sin(ang)*len*.65);ctx.stroke();
+    const drawArrow=deg!==null && (innerWidth<760 ? i%2===0 : true);
+    if(drawArrow){
+      const ang=(deg-90)*Math.PI/180,len=7+t*8;
+      const x0=p.x-Math.cos(ang)*len*.42,y0=p.y-Math.sin(ang)*len*.42;
+      const x1=p.x+Math.cos(ang)*len*.58,y1=p.y+Math.sin(ang)*len*.58;
+      ctx.strokeStyle=`rgba(18,64,91,${(.42+t*.38).toFixed(3)})`;
+      ctx.fillStyle=`rgba(18,64,91,${(.46+t*.38).toFixed(3)})`;
+      ctx.lineWidth=1.15;
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+      const ah=3.2+t*1.8,side=.65;
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x1-Math.cos(ang-side)*ah,y1-Math.sin(ang-side)*ah);
+      ctx.lineTo(x1-Math.cos(ang+side)*ah,y1-Math.sin(ang+side)*ah);
+      ctx.closePath();ctx.fill();
     }
   });
   ctx.restore();
@@ -169,20 +183,13 @@ function wind(rows,map,field,motion){
   stop();
   fit(field,innerWidth<760?.58:.50,map);fit(motion,innerWidth<760?.58:.50,map);
   const fctx=field.getContext("2d"),mctx=motion.getContext("2d");
-  fctx.clearRect(0,0,field.width,field.height);mctx.clearRect(0,0,motion.width,motion.height);
-  const pv=windVectors(rows,map,field);if(!pv.length)return;
-  fctx.save();fctx.lineCap="round";
-  for(let y=8;y<field.height;y+=15){
-    for(let x=8;x<field.width;x+=15){
-      const n=vectorAt(x,y,pv);if(!n)continue;
-      const m=Math.max(.001,Math.hypot(n.u,n.v)),ux=n.u/m,uy=-n.v/m,strength=clamp(n.mag/10,0,1),len=5+strength*6;
-      fctx.strokeStyle=`rgba(17,70,92,${(.18+strength*.30).toFixed(3)})`;fctx.lineWidth=.65+strength*.45;
-      fctx.beginPath();fctx.moveTo(x-ux*len*.4,y-uy*len*.4);fctx.lineTo(x+ux*len*.6,y+uy*len*.6);fctx.stroke();
-    }
-  }
-  fctx.restore();
+  fctx.clearRect(0,0,field.width,field.height);
+  mctx.clearRect(0,0,motion.width,motion.height);
 
-  const pv2=windVectors(rows,map,motion),count=innerWidth<760?95:180;
+  // Wind is expressed only by moving particles - no fixed dash/grid texture.
+  const pv2=windVectors(rows,map,motion);
+  if(!pv2.length)return;
+  const count=innerWidth<760?68:112;
   particles=Array.from({length:count},()=>({x:Math.random()*motion.width,y:Math.random()*motion.height,age:Math.random()*80}));
   const tick=()=>{
     mctx.clearRect(0,0,motion.width,motion.height);mctx.lineCap="round";
@@ -191,8 +198,17 @@ function wind(rows,map,field,motion){
       const m=Math.max(.001,Math.hypot(n.u,n.v)),ux=n.u/m,uy=-n.v/m,speed=.55+clamp(n.mag/8,0,1)*1.7,ox=p.x,oy=p.y;
       p.x+=ux*speed;p.y+=uy*speed;p.age++;
       if(p.x<0||p.y<0||p.x>motion.width||p.y>motion.height||p.age>110){p.x=Math.random()*motion.width;p.y=Math.random()*motion.height;p.age=0;continue;}
-      mctx.strokeStyle=`rgba(17,70,92,${(.30+clamp(n.mag/12,0,1)*.38).toFixed(3)})`;mctx.lineWidth=.9;
-      mctx.beginPath();mctx.moveTo(ox,oy);mctx.lineTo(p.x,p.y);mctx.stroke();
+      const strength=clamp(n.mag/12,0,1);
+      mctx.strokeStyle=`rgba(17,70,92,${(.20+strength*.30).toFixed(3)})`;
+      mctx.fillStyle=`rgba(17,70,92,${(.34+strength*.34).toFixed(3)})`;
+      mctx.lineWidth=.65;
+      mctx.beginPath();
+      mctx.moveTo(ox+(p.x-ox)*.55,oy+(p.y-oy)*.55);
+      mctx.lineTo(p.x,p.y);
+      mctx.stroke();
+      mctx.beginPath();
+      mctx.arc(p.x,p.y,.55+strength*.55,0,Math.PI*2);
+      mctx.fill();
     }
     windRAF=requestAnimationFrame(tick);
   };
@@ -206,5 +222,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"V2_MAP_PANE_20260921_0442",render,stop};
+window.JoTripSceneRenderer={version:"1.7-active-v2-clarity",render,stop};
 })();

@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const base='https://weather.openphuquoc.com';
-const result={ok:false,embed:null,scenes:{},flag:null,comparisons:{},pageErrors:[],consoleErrors:[],failure:null};
+const result={ok:false,embed:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
 page.on('pageerror',e=>result.pageErrors.push(String(e)));
@@ -81,6 +81,31 @@ try{
   const windySrc=await windy.getAttribute('src');
   result.comparisons.windyWind=Boolean(windySrc&&windySrc.includes('embed.windy.com')&&windySrc.includes('overlay=wind'));
 
+  await page.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:30000});
+  result.forecast={
+    regions:await page.locator('#forecastRegionTabs button[data-region]').allTextContents(),
+    pointTabs:await page.locator('#pointTabs button').allTextContents(),
+    state:(await page.locator('#ensembleState').innerText()).trim()
+  };
+
+  const desktop=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+  await desktop.goto(base+'/?desktopqa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+  await desktop.locator('.map-panel').scrollIntoViewIfNeeded();
+  await desktop.locator('[data-map="jotrip"]').click();
+  const desktopIframe=desktop.locator('iframe[data-jotrip-scene]');
+  await desktopIframe.waitFor({state:'visible',timeout:120000});
+  const desktopFrame=desktop.frames().find(f=>f.url().includes('/weather-scene-v3.html'));
+  if(!desktopFrame)throw new Error('Desktop Scene V3 iframe missing');
+  await desktopFrame.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:120000});
+  await desktop.waitForTimeout(500);
+  result.desktop=await desktopFrame.evaluate(()=>({
+    lonSpan:Number(document.documentElement.dataset.sceneLonSpan||NaN),
+    latSpan:Number(document.documentElement.dataset.sceneLatSpan||NaN),
+    freshness:(document.getElementById('freshness')?.textContent||'').trim()
+  }));
+  await desktop.locator('#mapBox').screenshot({path:'/tmp/prod-jotrip-scene-desktop.png'});
+  await desktop.close();
+
   const sceneOk=
     result.scenes.cloud.field.visible>20 &&
     result.scenes.rain.field.visible>20 &&
@@ -97,6 +122,13 @@ try{
     result.flag?.waveDirection===true &&
     result.comparisons.himawari===true &&
     result.comparisons.windyWind===true &&
+    result.forecast?.regions?.includes('Gành Dầu - Cửa Cạn') &&
+    result.forecast?.regions?.includes('Dương Đông') &&
+    !result.forecast?.regions?.some(x=>/Bắc|Đông Bắc|Tây Bắc/.test(x)) &&
+    !result.forecast?.pointTabs?.some(x=>x.includes('Rạch Giá')) &&
+    Number.isFinite(result.desktop?.lonSpan) &&
+    result.desktop.lonSpan<2 &&
+    result.desktop.latSpan<1 &&
     result.pageErrors.length===0;
 }catch(e){result.failure=String(e?.stack||e)}
 

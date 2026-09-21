@@ -2,7 +2,7 @@ name: Weather runtime mirror
 
 on:
   schedule:
-    - cron: '7,37 * * * *'
+    - cron: '7,27,47 * * * *'
   workflow_dispatch:
   push:
     paths:
@@ -65,6 +65,128 @@ jobs:
           Path('weather-live-config.js').write_text(js,encoding='utf-8')
           print('Weather mirror validated')
           PY
+
+      - name: Build Weather Scene runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/weather-scene data/weather-scene
+
+          LAB_FEATURE='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
+          LAB_DATA='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data'
+
+          curl -fsSL --retry 3 --retry-delay 2 "${LAB_DATA}/weather-nowcast/latest.json?t=$(date +%s)" -o /tmp/weather-scene/cloud-full.json
+          curl -fsSL --retry 3 --retry-delay 2 "${LAB_DATA}/weather-nowcast/compact-latest.json?t=$(date +%s)" -o /tmp/weather-scene/compact.json
+          curl -fsSL --retry 3 --retry-delay 2 "${LAB_DATA}/weather-current/latest.json?t=$(date +%s)" -o /tmp/weather-scene/current.json
+          curl -fsSL --retry 3 --retry-delay 2 "${LAB_FEATURE}/spatial-ecmwf.json?t=$(date +%s)" -o /tmp/weather-scene/ecmwf.json
+          curl -fsSL --retry 3 --retry-delay 2 "${LAB_FEATURE}/spatial-marine.json?t=$(date +%s)" -o /tmp/weather-scene/marine.json
+          curl -fsSL --retry 3 --retry-delay 2 "${LAB_FEATURE}/dashboard-data.json?t=$(date +%s)" -o /tmp/weather-scene/dashboard.json
+
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+
+          src=Path('/tmp/weather-scene')
+          out=Path('data/weather-scene')
+          out.mkdir(parents=True,exist_ok=True)
+
+          cloud=json.loads((src/'cloud-full.json').read_text())
+          compact=json.loads((src/'compact.json').read_text())
+          current=json.loads((src/'current.json').read_text())
+          ecmwf=json.loads((src/'ecmwf.json').read_text())
+          marine=json.loads((src/'marine.json').read_text())
+          dashboard=json.loads((src/'dashboard.json').read_text())
+
+          assert cloud.get('status')=='POINT_NUMERIC_READY'
+          assert compact.get('status')=='POINT_NUMERIC_READY'
+          assert current.get('schema_version')=='weather-current-v3'
+          assert ecmwf.get('spatial',{}).get('status')=='READY'
+          assert marine.get('wave',{}).get('status')=='READY'
+
+          # Cloud scene: keep recent observed frames and only renderer fields.
+          frames=cloud.get('spatial',{}).get('frames',[])[-8:]
+          cloud_out={
+            'status':cloud.get('status'),
+            'generated_at':cloud.get('generated_at'),
+            'sampled_time':cloud.get('sampled_time'),
+            'source':cloud.get('source'),
+            'source_type':cloud.get('source_type'),
+            'observation_resolution':cloud.get('observation_resolution'),
+            'spatial':{
+              'status':cloud.get('spatial',{}).get('status'),
+              'bounds':cloud.get('spatial',{}).get('bounds'),
+              'display_grid_deg':cloud.get('spatial',{}).get('display_grid_deg'),
+              'sampling_method':cloud.get('spatial',{}).get('sampling_method'),
+              'frames':[]
+            }
+          }
+          keep_cloud=('lat','lon','cloud_top_cold_c','cloud_top_median_c','cloud_top_high_m','cloud_top_median_m','cooling_c_per_20m_proxy','convective_score','convective_level')
+          for fr in frames:
+            cloud_out['spatial']['frames'].append({
+              'sampled_time':fr.get('sampled_time'),
+              'cells':[{k:c.get(k) for k in keep_cloud} for c in fr.get('cells',[])]
+            })
+
+          # Forecast scene: D0-D3 only, starting close to now, renderer variables only.
+          now=datetime.now(timezone.utc)
+          lo=now-timedelta(hours=4)
+          hi=now+timedelta(hours=72)
+          keep_fc=('cell_id','lat','lon','valid_time','lead_hours','temperature_c','u10_ms','v10_ms','wind_kmh','wind_direction_deg','gust_kmh','rain_mm','wave_hs_m','wave_direction_deg','wave_period_s')
+          fc_frames=[]
+          for fr in ecmwf.get('spatial',{}).get('frames',[]):
+            try:
+              t=datetime.fromisoformat(fr['valid_time'].replace('Z','+00:00'))
+            except Exception:
+              continue
+            if lo <= t <= hi:
+              fc_frames.append({
+                'lead_hours':fr.get('lead_hours'),
+                'valid_time':fr.get('valid_time'),
+                'cells':[{k:c.get(k) for k in keep_fc} for c in fr.get('cells',[])]
+              })
+          forecast_out={
+            'schema_version':'weather-scene-forecast-v1',
+            'product':ecmwf.get('product'),
+            'generated_at':ecmwf.get('generated_at'),
+            'run_time':ecmwf.get('run_time'),
+            'medium_run_time':ecmwf.get('medium_run_time'),
+            'source':ecmwf.get('source'),
+            'spatial':{
+              'status':'READY' if fc_frames else 'UNAVAILABLE',
+              'requested_grid_deg':ecmwf.get('spatial',{}).get('requested_grid_deg'),
+              'display_interpolation':ecmwf.get('spatial',{}).get('display_interpolation'),
+              'short_run_time':ecmwf.get('spatial',{}).get('short_run_time'),
+              'frames':fc_frames
+            }
+          }
+
+          meta={
+            'schema_version':'weather-scene-meta-v1',
+            'generated_at':dashboard.get('generated_at'),
+            'source_cycles':dashboard.get('source_cycles',{}),
+            'sources':dashboard.get('sources',{}),
+            'gaps':dashboard.get('gaps',[]),
+            'report_status':dashboard.get('report_status')
+          }
+
+          (out/'cloud.json').write_text(json.dumps(cloud_out,ensure_ascii=False,separators=(',',':')))
+          (out/'compact.json').write_text(json.dumps(compact,ensure_ascii=False,separators=(',',':')))
+          (out/'current.json').write_text(json.dumps(current,ensure_ascii=False,separators=(',',':')))
+          (out/'forecast.json').write_text(json.dumps(forecast_out,ensure_ascii=False,separators=(',',':')))
+          (out/'marine.json').write_text(json.dumps(marine,ensure_ascii=False,separators=(',',':')))
+          (out/'meta.json').write_text(json.dumps(meta,ensure_ascii=False,separators=(',',':')))
+
+          print('Weather Scene runtime built',
+                'cloud_frames=',len(cloud_out['spatial']['frames']),
+                'forecast_frames=',len(fc_frames),
+                'sampled=',cloud_out.get('sampled_time'),
+                'run=',forecast_out.get('run_time'))
+          PY
+
+          for file in data/weather-scene/*.json; do
+            python -m json.tool "$file" >/dev/null
+          done
 
       - name: Commit mirror only when changed
         shell: bash

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#edf2f3">
+<title>JoTrip Weather Scene V1</title>
+<link rel="icon" href="/weather-app-icon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/weather-scene-v1.css?v=20260921-1">
+</head>
+<body>
+<main class="app">
+<header class="topbar">
+<a class="brand" href="/" aria-label="JoTrip Weather"><img src="/weather-brand.svg" alt="JoTrip Weather"></a>
+<div class="title"><b>WEATHER SCENE V1</b><span>prototype - không thay bản hiện tại</span></div>
+<a class="back" href="/spatial-lab.html">Bản hiện tại</a>
+</header>
+<section class="map-shell">
+<div id="map"></div>
+<canvas id="fieldCanvas"></canvas>
+<canvas id="motionCanvas"></canvas>
+<div class="tabs" role="tablist">
+<button class="active" data-scene="cloud">Mây</button>
+<button data-scene="rain">Mưa</button>
+<button data-scene="wind">Gió</button>
+</div>
+<aside class="status-card">
+<span id="eyebrow">QUAN TRẮC</span>
+<h1 id="headline">Đang đọc bầu trời quanh Phú Quốc</h1>
+<p id="summary">Đang tải dữ liệu Himawari...</p>
+<div class="facts" id="facts"></div>
+</aside>
+<div class="legend" id="legend"></div>
+<section class="timeline">
+<button id="playBtn" aria-label="Phát">▶</button>
+<div class="timecopy"><b id="timeLabel">--</b><small id="timeMeta">--</small></div>
+<input id="slider" type="range" min="0" max="0" value="0" step="1">
+<div class="seam"><span>OBSERVED</span><i>NOW</i><span>FORECAST</span></div>
+</section>
+<div id="loading" class="loading">Đang nạp Weather Scene...</div>
+</section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/weather-scene-v1.js?v=20260921-1"></script>
+</body>
+</html>

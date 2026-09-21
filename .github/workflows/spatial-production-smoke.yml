@@ -2,16 +2,22 @@ name: Spatial production browser smoke
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["pages build and deployment"]
-    types: [completed]
+  push:
+    paths:
+      - "index.html"
+      - "weather-v2.js"
+      - "weather-v2.css"
+      - "spatial-lab.html"
+      - "spatial-lab.css"
+      - "spatial-lab.js"
+      - "spatial-production-smoke.mjs"
+      - ".github/workflows/spatial-production-smoke.yml"
 
 permissions:
   contents: read
 
 jobs:
   production-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -24,7 +30,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
       - name: Allow CDN edge to settle
-        run: sleep 25
+        run: sleep 45
       - name: Test live custom domain
         run: node spatial-production-smoke.mjs
       - uses: actions/upload-artifact@v4

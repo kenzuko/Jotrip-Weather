@@ -1,0 +1,37 @@
+name: Spatial production browser smoke
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Allow CDN edge to settle
+        run: sleep 25
+      - name: Test live custom domain
+        run: node spatial-production-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spatial-production-smoke
+          path: |
+            /tmp/prod-*.png
+            /tmp/spatial-production-result.json
+          retention-days: 7

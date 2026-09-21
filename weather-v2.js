@@ -967,16 +967,33 @@ function renderCloudMotionTable(){
 }
 function renderMapConvective(){
   const n=effectiveNowcast();
-  const score=$("mapConvectiveScore"),cloud=$("mapCloudTop"),cool=$("mapCooling");
-  const state=cloudStateLabel(n),temp=num(n.cloud_top_cold_c),delta=num(n.cooling_c_per_20m);
+  const score=$("mapConvectiveScore"),cloud=$("mapCloudTop"),height=$("mapCloudHeight");
+  const cool=$("mapCooling"),meaning=$("mapCoolingMeaning"),fresh=$("mapCloudFreshness");
+  const state=cloudStateLabel(n),temp=num(n.cloud_top_cold_c),top=num(n.cloud_top_high_m),delta=num(n.cooling_c_per_20m);
   if(score)score.textContent=state.label;
-  if(cloud)cloud.textContent=temp===null?"-":fmt(temp,1)+"°C"+(temp<=-60?" · rất lạnh":temp<=-45?" · lạnh":"");
-  if(cool){
-    if(delta===null)cool.textContent="-";
-    else if(delta<=-3)cool.textContent="Đang phát triển nhanh · "+fmt(delta,1)+"°C";
-    else if(delta<=-1)cool.textContent="Đang phát triển · "+fmt(delta,1)+"°C";
-    else if(delta>=2)cool.textContent="Đang chậm lại · +"+fmt(delta,1)+"°C";
-    else cool.textContent="Ít thay đổi · "+(delta>0?"+":"")+fmt(delta,1)+"°C";
+  if(cloud)cloud.textContent=temp===null?"-":fmt(temp,1)+"°C";
+  if(height)height.textContent=top===null?"":("Khoảng "+fmt(top/1000,1)+" km");
+  if(cool&&meaning){
+    if(delta===null){
+      cool.textContent="-";
+      meaning.textContent="Chưa đủ hai ảnh liên tiếp để tính xu hướng";
+    }else if(delta<=-3){
+      cool.textContent="Lạnh thêm "+fmt(Math.abs(delta),1)+"°C";
+      meaning.textContent="Đỉnh mây đang phát triển nhanh";
+    }else if(delta<=-1){
+      cool.textContent="Lạnh thêm "+fmt(Math.abs(delta),1)+"°C";
+      meaning.textContent="Đỉnh mây đang phát triển";
+    }else if(delta>=2){
+      cool.textContent="Ấm lên "+fmt(delta,1)+"°C";
+      meaning.textContent="Đỉnh mây có xu hướng yếu dần";
+    }else{
+      cool.textContent="Gần như không đổi";
+      meaning.textContent=Math.abs(delta)<.05?"Biến động rất nhỏ":("Thay đổi "+(delta>0?"+":"")+fmt(delta,1)+"°C");
+    }
+  }
+  if(fresh){
+    const ref=n?.sampled_time||fullNowcast?.sampled_time;
+    fresh.textContent=(ref?"Himawari · "+ageText(ref)+" · ":"")+"Quan trắc đỉnh mây, không phải xác suất mưa hay sét.";
   }
 }
 
@@ -2174,6 +2191,12 @@ function shareWeather(){
   else if(navigator.clipboard){navigator.clipboard.writeText(location.href).then(()=>{const b=$("shareWeather");if(b)b.textContent="Đã sao chép link"})}
 }
 function events(){
+  document.addEventListener("click",e=>{
+    const close=e.target.closest("[data-close-target]");
+    if(!close)return;
+    const target=document.getElementById(close.dataset.closeTarget||"");
+    if(target)target.hidden=true;
+  });
   $("pointTabs")?.addEventListener("click",e=>{
     const compare=e.target.closest("[data-compare]");
     if(compare?.dataset.compare==="ha_tien"){

@@ -167,4 +167,10 @@ button,a,input{font:inherit}
 @media(max-width:760px){
   .tabs{max-width:calc(100% - 18px)}
   .tabs button{padding-left:9px;padding-right:9px}
+  .map-shell.has-selection .status-card{
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(-6px);
+  }
+  .status-card{transition:opacity .16s ease,transform .16s ease}
 }

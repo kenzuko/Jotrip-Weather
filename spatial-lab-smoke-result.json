@@ -14,9 +14,9 @@
         "w": 702,
         "h": 1519,
         "samples": 66647,
-        "visible": 11492,
-        "strong": 1500,
-        "meanAlpha": 4.2696445451408165
+        "visible": 11135,
+        "strong": 1496,
+        "meanAlpha": 4.169970141191651
       },
       "readout": "9 km/h",
       "time": "07:00 21-09"
@@ -94,9 +94,9 @@
         "w": 702,
         "h": 1519,
         "samples": 66647,
-        "visible": 1000,
-        "strong": 101,
-        "meanAlpha": 0.33188290545710986
+        "visible": 1008,
+        "strong": 122,
+        "meanAlpha": 0.355649916725434
       },
       "readout": "0.47 km/h",
       "time": "07:00"
@@ -108,7 +108,7 @@
         "samples": 3296,
         "visible": 3296,
         "strong": 3296,
-        "meanAlpha": 190.436286407767
+        "meanAlpha": 190.74089805825244
       },
       "flow": {
         "w": 702,
@@ -118,7 +118,7 @@
         "strong": 0,
         "meanAlpha": 0
       },
-      "readout": "MÂY CAO ",
+      "readout": "MÂY RẤT CAO ",
       "time": "23:50 20-09"
     }
   },
@@ -139,19 +139,19 @@
     "Failed to load resource: the server responded with a status of 404 (File not found)",
     "Failed to load resource: the server responded with a status of 404 (File not found)",
     "Failed to load resource: the server responded with a status of 404 (File not found)",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-ecmwf.json?t=1789949544737' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/critical.json?t=1789949559085' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/jotrip-forecast.json?t=1789949544751' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-ecmwf.json?t=1789949559067' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-marine.json?t=1789949544755' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-icon.json?t=1789949559082' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-icon.json?t=1789949544738' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/jotrip-forecast.json?t=1789949559090' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/critical.json?t=1789949544757' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/spatial-marine.json?t=1789949559084' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
     "Failed to load resource: the server responded with a status of 404 ()",
     "Failed to load resource: the server responded with a status of 404 ()",
-    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/dashboard-data.json?t=1789949544722' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
+    "Access to fetch at 'https://jotrip-weather-live.kenzuko.workers.dev/dashboard-data.json?t=1789949559052' from origin 'http://127.0.0.1:4173' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://weather.openphuquoc.com' that is not equal to the supplied origin. Have the server send the header with a valid value.",
     "Failed to load resource: net::ERR_FAILED",
     "Failed to load resource: the server responded with a status of 404 ()",
     "Failed to load resource: the server responded with a status of 404 ()"

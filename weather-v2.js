@@ -256,11 +256,12 @@ function confidenceScore(){
   if(learning)score*=0.88;
   return Math.round(clamp(score,0,100));
 }
-function pointRisk(p){
-  const m=p.model||{},n=p.nowcast||{},l=p.local||{},rows=p.ensemble?.rows||[];
+function pointRisk(p,id=null){
+  const m=p.model||{},legacyNow=p.nowcast||{},l=p.local||{},rows=p.ensemble?.rows||[];
+  const n=id?effectiveNowcastFor(id):legacyNow;
   const localFresh=localDataFresh();
-  const nowFresh=freshEnough(fullNowcast?.sampled_time||n.sampled_time,75);
-  const conv=nowFresh?num(n.convective_score):null;
+  const nowFresh=freshEnough(n?.sampled_time||fullNowcast?.sampled_time||legacyNow.sampled_time,75);
+  const conv=nowFresh?num(n?.convective_score):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
   const gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),hs=num(m.wave_hs_m);
   const windProb=Math.max(0,...rows.map(x=>num(x.wind?.prob)).filter(v=>v!==null));
@@ -485,7 +486,7 @@ function renderHazardBoard(){
 }
 
 function islandAssessment(){
-  const rows=islandIds().map(id=>({id,p:critical.points[id],risk:pointRisk(critical.points[id])}));
+  const rows=islandIds().map(id=>({id,p:critical.points[id],risk:pointRisk(critical.points[id],id)}));
   rows.sort((a,b)=>b.risk.level-a.risk.level);
   const worst=rows[0]?.risk.level||0;
   const label=worst>=3?"NÊN ĐIỀU CHỈNH":worst>=2?"THEO DÕI SÁT":worst>=1?"CÓ ĐIỂM CẦN LƯU Ý":"TƯƠNG ĐỐI ỔN";
@@ -539,7 +540,7 @@ function summary(p){
   const nowFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
   const rain=localFresh?num(l.rain_rate_mm_h):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
-  const conv=nowFresh?num((p.nowcast||{}).convective_score??l.convection_score):null;
+  const conv=nowFresh?num(effectiveNowcast()?.convective_score??l.convection_score):null;
   const wind=localFresh?num(l.wind_kmh??m.wind_kmh):num(m.wind_kmh);
   const wave=localFresh?num(l.wave_hs_m??m.wave_hs_m):num(m.wave_hs_m);
   if(rain!==null)bits.push(rain>=3?"Ước tính mưa hiện tại đáng chú ý":rain>.2?"Ước tính có mưa nhẹ hoặc rải rác":"Ước tính mưa hiện tại thấp");

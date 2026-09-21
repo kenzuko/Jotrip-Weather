@@ -631,7 +631,9 @@ function drawParticles(ctx,w,h,scale){
 }
 
 function nearestLocalPoint(lat,lon){
-  const points=Object.values(state.current?.local_now?.points||{});
+  const points=Object.entries(state.current?.local_now?.points||{})
+    .filter(([id])=>id!=="rach_gia")
+    .map(([,p])=>p);
   let best=null,dist=Infinity;
   for(const p of points){
     if(p.lat==null||p.lon==null) continue;

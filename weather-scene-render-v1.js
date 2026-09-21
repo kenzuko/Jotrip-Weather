@@ -24,7 +24,7 @@ function fit(canvas,scale){
 function project(rows,map,canvas,scale){
   const s=fit(canvas,scale);
   return (rows||[]).map(r=>{
-    const p=map.latLngToContainerPoint([Number(r.lat),Number(r.lon)]);
+    const p=map.latLngToLayerPoint([Number(r.lat),Number(r.lon)]);
     return {...r,x:p.x*s.sx,y:p.y*s.sy};
   }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
 }

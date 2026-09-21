@@ -172,11 +172,12 @@
     </nav>
     <div id="mapBox" class="map-box"><div class="map-placeholder"><b>Đang chuẩn bị bản đồ JoTrip</b><span>Số đo thực tế + ước tính hiện tại + mây Himawari + gió + biển trên cùng một bản đồ.</span></div></div>
     <div id="mapNote" class="map-note">Chọn lớp ngay trên bản đồ. Mỗi lớp dùng cách thể hiện riêng để ưu tiên hướng, vị trí và mức độ thay vì hiệu ứng màu trang trí.</div>
-    <div id="mapConvective" class="map-convective">
-      <span><b>Trạng thái mây</b><strong id="mapConvectiveScore">-</strong></span>
-      <span><b>Đỉnh mây</b><strong id="mapCloudTop">-</strong></span>
-      <span><b>20 phút gần đây</b><strong id="mapCooling">-</strong></span>
-      <small>Ảnh vệ tinh cho biết mây đang cao/lạnh và phát triển ra sao. Đây không phải xác suất mưa hay sét.</small>
+    <div id="mapConvective" class="map-convective" role="status" aria-live="polite">
+      <button type="button" class="panel-close map-convective-close" aria-label="Đóng thông tin mây" data-close-target="mapConvective">×</button>
+      <span><b>Tình trạng mây</b><strong id="mapConvectiveScore">-</strong></span>
+      <span><b>Đỉnh mây</b><strong id="mapCloudTop">-</strong><em id="mapCloudHeight"></em></span>
+      <span><b>20 phút qua</b><strong id="mapCooling">-</strong><em id="mapCoolingMeaning"></em></span>
+      <small id="mapCloudFreshness">Ảnh Himawari cho biết độ cao/lạnh của đỉnh mây và xu hướng phát triển. Không phải xác suất mưa hay sét.</small>
     </div>
     <details class="map-sources">
       <summary>Nguồn đối chiếu</summary>

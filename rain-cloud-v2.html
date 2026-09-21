@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eef4f6">
+  <title>JoTrip Weather - Rain & Cloud V2 Prototype</title>
+  <link rel="icon" href="/weather-app-icon.svg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/rain-cloud-v2.css?v=20260921-1">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="JoTrip Weather">
+        <img src="/weather-brand.svg" alt="JoTrip Weather">
+      </a>
+      <div class="prototype">
+        <b>RAIN / CLOUD V2</b>
+        <span>PROTOTYPE - không thay bản hiện tại</span>
+      </div>
+      <a class="back" href="/spatial-lab.html">Bản hiện tại</a>
+    </header>
+
+    <section class="map-shell">
+      <div id="map"></div>
+      <canvas id="weatherCanvas" aria-hidden="true"></canvas>
+      <canvas id="reliefCanvas" aria-hidden="true"></canvas>
+
+      <div class="layer-switch" role="tablist" aria-label="Lớp thời tiết">
+        <button class="active" data-layer="cloud" type="button">
+          <span class="dot cloud-dot"></span>Mây quan trắc
+        </button>
+        <button data-layer="rain" type="button">
+          <span class="dot rain-dot"></span>Mưa dự báo
+        </button>
+      </div>
+
+      <div class="stage-card">
+        <span id="stageBadge">QUAN TRẮC</span>
+        <b id="stageTitle">Himawari-9</b>
+        <small id="stageMeta">Đang tải dữ liệu...</small>
+      </div>
+
+      <button id="fitBtn" class="fit-btn" type="button" aria-label="Về Phú Quốc">◎</button>
+
+      <section class="timeline-panel" aria-label="Dòng thời gian">
+        <div class="timeline-head">
+          <button id="playBtn" type="button" aria-label="Phát">▶</button>
+          <div>
+            <b id="timeLabel">--</b>
+            <small id="timeKind">--</small>
+          </div>
+          <span id="resolutionLabel">--</span>
+        </div>
+        <input id="timeSlider" type="range" min="0" max="0" value="0" step="1" aria-label="Thời gian">
+        <div class="timeline-zones">
+          <span>QUAN TRẮC</span><i>NOW</i><span>DỰ BÁO</span>
+        </div>
+      </section>
+
+      <aside class="readout">
+        <div class="readout-head">
+          <span id="readoutEyebrow">MÂY THẬT</span>
+          <b id="readoutValue">Chạm bản đồ</b>
+        </div>
+        <p id="readoutText">Himawari được vẽ từ lưới lat/lon đã remap, không dùng PNG ép bounding box.</p>
+        <div id="actualBox" class="actual-box"></div>
+      </aside>
+
+      <div id="legend" class="legend"></div>
+      <div id="loading" class="loading">Đang nạp dữ liệu JoTrip Weather...</div>
+    </section>
+
+    <footer class="footnote">
+      <b>Nguyên tắc V2:</b>
+      <span>Mây = quan trắc vệ tinh. Mưa = trường dự báo mô hình. Nội suy chỉ để render giữa các ô nguồn, không tạo chi tiết thời tiết giả.</span>
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/rain-cloud-v2.js?v=20260921-1"></script>
+</body>
+</html>

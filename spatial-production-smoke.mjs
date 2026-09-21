@@ -1,9 +1,8 @@
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
-const BUILD='V6.13-PROD';
 const base='https://weather.openphuquoc.com';
-const result={ok:false,build:null,layers:{},himawari:{},pageErrors:[],consoleErrors:[],failure:null};
+const result={ok:false,embed:null,scenes:{},flag:null,comparisons:{},pageErrors:[],consoleErrors:[],failure:null};
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
 page.on('pageerror',e=>result.pageErrors.push(String(e)));
@@ -14,43 +13,85 @@ async function stats(frame,sel){
     if(!(canvas instanceof HTMLCanvasElement)||!canvas.width||!canvas.height)return {visible:0,strong:0,meanAlpha:0};
     const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
     let n=0,visible=0,strong=0,sum=0;
-    for(let i=3;i<d.length;i+=64){const a=d[i];n++;sum+=a;if(a>8)visible++;if(a>40)strong++}
+    for(let i=3;i<d.length;i+=32){const a=d[i];n++;sum+=a;if(a>8)visible++;if(a>40)strong++}
     return {visible,strong,meanAlpha:n?sum/n:0};
   });
 }
 
 try{
-  await page.goto(base+'/?qa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
+  await page.goto(base+'/?mergeqa='+Date.now(),{waitUntil:'domcontentloaded',timeout:120000});
   await page.locator('.map-panel').scrollIntoViewIfNeeded();
   await page.locator('[data-map="jotrip"]').click();
-  const iframe=page.locator('iframe[data-jotrip-spatial]');
-  await iframe.waitFor({state:'visible',timeout:120000});
-  const frame=page.frames().find(f=>f.url().includes('/spatial-lab.html'));
-  if(!frame)throw new Error('Spatial iframe missing');
-  await frame.waitForFunction(()=>document.getElementById('dataStatus')?.textContent?.includes('ĐANG HOẠT ĐỘNG'),null,{timeout:120000});
-  result.build=await frame.evaluate(()=>document.documentElement.dataset.spatialBuild||null);
-  if(result.build!==BUILD)throw new Error('Production build mismatch: '+result.build+' != '+BUILD);
 
-  for(const layer of ['wind','rain','waves','current','storm']){
-    await frame.locator('.layer[data-layer="'+layer+'"]').click();
-    await page.waitForTimeout(layer==='storm'?2200:1700);
-    result.layers[layer]={
+  const iframe=page.locator('iframe[data-jotrip-scene]');
+  await iframe.waitFor({state:'visible',timeout:120000});
+  const frame=page.frames().find(f=>f.url().includes('/weather-scene-v3.html'));
+  if(!frame)throw new Error('Scene V3 iframe missing');
+  await frame.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:120000});
+
+  result.embed=await frame.evaluate(()=>({
+    embedMode:document.body.classList.contains('embed-mode'),
+    topbarDisplay:getComputedStyle(document.querySelector('.topbar')).display,
+    renderer:window.JoTripSceneRenderer?.version||null
+  }));
+
+  for(const scene of ['cloud','rain','wind','wave']){
+    await frame.locator('.tabs button[data-scene="'+scene+'"]').click();
+    await page.waitForTimeout(scene==='wind'?1300:800);
+    result.scenes[scene]={
       field:await stats(frame,'#fieldCanvas'),
-      flow:await stats(frame,'#flowCanvas'),
-      readout:(await frame.locator('#readoutValue').innerText())+' '+(await frame.locator('#readoutUnit').innerText())
+      motion:await stats(frame,'#motionCanvas'),
+      time:(await frame.locator('#timeLabel').innerText()).trim()
     };
-    await page.screenshot({path:'/tmp/prod-'+layer+'.png',fullPage:false});
   }
+
+  await frame.locator('.tabs button[data-scene="wave"]').click();
+  const mapBox=await frame.locator('#map').boundingBox();
+  if(!mapBox)throw new Error('Scene map box missing');
+  await frame.locator('#map').click({position:{x:mapBox.width*.48,y:mapBox.height*.50}});
+  await page.waitForTimeout(350);
+  const before=(await frame.locator('.leaflet-popup.selection-popup').innerText()).trim();
+  const slider=frame.locator('#slider');
+  const max=Number(await slider.getAttribute('max')||0);
+  await slider.evaluate((el,v)=>{el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}))},Math.min(max,Math.max(1,Math.floor(max*.65))));
+  await page.waitForTimeout(450);
+  const after=(await frame.locator('.leaflet-popup.selection-popup').innerText()).trim();
+  result.flag={
+    visible:await frame.locator('.selection-flag').isVisible().catch(()=>false),
+    changed:before!==after,
+    waveDirection:/Sóng đến từ \d+° · đi về \d+°/.test(after)
+  };
+  await page.screenshot({path:'/tmp/prod-jotrip-scene.png',fullPage:false});
 
   await page.locator('[data-map="himawari"]').click();
   await page.locator('.himawari-georef .leaflet-image-layer').waitFor({state:'visible',timeout:120000});
-  result.himawari.image=await page.locator('.himawari-georef .leaflet-image-layer').getAttribute('src');
-  result.himawari.badge=await page.locator('.himawari-ir-badge').innerText();
-  result.himawari.mapVisible=await page.locator('#himawariMap').isVisible();
-  await page.screenshot({path:'/tmp/prod-himawari.png',fullPage:false});
+  result.comparisons.himawari=true;
 
-  result.ok=true;
+  await page.locator('[data-map="wind"]').click();
+  const windy=page.locator('#mapBox iframe');
+  await windy.waitFor({state:'attached',timeout:30000});
+  const windySrc=await windy.getAttribute('src');
+  result.comparisons.windyWind=Boolean(windySrc&&windySrc.includes('embed.windy.com')&&windySrc.includes('overlay=wind'));
+
+  const sceneOk=
+    result.scenes.cloud.field.visible>20 &&
+    result.scenes.rain.field.visible>20 &&
+    result.scenes.wind.motion.visible>4 &&
+    result.scenes.wave.field.visible>20;
+
+  result.ok=
+    result.embed?.embedMode===true &&
+    result.embed?.topbarDisplay==='none' &&
+    String(result.embed?.renderer||'').includes('wave-direction-convention') &&
+    sceneOk &&
+    result.flag?.visible===true &&
+    result.flag?.changed===true &&
+    result.flag?.waveDirection===true &&
+    result.comparisons.himawari===true &&
+    result.comparisons.windyWind===true &&
+    result.pageErrors.length===0;
 }catch(e){result.failure=String(e?.stack||e)}
+
 await writeFile('/tmp/spatial-production-result.json',JSON.stringify(result,null,2)+'\n');
 console.log(JSON.stringify(result,null,2));
 await browser.close();

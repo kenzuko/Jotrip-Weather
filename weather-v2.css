@@ -2221,3 +2221,63 @@ footer{font-size:9.5px}
 
 /* Hide the redundant region metadata row on the traveller surface. */
 #forecastRegionMeta[hidden]{display:none!important}
+
+/* Cloud insight - traveller-readable semantics */
+.map-convective{
+  position:relative;
+  grid-template-columns:minmax(0,1.25fr) minmax(0,.8fr) minmax(0,.95fr);
+  gap:10px;
+  padding:12px 42px 12px 12px;
+}
+.map-convective span{
+  padding-right:8px;
+  border-right:1px solid #e4edf1;
+}
+.map-convective span:nth-of-type(3){border-right:0}
+.map-convective b{font-size:7.4px;letter-spacing:.02em}
+.map-convective strong{font-size:11.5px;line-height:1.3}
+.map-convective em{
+  display:block;
+  margin-top:3px;
+  color:#77909d;
+  font-size:7px;
+  font-style:normal;
+  font-weight:650;
+  line-height:1.35;
+}
+.map-convective small{padding-top:2px;font-size:7.2px}
+.panel-close{
+  appearance:none;
+  border:0;
+  background:rgba(238,244,247,.96);
+  color:#506c7a;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  font:700 18px/1 system-ui,-apple-system,sans-serif;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.map-convective-close{
+  position:absolute;
+  top:8px;
+  right:8px;
+}
+.panel-close:active{transform:scale(.94)}
+@media(max-width:620px){
+  .map-convective{
+    grid-template-columns:1fr 1fr;
+    padding:11px 40px 11px 11px;
+  }
+  .map-convective span:first-of-type{
+    grid-column:1/-1;
+    border-right:0;
+    border-bottom:1px solid #e4edf1;
+    padding:0 0 8px;
+  }
+  .map-convective span:nth-of-type(2){border-right:1px solid #e4edf1}
+  .map-convective span:nth-of-type(3){border-right:0}
+  .map-convective strong{font-size:11px}
+}

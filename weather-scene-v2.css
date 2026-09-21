@@ -31,7 +31,15 @@ button,a,input{font:inherit}
 }
 #map #fieldCanvas{z-index:350}
 #map #motionCanvas{z-index:365}
-.leaflet-pane.leaflet-tile-pane{filter:saturate(.55) brightness(.985) contrast(.93)}
+.leaflet-pane.leaflet-tile-pane{filter:saturate(.55) brightness(.985) contrast(.93);transition:filter .22s ease}
+.map-shell[data-scene="cloud"] .leaflet-pane.leaflet-tile-pane{
+  filter:saturate(.30) brightness(.78) contrast(.94)
+}
+.map-shell[data-scene="cloud"] #map{background:#c8d2d5}
+.map-shell[data-scene="rain"] .leaflet-pane.leaflet-tile-pane,
+.map-shell[data-scene="wind"] .leaflet-pane.leaflet-tile-pane{
+  filter:saturate(.55) brightness(.985) contrast(.93)
+}
 .leaflet-pane.scene-label-pane{z-index:650!important;pointer-events:none}
 .leaflet-control-attribution{font-size:8px!important;background:rgba(255,255,255,.72)!important}
 .tabs{

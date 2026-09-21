@@ -364,8 +364,8 @@ function updateCopy(){
     kind="forecast";
     $("legend").innerHTML=
       '<b>Sóng Hs</b>'+
-      '<div class="bar" style="background:linear-gradient(90deg,#e7f4f7,#8bcbd5,#4ba5bd,#397aab,#57569a)"></div>'+
-      '<div class="scale"><span>êm</span><span>cao</span></div>';
+      '<div class="bar" style="background:linear-gradient(90deg,#e6f6f8,#b8e5e9,#79cdd7,#43aec5,#2b87b5,#2f61a3,#4e4591,#6a3080)"></div>'+
+      '<div class="scale"><span>0.2 m</span><span>0.6</span><span>1.0</span><span>1.6+ m</span></div>';
   }
 
   const fresh=state.scene==="cloud"

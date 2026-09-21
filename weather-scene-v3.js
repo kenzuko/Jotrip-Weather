@@ -770,7 +770,11 @@ function selectionHtml(lat,lon){
     if(local?.wave_period_s!=null) rows.push('Chu kỳ now '+Number(local.wave_period_s).toFixed(1)+' s');
     if(cell?.wave_hs_m!=null) rows.push('<b>Dự báo ô biển gần nhất:</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
     if(cell?.wave_period_s!=null) rows.push('Chu kỳ '+Number(cell.wave_period_s).toFixed(1)+' s');
-    if(cell?.wave_direction_deg!=null) rows.push('Hướng '+Math.round(Number(cell.wave_direction_deg))+'°');
+    if(cell?.wave_direction_deg!=null){
+      const from=Math.round(Number(cell.wave_direction_deg))%360;
+      const to=(from+180)%360;
+      rows.push('Sóng đến từ '+from+'° · đi về '+to+'°');
+    }
     if(cell?.wave_hs_m==null) rows.push('<span class="selection-near">Chưa có ô dự báo biển hợp lệ tại vùng này.</span>');
   }
 

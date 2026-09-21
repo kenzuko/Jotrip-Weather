@@ -55,7 +55,7 @@ jobs:
           grep -q 'weather_feedback' cloudflare/schema.sql
           grep -q 'weather-v2.js' index.html
           grep -q 'weather-v2.css' index.html
-          grep -q 'spatial-lab.html' weather-v2.js
+          grep -q 'weather-scene-v3.html' weather-v2.js
           grep -q 'BẢN ĐỒ JOTRIP' index.html
           grep -q 'data-layer="wind"' spatial-lab.html
           grep -q 'data-layer="rain"' spatial-lab.html
@@ -67,6 +67,8 @@ jobs:
         run: |
           node --check weather-dashboard.js
           node --check weather-v2.js
+          node --check weather-scene-v3.js
+          node --check weather-scene-render-v2.js
           node --check spatial-lab.js
           node --check weather-standalone-data.js
           node --check weather-live-config.js

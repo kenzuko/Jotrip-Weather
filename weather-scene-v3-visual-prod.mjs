@@ -1,4 +1,4 @@
-// rerun after mapPane fix
+// rerun after mapPane sizing fix
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 

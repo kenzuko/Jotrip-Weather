@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260921-prod60">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260921-prod61">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260921-prod60"></script>
+  <script defer src="/weather-v2.js?v=20260921-prod61"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -44,21 +44,33 @@
 </header>
 
 <main>
-  <section class="weather-scene weather-scene-hero" aria-label="Thời tiết Phú Quốc tại điểm đang chọn">
-    <img decoding="async" fetchpriority="high" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Phu%20Quoc%20beach%2001.jpg?width=1600" alt="Bờ biển phía tây Phú Quốc gần Dương Đông, ảnh tháng 11 năm 2025">
-    <div class="weather-scene-shade"></div>
-    <div class="weather-scene-copy">
-      <span class="scene-badge">PHÚ QUỐC WEATHER INTELLIGENCE · V2</span>
-      <small>ẢNH THAM CHIẾU · DƯƠNG ĐÔNG · 15/11/2025</small>
-      <h1 id="placeName">Dương Đông</h1>
-      <p id="heroSummary">Đang đọc dữ liệu quan trắc và phân tích địa phương...</p>
+  <section class="weather-overview" aria-label="Thời tiết Phú Quốc tại điểm đang chọn">
+    <div class="weather-overview-head">
+      <div>
+        <span class="eyebrow">THỜI TIẾT LÚC NÀY</span>
+        <h1 id="placeName">Dương Đông</h1>
+      </div>
       <div class="updated" id="updatedAt">-</div>
-      <span class="scene-credit">Ảnh: Elmschrat · Wikimedia Commons · CC BY-SA 4.0 · không phải webcam trực tiếp</span>
     </div>
-    <div class="weather-scene-data">
-      <span>NHIỆT ĐỘ ĐỊA PHƯƠNG</span>
-      <strong id="heroTemp">--</strong>
-      <small id="heroTempClass">ƯỚC TÍNH</small>
+
+    <div class="weather-overview-main">
+      <div class="weather-now-primary">
+        <div id="heroWeatherIcon" class="weather-now-icon" aria-hidden="true">🌦️</div>
+        <div class="weather-now-temp">
+          <strong id="heroTemp">--</strong>
+          <span id="heroTempClass">ƯỚC TÍNH</span>
+        </div>
+        <div class="weather-now-copy">
+          <b id="heroCondition">Đang đọc thời tiết...</b>
+          <p id="heroSummary">Đang đọc dữ liệu quan trắc và phân tích địa phương...</p>
+        </div>
+      </div>
+
+      <div class="weather-now-facts" aria-label="Thông tin nhanh">
+        <div><span>Mưa tại điểm</span><b id="heroRain">--</b><small>mm/h</small></div>
+        <div><span>Gió</span><b id="heroWind">--</b><small>km/h</small></div>
+        <div><span>Sóng Hs</span><b id="heroWave">--</b><small>m</small></div>
+      </div>
     </div>
   </section>
 
@@ -81,21 +93,17 @@
     <span class="inline-loader">Đang tải danh sách điểm...</span>
   </nav>
 
-  <div class="section-intro">
-    <div><span class="eyebrow">ĐANG XẢY RA</span><h2>Thời tiết tại điểm đang chọn</h2></div>
-    <small>JoTrip kết hợp số đo thực tế và ước tính hiện tại tại từng khu vực</small>
+  <div class="section-intro section-intro-simple">
+    <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Những gì khách cần biết ngay</h2></div>
+    <small>Các chỉ số chính trước. Thông số chuyên sâu được đặt riêng bên dưới.</small>
   </div>
-  <section class="now-grid" aria-label="Tình hình hiện tại">
+  <section class="now-grid now-grid-primary" aria-label="Tình hình hiện tại">
     <article class="metric-card">
-      <div><span>Gió địa phương</span><em id="windClass" class="badge estimated">ƯỚC TÍNH</em></div>
+      <div><span>Gió</span><em id="windClass" class="badge estimated">ƯỚC TÍNH</em></div>
       <b id="windNow">--</b><small>km/h</small>
     </article>
     <article class="metric-card">
-      <div><span>Gió giật</span><em class="badge model">MÔ HÌNH</em></div>
-      <b id="gustNow">--</b><small>km/h</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Mưa ước tính tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
+      <div><span>Mưa tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
       <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
     </article>
     <article class="metric-card">
@@ -104,21 +112,31 @@
     </article>
     <article class="metric-card">
       <div><span>Sóng Hs</span><em id="marineClass" class="badge model">MÔ HÌNH</em></div>
-      <b id="waveNow">--</b><small>m · biển nền</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Sóng cao Hmax</span><em class="badge model">MÔ HÌNH</em></div>
-      <b id="hmaxNow">--</b><small>m · giá trị ước tính khi cần</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Chu kỳ sóng</span><em class="badge model">MÔ HÌNH</em></div>
-      <b id="periodNow">--</b><small>giây</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Dòng chảy</span><em class="badge model">MÔ HÌNH</em></div>
-      <b id="currentNow">--</b><small>km/h</small>
+      <b id="waveNow">--</b><small>m · độ cao sóng có nghĩa</small>
     </article>
   </section>
+
+  <details class="now-advanced">
+    <summary>Xem thêm thông số gió và biển</summary>
+    <section class="now-grid now-grid-advanced" aria-label="Thông số thời tiết chuyên sâu">
+      <article class="metric-card">
+        <div><span>Gió giật</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="gustNow">--</b><small>km/h</small>
+      </article>
+      <article class="metric-card">
+        <div><span>Sóng cao Hmax</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="hmaxNow">--</b><small>m · giá trị ước tính khi cần</small>
+      </article>
+      <article class="metric-card">
+        <div><span>Chu kỳ sóng</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="periodNow">--</b><small>giây</small>
+      </article>
+      <article class="metric-card">
+        <div><span>Dòng chảy</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="currentNow">--</b><small>km/h</small>
+      </article>
+    </section>
+  </details>
 
   <section class="command-center" aria-label="Trung tâm theo dõi thời tiết">
     <div class="command-center-head">

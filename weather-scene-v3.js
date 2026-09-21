@@ -88,7 +88,12 @@ function modelCycleBadge(scene){
   const run=modelRunIso(scene);
   if(!run) return {text:"run --",stale:true};
   const a=ageMinutes(run);
-  return {text:"run "+utcCycleLabel(run)+" · "+Math.round(a/60)+"h",stale:a>18*60};
+  const hours=Math.round((a||0)/60);
+  const stale=(a||Infinity)>12*60;
+  return {
+    text:"run "+utcCycleLabel(run)+" · "+hours+" giờ"+(stale?" · đang chờ chu kỳ mới":""),
+    stale
+  };
 }
 function ageMinutes(iso){
   const t=Date.parse(iso||"");
@@ -107,7 +112,17 @@ function initMap(){
   state.map=L.map("map",{
     zoomControl:false,attributionControl:true,
     minZoom:8.1,maxZoom:12.2,zoomSnap:.25,zoomDelta:.5,preferCanvas:true
-  }).setView([10.18,103.98],innerWidth<760?8.65:9);
+  });
+  if(EMBED&&innerWidth>=760){
+    // The Weather card is very wide on desktop. A fixed zoom 9 exposed
+    // Cambodia / mainland Vietnam and made the Phu Quoc field look broken.
+    // Fit the island envelope; the vertical island extent controls the view.
+    state.map.fitBounds([[9.82,103.78],[10.49,104.13]],{
+      padding:[18,18],maxZoom:10.6,animate:false
+    });
+  }else{
+    state.map.setView([10.18,103.98],innerWidth<760?8.65:9);
+  }
 
   state.map.createPane("sceneLabels");
   const labelPane=state.map.getPane("sceneLabels");
@@ -299,7 +314,6 @@ function updateCopy(){
     $("timeLabel").textContent=stamp(f?.sampled_time);
     $("timeMeta").textContent="JoTrip Weather · Himawari-9 · observed";
     $("modelBadge").textContent="HIMAWARI-9 · OBSERVED";
-    $("modelBadge").textContent="HIMAWARI-9 · OBSERVED";
     $("timeClass").textContent="OBSERVED";
     $("timeClass").className="time-class observed";
     sourceTime=f?.sampled_time||state.nowcast?.sampled_time;
@@ -322,7 +336,6 @@ function updateCopy(){
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("rain"));
     $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("rain"));
-    $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("rain"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -342,7 +355,6 @@ function updateCopy(){
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("wind"));
     $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("wind"));
-    $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("wind"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -358,7 +370,6 @@ function updateCopy(){
     $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF Wave · run "+utcCycleLabel(modelRunIso("wave"));
-    $("modelBadge").textContent="ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
     $("modelBadge").textContent="ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";

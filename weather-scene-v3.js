@@ -21,6 +21,8 @@ const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Number(v);
 
+const EMBED=new URLSearchParams(location.search).get("embed")==="1";
+
 const state={
   map:null,
   nowcast:null,
@@ -1111,6 +1113,7 @@ function bind(){
 }
 
 async function boot(){
+  if(EMBED) document.body.classList.add("embed-mode");
   initMap();
   bind();
 

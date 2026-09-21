@@ -307,6 +307,7 @@ function updateCopy(){
     $("timeLabel").textContent=stamp(f?.sampled_time);
     $("timeMeta").textContent="JoTrip Weather · Himawari-9 · observed";
     $("modelBadge").textContent="HIMAWARI-9 · OBSERVED";
+    $("modelBadge").textContent="HIMAWARI-9 · OBSERVED";
     $("timeClass").textContent="OBSERVED";
     $("timeClass").className="time-class observed";
     sourceTime=f?.sampled_time||state.nowcast?.sampled_time;
@@ -329,6 +330,7 @@ function updateCopy(){
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("rain"));
     $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("rain"));
+    $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("rain"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -348,6 +350,7 @@ function updateCopy(){
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("wind"));
     $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("wind"));
+    $("modelBadge").textContent="ECMWF IFS · RUN "+utcCycleLabel(modelRunIso("wind"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
     sourceTime=state.ecmwf?.generated_at||f?.valid_time;
@@ -363,6 +366,7 @@ function updateCopy(){
     $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF Wave · run "+utcCycleLabel(modelRunIso("wave"));
+    $("modelBadge").textContent="ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
     $("modelBadge").textContent="ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
     $("timeClass").textContent="FORECAST";
     $("timeClass").className="time-class forecast";
@@ -596,7 +600,19 @@ function sizeCanvas(c){
   return {w,h,scale};
 }
 function renderScalar(){
-  const c=$("fieldCanvas"),m=$("motionCanvas"),{w,h,scale}=sizeCanvas(c);
+  const c=$("fieldCanvas"),m=$("motionCanvas");
+  if(window.JoTripSceneRenderer){
+    const f=frame();
+    window.JoTripSceneRenderer.render({
+      scene:state.scene,
+      rows:f?.cells||[],
+      map:state.map,
+      fieldCanvas:c,
+      motionCanvas:m
+    });
+    return;
+  }
+  const {w,h,scale}=sizeCanvas(c);
   sizeCanvas(m);
   const ctx=c.getContext("2d"),mctx=m.getContext("2d");
   ctx.clearRect(0,0,w,h);

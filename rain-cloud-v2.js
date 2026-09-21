@@ -15,6 +15,8 @@ const URLS = {
   ]
 };
 
+const CARTO_KEY = "cb1_3q98_1_d8112ce70cc7ec9b9276b0a0";
+const BASE_MODE = new URLSearchParams(location.search).get("base")==="voyager" ? "voyager" : "positron";
 const $ = (id) => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const num = (v) => v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? null : Number(v);
@@ -82,12 +84,13 @@ function initMap(){
   state.map.getPane("labels").style.zIndex = "650";
   state.map.getPane("labels").style.pointerEvents = "none";
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",{
+  const baseStyle = BASE_MODE==="voyager" ? "voyager" : "light";
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/"+baseStyle+"_nolabels/{z}/{x}/{y}{r}.png?key="+CARTO_KEY,{
     subdomains:"abcd",maxZoom:19,
     attribution:'&copy; OpenStreetMap &copy; CARTO'
   }).addTo(state.map);
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",{
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/"+baseStyle+"_only_labels/{z}/{x}/{y}{r}.png?key="+CARTO_KEY,{
     subdomains:"abcd",maxZoom:19,pane:"labels"
   }).addTo(state.map);
 
@@ -170,13 +173,13 @@ function updateUI(){
 function renderLegendCloud(){
   $("legend").innerHTML =
     '<div class="legend-title">ĐỈNH MÂY IR</div>'+
-    '<div class="legend-bar" style="background:linear-gradient(90deg,rgba(218,225,228,.2),#d7e1e8,#b9d7e7,#a6bfdc,#c7b8d9)"></div>'+
+    '<div class="legend-bar" style="background:linear-gradient(90deg,#aab9c1,#cfdae1,#a9c8dc,#998ac5,#715aaf)"></div>'+
     '<div class="legend-scale"><span>ấm / thấp</span><span>-40°C</span><span>rất lạnh / cao</span></div>';
 }
 function renderLegendRain(){
   $("legend").innerHTML =
     '<div class="legend-title">MƯA / BƯỚC MODEL</div>'+
-    '<div class="legend-bar" style="background:linear-gradient(90deg,#73cbe3,#2bb99f,#d6cf4a,#ef943e,#cb3d65)"></div>'+
+    '<div class="legend-bar" style="background:linear-gradient(90deg,#4d93d6,#31bcd9,#23bc94,#d7cf4a,#f19137,#de5046,#bc336c)"></div>'+
     '<div class="legend-scale"><span>0.2</span><span>3</span><span>12</span><span>40+ mm</span></div>';
 }
 function updateActualBox(){
@@ -229,8 +232,8 @@ function ramp(stops,t){
   return stops.at(-1)[1];
 }
 function rainStyle(mm){
-  if(mm===null || mm<.05) return [0,0,0,0];
-  const stops=[[0,0],[.2,.08],[1,.22],[3,.39],[7,.56],[12,.69],[22,.84],[40,1]];
+  if(mm===null || mm<.10) return [0,0,0,0];
+  const stops=[[.10,.05],[.20,.13],[.50,.22],[1,.31],[3,.47],[7,.62],[12,.74],[22,.87],[40,1]];
   let t=1;
   for(let i=1;i<stops.length;i++){
     if(mm<=stops[i][0]){
@@ -239,20 +242,20 @@ function rainStyle(mm){
     }
   }
   const rgb=ramp([
-    [0,[81,154,212]],[.20,[64,190,213]],[.42,[43,185,151]],
-    [.62,[205,205,72]],[.80,[239,145,58]],[1,[194,54,99]]
+    [0,[77,147,214]],[.18,[49,188,217]],[.38,[35,188,148]],
+    [.58,[215,207,74]],[.76,[241,145,55]],[.90,[222,80,70]],[1,[188,51,108]]
   ],t);
-  const alpha=clamp(.06+Math.pow(t,.76)*.76,.06,.82);
+  const alpha=clamp(.10+Math.pow(t,.68)*.78,.10,.88);
   return [rgb[0],rgb[1],rgb[2],Math.round(alpha*255)];
 }
 function cloudStyle(cold){
-  if(cold===null || cold>18) return [0,0,0,0];
-  const t=clamp((12-cold)/88,0,1);
+  if(cold===null || cold>10) return [0,0,0,0];
+  const t=clamp((8-cold)/88,0,1);
   const rgb=ramp([
-    [0,[218,226,229]],[.28,[213,225,232]],[.50,[185,214,229]],
-    [.72,[164,190,218]],[.88,[183,176,216]],[1,[207,194,220]]
+    [0,[161,177,186]],[.24,[187,201,209]],[.46,[205,218,225]],
+    [.66,[169,200,220]],[.82,[153,139,197]],[1,[113,90,175]]
   ],t);
-  const alpha=clamp(.07+Math.pow(t,.95)*.66,.07,.73);
+  const alpha=clamp(.07+Math.pow(t,.82)*.72,.07,.79);
   return [rgb[0],rgb[1],rgb[2],Math.round(alpha*255)];
 }
 function sizeCanvas(canvas){
@@ -307,14 +310,7 @@ function renderField(){
   }
   ctx.putImageData(img,0,0);
 
-  if(state.layer==="cloud"){
-    // Relief is derived only from the same observed IR field - no procedural cloud objects.
-    const shade=rctx.createLinearGradient(0,0,w,h);
-    shade.addColorStop(0,"rgba(255,255,255,.18)");
-    shade.addColorStop(.5,"rgba(255,255,255,0)");
-    shade.addColorStop(1,"rgba(26,53,64,.16)");
-    rctx.fillStyle=shade;rctx.fillRect(0,0,w,h);
-  }else{
+  if(state.layer==="rain"){
     drawActualGauges(ctx,scale);
   }
 }

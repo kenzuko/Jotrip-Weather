@@ -543,12 +543,12 @@ function summary(p){
   const conv=nowFresh?num(effectiveNowcast()?.convective_score??l.convection_score):null;
   const wind=localFresh?num(l.wind_kmh??m.wind_kmh):num(m.wind_kmh);
   const wave=localFresh?num(l.wave_hs_m??m.wave_hs_m):num(m.wave_hs_m);
-  if(rain!==null)bits.push(rain>=3?"Ước tính mưa hiện tại đáng chú ý":rain>.2?"Ước tính có mưa nhẹ hoặc rải rác":"Ước tính mưa hiện tại thấp");
+  if(rain!==null)bits.push(rain>=3?"Đang có mưa đáng chú ý":rain>.2?"Có mưa nhẹ hoặc rải rác":"Mưa hiện tại ít");
   if(imminence!==null&&imminence>=75)bits.push("mưa cục bộ có thể tăng nhanh trong 0-60 phút");
   else if(imminence!==null&&imminence>=55)bits.push("mưa ngắn hạn cần theo dõi");
-  if(conv!==null&&conv>=70)bits.push("có cụm mây rất cao, dễ kèm mưa dông");
+  if(conv!==null&&conv>=70)bits.push("có mây dông đáng chú ý");
   if(wind!==null)bits.push("gió khoảng "+fmt(wind,0)+" km/h");
-  if(wave!==null)bits.push("Hs nền khoảng "+fmt(wave,1)+" m");
+  if(wave!==null)bits.push("sóng khoảng "+fmt(wave,1)+" m");
   return bits.length?bits.join(" · ")+".":"Chưa đủ dữ liệu địa phương để tóm tắt.";
 }
 
@@ -1286,7 +1286,10 @@ function renderJoTripForecast(){
   renderForecastRegionTabs();
   renderForecastDayRibbon(rows);
   const metaBox=$("forecastRegionMeta");
-  if(metaBox)metaBox.innerHTML='<b>'+esc(regionName)+'</b><span>Điểm theo dõi: '+esc((meta.points||[]).join(" · "))+'</span>';
+  if(metaBox){
+    const placeNames=(meta.points||[]).map(id=>critical?.points?.[id]?.name||NAMES[id]||id.replaceAll("_"," "));
+    metaBox.innerHTML='<b>'+esc(regionName)+'</b><span>Điểm theo dõi: '+esc(placeNames.join(" · "))+'</span>';
+  }
 
   if(!rows.length){
     body.innerHTML='<tr><td colspan="8"><div class="data-empty"><b>CHƯA ĐỦ DỮ LIỆU 10 NGÀY</b><span>Vùng này chưa có đủ dữ liệu dự báo tổ hợp để công bố.</span></div></td></tr>';

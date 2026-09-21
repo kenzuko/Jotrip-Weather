@@ -22,16 +22,24 @@ async function popupText(){
 async function chooseScene(scene){
   await page.locator('.tabs button[data-scene="'+scene+'"]').click();
   await page.waitForTimeout(scene==='wind'?1300:700);
+}
+async function placeFlagOnce(){
   const box=await page.locator('#map').boundingBox();
   if(!box) throw new Error('map box missing');
   await page.mouse.click(box.x+box.width*.52,box.y+box.height*.57);
   await page.waitForTimeout(500);
+  if(!(await page.locator('.selection-flag').isVisible().catch(()=>false))){
+    throw new Error('selection flag not visible');
+  }
 }
 
 try{
   await page.goto(target,{waitUntil:'domcontentloaded',timeout:120000});
   await page.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),{timeout:120000});
   await page.waitForTimeout(1500);
+
+  await chooseScene('rain');
+  await placeFlagOnce();
 
   for(const scene of ['rain','wind','wave']){
     await chooseScene(scene);

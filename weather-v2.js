@@ -1073,7 +1073,11 @@ function renderForecastDayRibbon(rows){
     const windMax=winds.length?Math.max(...winds):null;
     const rainMax=rains.length?Math.max(...rains):null;
     const state=dailyWeatherSummary(rainMax,rainProb,windMax,hasNowcastImpact);
-    const tempText=temps.length?fmt(Math.min(...temps),0)+"° - "+fmt(Math.max(...temps),0)+"°":"-";
+    let tempText="-";
+    if(temps.length){
+      const lo=Math.round(Math.min(...temps)),hi=Math.round(Math.max(...temps));
+      tempText=lo===hi?lo+"°":lo+"° - "+hi+"°";
+    }
     const meta=[
       rainMax===null?null:"Mưa ~"+fmt(rainMax,1)+" mm",
       windMax===null?null:"Gió "+fmt(windMax,0)+" km/h"
@@ -1279,8 +1283,8 @@ function renderJoTripForecast(){
 
   if(!regionalForecast||!meta){
     if(body)body.innerHTML='<tr><td colspan="8"><span class="inline-loader">Đang tải dự báo JoTrip theo vùng...</span></td></tr>';
-    $("jotripForecastSummary").textContent="Dự báo 10 ngày được tải sau để phần thời tiết hiện tại luôn mở nhanh.";
-    $("ensembleMeta").textContent="Đang chờ sản phẩm dự báo vùng.";
+    $("jotripForecastSummary").textContent="Đang tải dự báo cho khu vực này...";
+    $("ensembleMeta").textContent="Đang cập nhật dữ liệu dự báo.";
     return;
   }
 
@@ -1288,8 +1292,10 @@ function renderJoTripForecast(){
   renderForecastDayRibbon(rows);
   const metaBox=$("forecastRegionMeta");
   if(metaBox){
-    const placeNames=(meta.points||[]).map(id=>critical?.points?.[id]?.name||NAMES[id]||id.replaceAll("_"," "));
-    metaBox.innerHTML='<b>'+esc(regionName)+'</b><span>'+esc(placeNames.join(" · "))+'</span>';
+    // Region names themselves are already traveller-facing. Keep the extra
+    // representative-point taxonomy out of the main visual surface.
+    metaBox.hidden=true;
+    metaBox.innerHTML="";
   }
 
   if(!rows.length){

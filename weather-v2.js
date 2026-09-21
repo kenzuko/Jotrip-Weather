@@ -1865,7 +1865,7 @@ async function renderJoTripMap(){
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
   box.classList.add("jotrip-scene-active");
-  box.innerHTML='<iframe data-jotrip-scene title="JoTrip Weather Scene - Phú Quốc" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/weather-scene-v3.html?embed=1&integrated=1&v=20260921-merge1"></iframe>';
+  box.innerHTML='<iframe data-jotrip-scene title="JoTrip Weather Scene - Phú Quốc" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/weather-scene-v3.html?embed=1&integrated=1&v=20260921-merge2"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}

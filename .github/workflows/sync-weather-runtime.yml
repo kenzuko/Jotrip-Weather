@@ -1,6 +1,6 @@
 name: Weather runtime mirror
 
-# post-Himawari cadence refresh
+# post-fresh-model-cycle runtime refresh
 
 on:
   schedule:

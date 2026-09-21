@@ -1,5 +1,8 @@
 (function(){
 "use strict";
+const SPATIAL_BUILD="V6.13-PROD";
+document.documentElement.dataset.spatialBuild=SPATIAL_BUILD;
+window.__JOTRIP_SPATIAL_BUILD__=SPATIAL_BUILD;
 
 const URLS={
   production:[
@@ -545,7 +548,9 @@ function drawVectorTexture(rows,kind){
       const l=len*(.65+strength*.7);
       ctx.strokeStyle=kind==="waves"
         ?"rgba(17,72,96,"+(0.20+strength*.30).toFixed(3)+")"
-        :"rgba(255,255,255,"+(0.07+strength*.12).toFixed(3)+")";
+        :kind==="wind"
+          ?"rgba(18,73,96,"+(0.15+strength*.24).toFixed(3)+")"
+          :"rgba(12,111,120,"+(0.15+strength*.24).toFixed(3)+")";
       ctx.beginPath();
       ctx.moveTo(p.x-ux*l*.45,p.y-uy*l*.45);
       ctx.lineTo(p.x+ux*l*.55,p.y+uy*l*.55);
@@ -562,7 +567,7 @@ function drawVectorTexture(rows,kind){
         const back=kind==="waves"?3.8:2.3,wing=kind==="waves"?2.2:1.25;
         ctx.strokeStyle=kind==="waves"
           ?"rgba(11,64,88,"+(0.34+strength*.34).toFixed(3)+")"
-          :"rgba(255,255,255,"+(0.13+strength*.18).toFixed(3)+")";
+          :"rgba(10,91,105,"+(0.22+strength*.22).toFixed(3)+")";
         ctx.beginPath();
         ctx.moveTo(hx,hy);
         ctx.lineTo(hx-ux*back-uy*wing,hy-uy*back+ux*wing);
@@ -997,8 +1002,11 @@ function renderField(){
   fieldCanvas.style.opacity="1";
 
   // Wind is vector-first: no decorative scalar wash.
+  // A subtle static vector texture remains as Safari/mobile fallback if RAF trails are hard to see.
   if(state.layer==="wind"){
+    canvasSize(fieldCanvas,innerWidth<760?.58:.52);
     clearCanvas("fieldCanvas");
+    drawVectorTexture(rows,"wind");
     return;
   }
 
@@ -1022,7 +1030,9 @@ function renderField(){
 
   // Surface current is vector-first, like wind. Direction and motion are the message.
   if(state.layer==="current"){
+    canvasSize(fieldCanvas,innerWidth<760?.58:.52);
     clearCanvas("fieldCanvas");
+    drawVectorTexture(rows,"current");
     return;
   }
 
@@ -1605,7 +1615,7 @@ function togglePlay(){
   if(state.timer){stopTimer();return}
   $("playBtn").textContent="❚❚";
   if(state.layer==="radar"){
-    state.timer=setInterval(()=>{showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1));$("timeSlider").value=state.radarIndex},1300);
+    state.timer=setInterval(()=>{showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1));$("timeSlider").value=state.radarIndex},1800);
   }else if(state.layer==="storm"){
     const max=Number($("timeSlider").max)||0;
     state.cloudTween=0;
@@ -1620,14 +1630,14 @@ function togglePlay(){
       }
       renderField();
       updateReadout();
-    },250);
+    },320);
   }else{
     const max=Number($("timeSlider").max)||0;
     state.timer=setInterval(()=>{
       state.frameIndex=state.frameIndex>=max?0:state.frameIndex+1;
       $("timeSlider").value=state.frameIndex;
       renderAll(false);
-    },1200);
+    },1600);
   }
 }
 

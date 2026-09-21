@@ -16,7 +16,9 @@ const URLS = {
 };
 
 const CARTO_KEY = "cb1_3q98_1_d8112ce70cc7ec9b9276b0a0";
-const BASE_MODE = new URLSearchParams(location.search).get("base")==="voyager" ? "voyager" : "positron";
+const QUERY = new URLSearchParams(location.search);
+const BASE_MODE = QUERY.get("base")==="voyager" ? "voyager" : "positron";
+const STRUCTURE_MODE = QUERY.get("structure")!=="0";
 const $ = (id) => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const num = (v) => v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? null : Number(v);
@@ -146,7 +148,9 @@ function updateUI(){
   if(state.layer==="cloud"){
     $("stageBadge").textContent="QUAN TRẮC";
     $("stageTitle").textContent="Himawari-9 AHI";
-    $("stageMeta").textContent="Mây quan trắc - remap sang lưới lat/lon trước khi render";
+    $("stageMeta").textContent=STRUCTURE_MODE
+      ? "Mây quan trắc - màu + biên khối + relief từ chính trường dữ liệu"
+      : "Mây quan trắc - chỉ màu, tắt cấu trúc";
     $("timeLabel").textContent=stamp(f?.sampled_time);
     $("timeKind").textContent="OBSERVED SATELLITE - không phải dự báo";
     $("resolutionLabel").textContent=state.nowcast?.spatial?.display_grid_deg
@@ -158,7 +162,9 @@ function updateUI(){
   }else{
     $("stageBadge").textContent="DỰ BÁO";
     $("stageTitle").textContent="ECMWF IFS";
-    $("stageMeta").textContent="Mưa theo ô mô hình gốc - nội suy chỉ phục vụ hiển thị";
+    $("stageMeta").textContent=STRUCTURE_MODE
+      ? "Mưa ECMWF - màu + đường biên ngưỡng cường độ"
+      : "Mưa ECMWF - chỉ màu, tắt cấu trúc";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeKind").textContent=(f?.lead_hours===0?"MODEL ANALYSIS":"FORECAST") + " - lượng mưa theo bước mô hình";
     $("resolutionLabel").textContent=(state.ecmwf?.spatial?.requested_grid_deg || .25) + "° source grid";
@@ -174,13 +180,15 @@ function renderLegendCloud(){
   $("legend").innerHTML =
     '<div class="legend-title">ĐỈNH MÂY IR</div>'+
     '<div class="legend-bar" style="background:linear-gradient(90deg,#aab9c1,#cfdae1,#a9c8dc,#998ac5,#715aaf)"></div>'+
-    '<div class="legend-scale"><span>ấm / thấp</span><span>-40°C</span><span>rất lạnh / cao</span></div>';
+    '<div class="legend-scale"><span>ấm / thấp</span><span>-40°C</span><span>rất lạnh / cao</span></div>'+
+    '<div class="legend-scale" style="margin-top:5px"><span>biên tối = đổi tầng</span><span>viền tím = lõi đối lưu</span></div>';
 }
 function renderLegendRain(){
   $("legend").innerHTML =
     '<div class="legend-title">MƯA / BƯỚC MODEL</div>'+
     '<div class="legend-bar" style="background:linear-gradient(90deg,#4d93d6,#31bcd9,#23bc94,#d7cf4a,#f19137,#de5046,#bc336c)"></div>'+
-    '<div class="legend-scale"><span>0.2</span><span>3</span><span>12</span><span>40+ mm</span></div>';
+    '<div class="legend-scale"><span>0.2</span><span>3</span><span>12</span><span>40+ mm</span></div>'+
+    '<div class="legend-scale" style="margin-top:5px"><span>đường biên = đổi ngưỡng mưa</span><span></span></div>';
 }
 function updateActualBox(){
   const rain=state.current?.groundtruth?.rainfall;
@@ -258,6 +266,82 @@ function cloudStyle(cold){
   const alpha=clamp(.07+Math.pow(t,.82)*.72,.07,.79);
   return [rgb[0],rgb[1],rgb[2],Math.round(alpha*255)];
 }
+function rainBand(v){
+  if(v===null || !Number.isFinite(v) || v<.10) return -1;
+  const t=[.2,.5,1,3,7,12,22,40];
+  let b=0;
+  while(b<t.length && v>=t[b]) b++;
+  return b;
+}
+function cloudBand(v){
+  if(v===null || !Number.isFinite(v) || v>10) return -1;
+  const t=[0,-15,-30,-45,-55,-65,-75];
+  let b=0;
+  while(b<t.length && v<=t[b]) b++;
+  return b;
+}
+function strengthForStructure(v,layer){
+  if(v===null || !Number.isFinite(v)) return 0;
+  if(layer==="rain") return clamp(Math.log1p(Math.max(0,v))/Math.log(41),0,1);
+  return clamp((8-v)/88,0,1);
+}
+function renderStructure(ctx,field,w,h,layer,convField){
+  ctx.clearRect(0,0,w,h);
+  if(!STRUCTURE_MODE || !field?.length) return;
+  const img=ctx.createImageData(w,h);
+  const px=img.data;
+  const bandFn=layer==="rain" ? rainBand : cloudBand;
+  const stride=Math.max(1,Math.round(w/560));
+  for(let y=1;y<h-1;y++){
+    for(let x=1;x<w-1;x++){
+      const i=y*w+x, v=field[i];
+      if(!Number.isFinite(v)) continue;
+      const s=strengthForStructure(v,layer);
+      if(s<=.02) continue;
+      const l=field[i-1], r=field[i+1], u=field[i-w], d=field[i+w];
+      if(![l,r,u,d].every(Number.isFinite)) continue;
+
+      // Directional relief from the SAME scalar field. It improves topology legibility,
+      // but does not claim literal 3-D cloud thickness.
+      const gx=strengthForStructure(r,layer)-strengthForStructure(l,layer);
+      const gy=strengthForStructure(d,layer)-strengthForStructure(u,layer);
+      const light=clamp(-(gx*.78+gy*.52)*2.7,-1,1);
+      const k=i*4;
+      if(Math.abs(light)>.025){
+        if(light>0){
+          px[k]=255;px[k+1]=255;px[k+2]=255;
+          px[k+3]=Math.round((10+44*Math.abs(light))*s);
+        }else{
+          px[k]=18;px[k+1]=42;px[k+2]=51;
+          px[k+3]=Math.round((8+50*Math.abs(light))*s);
+        }
+      }
+
+      // Isoline-like boundary wherever a meaningful threshold band changes.
+      const b=bandFn(v);
+      const edge=b!==bandFn(r) || b!==bandFn(d);
+      if(edge && b>=0 && ((x+y)%stride===0)){
+        px[k]=layer==="rain"?24:35;
+        px[k+1]=layer==="rain"?55:51;
+        px[k+2]=layer==="rain"?66:67;
+        px[k+3]=layer==="rain"?72:62;
+      }
+
+      // Cloud convective structure: thin violet core boundary from observed score.
+      if(layer==="cloud" && convField){
+        const cv=convField[i];
+        const cr=convField[i+1], cd=convField[i+w];
+        if(Number.isFinite(cv) && cv>=20 && Number.isFinite(cr) && Number.isFinite(cd)){
+          const core=Math.floor(cv/15);
+          if(core!==Math.floor(cr/15) || core!==Math.floor(cd/15)){
+            px[k]=102;px[k+1]=74;px[k+2]=168;px[k+3]=Math.min(118,54+Math.round(cv));
+          }
+        }
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+}
 function sizeCanvas(canvas){
   const rect=$("map").getBoundingClientRect();
   const scale=innerWidth<760?.58:.50;
@@ -291,6 +375,12 @@ function renderField(){
   if(!grid)return;
 
   const img=ctx.createImageData(w,h);
+  const field=new Float32Array(w*h); field.fill(NaN);
+  let convGrid=null, convField=null;
+  if(state.layer==="cloud"){
+    convGrid=gridFromRows(rows,r=>r.convective_score);
+    convField=new Float32Array(w*h); convField.fill(NaN);
+  }
   const west=state.map.containerPointToLatLng([0,0]).lng;
   const east=state.map.containerPointToLatLng([w/scale,0]).lng;
   const latRows=new Float32Array(h);
@@ -302,13 +392,20 @@ function renderField(){
     const lat=latRows[y];
     for(let x=0;x<w;x++){
       const lon=west+(east-west)*(x/(w-1));
+      const i=y*w+x;
       const v=sampleGrid(grid,lat,lon);
+      field[i]=v===null?NaN:v;
+      if(convGrid){
+        const cv=sampleGrid(convGrid,lat,lon);
+        convField[i]=cv===null?NaN:cv;
+      }
       const c=styleFn(v);
-      const k=(y*w+x)*4;
+      const k=i*4;
       img.data[k]=c[0];img.data[k+1]=c[1];img.data[k+2]=c[2];img.data[k+3]=c[3];
     }
   }
   ctx.putImageData(img,0,0);
+  renderStructure(rctx,field,w,h,state.layer,convField);
 
   if(state.layer==="rain"){
     drawActualGauges(ctx,scale);

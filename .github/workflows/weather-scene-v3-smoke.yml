@@ -1,0 +1,44 @@
+name: Weather Scene V3 browser smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "weather-scene-v3.html"
+      - "weather-scene-v3.css"
+      - "weather-scene-v3.js"
+      - "weather-scene-render-v1.js"
+      - "weather-scene-v3-smoke.mjs"
+      - "data/weather-scene/**"
+      - ".github/workflows/weather-scene-v3-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 >/tmp/weather-scene-http.log 2>&1 &
+          sleep 2
+      - name: Run Weather Scene browser smoke
+        run: node weather-scene-v3-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weather-scene-v3-smoke
+          path: |
+            /tmp/weather-scene-v3-smoke.json
+            /tmp/weather-scene-http.log
+          retention-days: 7

@@ -166,7 +166,14 @@ function initMap(){
 
   state.actualLayer=L.layerGroup().addTo(state.map);
 
+  const publishViewContract=()=>{
+    const b=state.map.getBounds();
+    document.documentElement.dataset.sceneLatSpan=(b.getNorth()-b.getSouth()).toFixed(3);
+    document.documentElement.dataset.sceneLonSpan=(b.getEast()-b.getWest()).toFixed(3);
+  };
   state.map.on("move zoom resize",queueRender);
+  state.map.on("moveend zoomend resize",publishViewContract);
+  setTimeout(publishViewContract,80);
   state.map.on("click",e=>{
     state.probe={lat:e.latlng.lat,lon:e.latlng.lng};
     placeSelectionFlag(e.latlng.lat,e.latlng.lng);

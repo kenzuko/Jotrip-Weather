@@ -2,24 +2,27 @@
 
 const URLS={
   nowcast:[
-    "/data/weather-nowcast/latest.json",
+    "/data/weather-scene/cloud.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/latest.json"
   ],
   compact:[
-    "/data/weather-nowcast/compact-latest.json",
+    "/data/weather-scene/compact.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"
   ],
   current:[
+    "/data/weather-scene/current.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-current/latest.json"
   ],
   ecmwf:[
-    "/spatial-ecmwf.json",
+    "/data/weather-scene/forecast.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-ecmwf.json"
   ],
   dashboard:[
+    "/data/weather-scene/meta.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/dashboard-data.json"
   ],
   marine:[
+    "/data/weather-scene/marine.json",
     "https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/spatial-marine.json"
   ]
 };

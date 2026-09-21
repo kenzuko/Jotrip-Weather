@@ -1,0 +1,73 @@
+name: Spatial map browser smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "spatial-lab.html"
+      - "spatial-lab.css"
+      - "spatial-lab.js"
+      - "spatial-lab-smoke.mjs"
+      - ".github/workflows/spatial-lab-smoke.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 >/tmp/spatial-http.log 2>&1 &
+          sleep 2
+      - name: Run browser smoke
+        id: smoke
+        continue-on-error: true
+        run: node spatial-lab-smoke.mjs
+      - name: Publish diagnostics
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -f /tmp/spatial-lab-smoke-result.json ]; then
+            printf '%s\n' '{"ok":false,"failure":"result missing"}' > /tmp/spatial-lab-smoke-result.json
+          fi
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/spatial-lab-smoke-result.json spatial-lab-smoke-result.json
+          git config user.name "jotrip-weather-smoke"
+          git config user.email "jotrip-weather-smoke@users.noreply.github.com"
+          git add spatial-lab-smoke-result.json
+          if ! git diff --cached --quiet; then
+            git commit -m "test: record spatial map smoke result [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spatial-lab-smoke
+          path: |
+            /tmp/spatial-*.png
+            /tmp/spatial-http.log
+            /tmp/spatial-lab-smoke-result.json
+          retention-days: 7
+      - name: Enforce browser smoke
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/spatial-lab-smoke-result.json'))
+          assert p.get('ok') is True, p
+          PY

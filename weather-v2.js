@@ -1273,13 +1273,19 @@ function renderJoTripForecast(){
   }).join("");
 
   const horizon=regionalForecast.horizon_hours||0;
+  const nowcastContext=regionalForecast?.nowcast_context||{};
+  const nowcastCopy=nowcastContext.applied
+    ?"Trong 0-12 giờ đầu, Himawari/nowcast mới đủ độ tươi được chồng thêm để phát hiện diễn biến cục bộ, nhưng không sửa các số q50/q90 gốc của ensemble. "
+    :"Nowcast hiện chưa đủ mới để chồng vào 0-12 giờ đầu; phần này tạm chỉ dùng dự báo tổ hợp cho tới khi có ảnh vệ tinh mới. ";
   $("jotripForecastSummary").textContent=(fresh.stale
     ? fresh.text+". Các mốc vẫn được giữ để tham khảo nhưng không dùng tạo cảnh báo nhanh cho đến khi có chu kỳ mới. "
     : "")+(horizon>=240
     ? "D0-D3 mỗi 6 giờ; D4-D10 mỗi 12 giờ. "
     : "Nguồn hiện tại mới đủ "+Math.round(horizon/24)+" ngày. ")+
-    (watch?watch+" mốc trong vùng có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
-    "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Trong 0-12 giờ đầu, Himawari/nowcast được chồng thêm để phát hiện diễn biến cục bộ nhưng không sửa các số q50/q90 gốc của ensemble. Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
+    (watch?watch+" mốc trong khu vực có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
+    "Mỗi khu vực được tổng hợp từ các điểm theo dõi tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. "+
+    nowcastCopy+
+    "Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
 
   $("ensembleMeta").textContent="Dự báo JoTrip theo khu vực · "+
     fresh.text+" · dữ liệu đầy đủ "+

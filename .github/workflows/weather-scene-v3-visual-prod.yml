@@ -1,0 +1,42 @@
+name: Weather Scene V3 visual production QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "weather-scene-v3-visual-prod.mjs"
+      - ".github/workflows/weather-scene-v3-visual-prod.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  visual-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Capture production visual diffs
+        run: node weather-scene-v3-visual-prod.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weather-scene-v3-visual-prod
+          path: |
+            /tmp/weather-scene-v3-visual.json
+            /tmp/cloud-visible.png
+            /tmp/cloud-hidden.png
+            /tmp/rain-visible.png
+            /tmp/rain-hidden.png
+            /tmp/wind-visible.png
+            /tmp/wind-hidden.png
+            /tmp/wave-visible.png
+            /tmp/wave-hidden.png
+          retention-days: 7

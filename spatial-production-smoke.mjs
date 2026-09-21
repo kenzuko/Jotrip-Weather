@@ -94,6 +94,8 @@ try{
   result.comparisons.windyWind=Boolean(windySrc&&windySrc.includes('embed.windy.com')&&windySrc.includes('overlay=wind'));
 
   await page.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:30000});
+  await page.locator('.jotrip-forecast-panel').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
   await page.locator('.jotrip-forecast-panel').screenshot({path:'/tmp/prod-weather-forecast-mobile.png'});
   result.forecast={
     regions:await page.locator('#forecastRegionTabs button[data-region]').allTextContents(),
@@ -109,6 +111,8 @@ try{
   await desktopOverview.waitFor({state:'visible',timeout:30000});
   await desktopOverview.screenshot({path:'/tmp/prod-weather-overview-desktop.png'});
   await desktop.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:60000});
+  await desktop.locator('.jotrip-forecast-panel').scrollIntoViewIfNeeded();
+  await desktop.waitForTimeout(250);
   await desktop.locator('.jotrip-forecast-panel').screenshot({path:'/tmp/prod-weather-forecast-desktop.png'});
   await desktop.locator('.map-panel').scrollIntoViewIfNeeded();
   await desktop.locator('[data-map="jotrip"]').click();

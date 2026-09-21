@@ -51,6 +51,9 @@ let lastLiveRefreshAt=0;
 let recentFieldFeedback=null;
 let himawariLoopTimer=null;
 let himawariLoopPlaying=true;
+let himawariMap=null;
+let himawariOverlay=null;
+const HIMAWARI_HA1_BOUNDS=[[7.0,99.0],[16.0,110.0]];
 
 async function getJSON(url,ttlMs=120000){
   const sep=url.includes("?")?"&":"?";
@@ -1669,40 +1672,85 @@ function preloadImage(url){
     img.src=url+(url.includes("?")?"&":"?")+"t="+Date.now();
   });
 }
-function stopHimawariLoop(){
+function stopHimawariLoop(removeMap=false){
   if(himawariLoopTimer)clearInterval(himawariLoopTimer);
   himawariLoopTimer=null;
+  if(removeMap&&himawariMap){
+    try{himawariMap.remove()}catch{}
+    himawariMap=null;
+    himawariOverlay=null;
+  }
 }
-async function startHimawariLoop(box,note,state){
-  stopHimawariLoop();
+async function startHimawariLoop(box,note,statusEl){
+  stopHimawariLoop(true);
   himawariLoopPlaying=true;
-  box.innerHTML='<div class="himawari-loop himawari-raw"><div class="himawari-focus"><img id="himawariImg" alt="Ảnh vệ tinh Himawari IR Band 13 - JMA Asia 1"><div class="himawari-ir-badge">JMA · IR B13 · ASIA 1</div></div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
+  const L=await ensureLeaflet();
+
+  box.innerHTML='<div class="himawari-loop himawari-georef"><div id="himawariMap" class="himawari-map" aria-label="Himawari IR Band 13 georeferenced map"></div><div class="himawari-ir-badge">JMA · IR B13 · 99–110°E · 7–16°N</div><div class="himawari-loop-bar"><button id="himawariLoopPlay" type="button" aria-label="Tạm dừng ảnh vệ tinh">❚❚</button><span id="himawariLoopTime">Đang tải chuỗi ảnh...</span><small id="himawariLoopCount"></small></div></div>';
+
   const candidates=mapCandidates();
   const checked=await Promise.all(candidates.map(async x=>({...x,ok:await preloadImage(x.url)})));
   const frames=checked.filter(x=>x.ok).slice(0,9).reverse();
-  const img=$("himawariImg"),time=$("himawariLoopTime"),count=$("himawariLoopCount"),play=$("himawariLoopPlay");
+  const time=$("himawariLoopTime"),count=$("himawariLoopCount"),play=$("himawariLoopPlay");
   if(!frames.length){
     if(note)note.textContent="Chưa tải được chuỗi ảnh Himawari IR trong lần này.";
-    if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}
+    if(statusEl){statusEl.textContent="CHƯA TẢI";statusEl.className="badge deferred"}
     return;
   }
+
+  himawariMap=L.map("himawariMap",{
+    zoomControl:false,
+    attributionControl:true,
+    preferCanvas:true,
+    minZoom:5,
+    maxZoom:10
+  });
+  himawariMap.createPane("himawariImage");
+  himawariMap.getPane("himawariImage").style.zIndex="360";
+  himawariMap.createPane("himawariLabels");
+  himawariMap.getPane("himawariLabels").style.zIndex="430";
+  himawariMap.getPane("himawariLabels").style.pointerEvents="none";
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=cb1_3q98_1_d8112ce70cc7ec9b9276b0a0",{
+    subdomains:"abcd",maxZoom:19,opacity:.78,
+    attribution:'&copy; OpenStreetMap &copy; CARTO'
+  }).addTo(himawariMap);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png?key=cb1_3q98_1_d8112ce70cc7ec9b9276b0a0",{
+    subdomains:"abcd",maxZoom:19,pane:"himawariLabels",opacity:.90
+  }).addTo(himawariMap);
+
   let i=0;
+  himawariOverlay=L.imageOverlay(frames[0].url+"?t="+Date.now(),HIMAWARI_HA1_BOUNDS,{
+    pane:"himawariImage",
+    opacity:.78,
+    interactive:false,
+    crossOrigin:false
+  }).addTo(himawariMap);
+
+  L.circleMarker([10.2172,103.9593],{
+    radius:4,weight:2,color:"#fff",fillColor:"#f0b741",fillOpacity:1
+  }).bindTooltip("Phú Quốc",{permanent:false,direction:"top"}).addTo(himawariMap);
+
+  himawariMap.fitBounds([[8.9,102.45],[11.55,105.45]],{padding:[8,8],animate:false});
+  setTimeout(()=>himawariMap?.invalidateSize(),80);
+
   const show=()=>{
     const f=frames[i];
-    img.src=f.url+"?t="+Date.now();
+    if(himawariOverlay)himawariOverlay.setUrl(f.url+"?t="+Date.now());
     if(time)time.textContent=new Date(f.time).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit",hour12:false});
     if(count)count.textContent=(i+1)+"/"+frames.length;
   };
   const tick=()=>{if(!himawariLoopPlaying)return;i=(i+1)%frames.length;show()};
   show();
-  himawariLoopTimer=setInterval(tick,850);
+  himawariLoopTimer=setInterval(tick,1800);
   play?.addEventListener("click",()=>{
     himawariLoopPlaying=!himawariLoopPlaying;
     play.textContent=himawariLoopPlaying?"❚❚":"▶";
     play.setAttribute("aria-label",himawariLoopPlaying?"Tạm dừng ảnh vệ tinh":"Chạy ảnh vệ tinh");
   });
-  if(note)note.textContent="Himawari IR B13 · ảnh JMA Asia 1 nguyên bản, không crop/đặt marker thủ công. Dùng để đối chiếu cấu trúc mây tổng thể; lớp Mây trong Bản đồ JoTrip mới là lớp đã đưa về tọa độ Phú Quốc.";
-  if(state){state.textContent="GẦN-LIVE";state.className="badge remote"}
+
+  if(note)note.textContent="Himawari IR B13 · JMA High-Resolution Asia 1 được đặt theo đúng phạm vi công bố 99–110°E, 7–16°N. Phú Quốc nằm đúng trên nền bản đồ để đối chiếu mây, không dùng crop/marker ước lượng.";
+  if(statusEl){statusEl.textContent="GẦN-LIVE";statusEl.className="badge remote"}
 }
 function ensureLeaflet(){
   if(window.L)return Promise.resolve(window.L);
@@ -1780,7 +1828,7 @@ async function renderJoTripMap(){
 }
 
 function setMap(type){
-  stopHimawariLoop();
+  stopHimawariLoop(true);
   mapLayer=type;
   document.querySelectorAll("[data-map]").forEach(b=>b.classList.toggle("active",b.dataset.map===type));
   if(!mapStarted)return;

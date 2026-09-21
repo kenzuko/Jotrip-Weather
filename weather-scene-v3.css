@@ -174,3 +174,26 @@ button,a,input{font:inherit}
   }
   .status-card{transition:opacity .16s ease,transform .16s ease}
 }
+
+
+/* Integrated JoTrip Map mode - keeps Weather V2 shell intact and removes duplicate chrome. */
+body.embed-mode{overflow:hidden}
+body.embed-mode .app{height:100dvh;grid-template-rows:minmax(0,1fr)}
+body.embed-mode .topbar{display:none!important}
+body.embed-mode .map-shell{min-height:0}
+body.embed-mode .tabs{top:8px}
+body.embed-mode .status-card{top:50px}
+body.embed-mode .info-btn{top:50px}
+body.embed-mode .source-panel{top:90px}
+body.embed-mode .legend{bottom:86px}
+body.embed-mode .timeline{bottom:8px}
+body.embed-mode .leaflet-control-attribution{opacity:.55}
+@media(max-width:760px){
+  body.embed-mode .app{grid-template-rows:minmax(0,1fr)}
+  body.embed-mode .tabs{top:7px}
+  body.embed-mode .status-card{top:48px}
+  body.embed-mode .info-btn{top:48px}
+  body.embed-mode .source-panel{top:88px}
+  body.embed-mode .legend{bottom:91px}
+  body.embed-mode .timeline{bottom:7px}
+}

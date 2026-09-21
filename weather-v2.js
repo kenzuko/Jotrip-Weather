@@ -600,21 +600,40 @@ function rainActualContext(){
   }
   return "Trạm mưa gần nhất: "+name+" · cách "+dist+" km.";
 }
+function weatherCondition(rain,conv,wind){
+  rain=num(rain)||0;conv=num(conv)||0;wind=num(wind)||0;
+  if(conv>=75&&rain>=1)return {label:"Mưa dông cục bộ",icon:"⛈️",mood:"storm"};
+  if(rain>=3)return {label:"Đang có mưa",icon:"🌧️",mood:"storm"};
+  if(rain>=.2)return {label:"Có mưa nhẹ hoặc rải rác",icon:"🌦️",mood:"watch"};
+  if(conv>=60)return {label:"Mây đang phát triển",icon:"☁️",mood:"watch"};
+  if(wind>=28)return {label:"Gió khá mạnh",icon:"💨",mood:"watch"};
+  if(conv>=25)return {label:"Nhiều mây",icon:"⛅",mood:"calm"};
+  return {label:"Thời tiết tương đối ổn",icon:"🌤️",mood:"calm"};
+}
 function renderHero(){
-  const p=point(),l=p.local||{},m=p.model||{},n=p.nowcast||{};
+  const p=point(),l=p.local||{},m=p.model||{},n=effectiveNowcast();
   $("placeName").textContent=p.name||current;
   const localFresh=localDataFresh();
   const t=localFresh?(num(l.temperature_c)??num(m.temperature_c)):num(m.temperature_c);
+  const rain=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
+  const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
+  const wave=localFresh?(num(l.wave_hs_m)??num(m.wave_hs_m)):num(m.wave_hs_m);
+  const conv=num(n?.convective_score??l.convection_score);
+  const condition=weatherCondition(rain,conv,wind);
+
   $("heroTemp").textContent=t===null?"--":fmt(t,1)+"°";
-  $("heroTempClass").textContent=localFresh&&l.available?"ƯỚC TÍNH":"MÔ HÌNH";
+  $("heroTempClass").textContent=localFresh&&l.available?"ƯỚC TÍNH HIỆN TẠI":"MÔ HÌNH";
+  $("heroCondition").textContent=condition.label;
+  $("heroWeatherIcon").textContent=condition.icon;
+  $("heroRain").textContent=rain===null?"--":fmt(rain,1);
+  $("heroWind").textContent=wind===null?"--":fmt(wind,0);
+  $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   $("heroSummary").textContent=summary(p);
   $("updatedAt").textContent="Cập nhật "+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
   if($("scenePoint"))$("scenePoint").textContent=p.name||current;
   if($("sceneTemp"))$("sceneTemp").textContent=t===null?"--":fmt(t,1)+"°";
   if($("sceneUpdated"))$("sceneUpdated").textContent=(localFresh?"JoTrip Local Now":"JoTrip gần nhất")+" · "+ageText(liveTimestamp());
-  const rain=num(l.rain_rate_mm_h)||0,conv=num(n.convective_score??l.convection_score)||0,wind=num(l.wind_kmh??m.wind_kmh)||0;
-  const mood=(conv>=70||rain>=3)?"storm":(conv>=50||rain>=.5||wind>=28)?"watch":"calm";
-  document.querySelector(".hero")?.setAttribute("data-mood",mood);
+  document.querySelector(".weather-overview")?.setAttribute("data-mood",condition.mood);
 }
 
 function renderCurrent(){
@@ -1024,6 +1043,15 @@ function worstConfidence(values){
   const rank={"THẬN TRỌNG":3,"TRUNG BÌNH":2,"KHÁ":1};
   return values.sort((a,b)=>(rank[b]||0)-(rank[a]||0))[0]||"-";
 }
+function dailyWeatherSummary(rainMax,rainProb,windMax,hasNowcastImpact){
+  rainMax=num(rainMax);rainProb=num(rainProb)||0;windMax=num(windMax)||0;
+  if(hasNowcastImpact)return {icon:"⛈️",label:"Mưa dông cần theo dõi",cls:"watch"};
+  if(rainMax!==null&&rainMax>=5)return {icon:"🌧️",label:"Có lúc mưa nhiều",cls:"watch"};
+  if(rainProb>=.50)return {icon:"🌦️",label:"Dễ có mưa rào",cls:"watch"};
+  if(windMax>=30)return {icon:"💨",label:"Gió khá mạnh",cls:"variable"};
+  if(rainProb>=.25)return {icon:"⛅",label:"Có thể có mưa",cls:"variable"};
+  return {icon:"🌤️",label:"Khá ổn",cls:"stable"};
+}
 function renderForecastDayRibbon(rows){
   const root=$("forecastDayRibbon");if(!root)return;
   const groups=new Map();
@@ -1033,33 +1061,29 @@ function renderForecastDayRibbon(rows){
     groups.get(day.key).rows.push(r);
   });
   const days=[...groups.values()].slice(0,10);
-  root.innerHTML=days.map(({day,rows})=>{
+  root.innerHTML=days.map(({day,rows},index)=>{
     const temps=rows.map(r=>num(r.temperature_c)).filter(v=>v!==null);
     const winds=rows.map(r=>num(r.wind_kmh)).filter(v=>v!==null);
-    const windQ90=rows.map(r=>num(r.wind_q90_kmh)).filter(v=>v!==null);
     const rains=rows.map(r=>num(r.rain_mm)).filter(v=>v!==null);
-    const rainQ90=rows.map(r=>num(r.rain_q90_mm)).filter(v=>v!==null);
     const rainProb=Math.max(0,...rows.map(r=>num(r.rain_prob_5)).filter(v=>v!==null));
-    const windProb=Math.max(0,...rows.map(r=>num(r.wind_prob_30)).filter(v=>v!==null));
-    let state=forecastCardState(windProb,rainProb);
     const hasNowcastImpact=rows.some(r=>
       r.nowcast_overlay?.operational_impact===true &&
       ["HIGH","ELEVATED"].includes(String(r.nowcast_overlay?.level||"").toUpperCase())
     );
-    if(hasNowcastImpact)state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
     const windMax=winds.length?Math.max(...winds):null;
-    const windHigh=windQ90.length?Math.max(...windQ90):null;
     const rainMax=rains.length?Math.max(...rains):null;
-    const rainHigh=rainQ90.length?Math.max(...rainQ90):null;
-    const bft=beaufort(windMax||0);
-    const conf=worstConfidence(rows.map(r=>r.confidence_band).filter(Boolean));
-    const confScore=Math.min(...rows.map(rowConfidence));
-    return '<article class="forecast-day '+state.cls+'">'+
-      '<header><b>'+esc(day.label)+'</b><span>'+esc(day.date)+'</span></header>'+
-      '<strong>'+(temps.length?fmt(Math.min(...temps),0)+'-'+fmt(Math.max(...temps),0)+'°':'-')+'</strong>'+
-      '<div><span>Mưa ước tính</span><b>'+(rainMax===null?'-':'~'+fmt(rainMax,1)+' mm/mốc')+'</b></div>'+
-      '<div><span>Gió ước tính</span><b>'+(windMax===null?'-':fmt(windMax,0)+' km/h · Bft '+bft.force)+'</b></div>'+
-      '<small>Biên cao q90: mưa '+(rainHigh===null?'-':fmt(rainHigh,1)+' mm')+' · gió '+(windHigh===null?'-':fmt(windHigh,0)+' km/h')+'<br>Tin cậy '+confScore+'/100 · '+esc(conf)+'</small>'+
+    const state=dailyWeatherSummary(rainMax,rainProb,windMax,hasNowcastImpact);
+    const tempText=temps.length?fmt(Math.min(...temps),0)+"° - "+fmt(Math.max(...temps),0)+"°":"-";
+    const meta=[
+      rainMax===null?null:"Mưa ~"+fmt(rainMax,1)+" mm",
+      windMax===null?null:"Gió "+fmt(windMax,0)+" km/h"
+    ].filter(Boolean).join(" · ");
+    return '<article class="forecast-day '+state.cls+(index===0?' selected':'')+'">'+
+      '<header><b>'+esc(day.date)+'</b><span>'+esc(day.label)+'</span></header>'+
+      '<div class="forecast-day-icon" aria-hidden="true">'+state.icon+'</div>'+
+      '<strong>'+tempText+'</strong>'+
+      '<h4>'+esc(state.label)+'</h4>'+
+      '<small>'+esc(meta||"Đang cập nhật")+'</small>'+
     '</article>';
   }).join("")||'<span class="inline-loader">Chưa đủ dữ liệu để tóm tắt 10 ngày.</span>';
 }

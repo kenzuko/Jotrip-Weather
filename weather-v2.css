@@ -1768,3 +1768,452 @@ footer{font-size:9.5px}
     z-index:1200;
   }
 }
+
+
+/* V2.10 - traveller-first weather visual
+   Keep the existing data/decision logic. This layer only makes the public surface
+   read like a familiar weather app before exposing technical detail. */
+.weather-overview{
+  position:relative;
+  margin:14px 0 12px;
+  padding:28px 30px;
+  border:1px solid rgba(26,70,87,.10);
+  border-radius:28px;
+  background:#fff!important;
+  box-shadow:0 10px 32px rgba(20,55,70,.055);
+  overflow:hidden;
+}
+.weather-overview:after{
+  content:"";
+  position:absolute;
+  width:190px;height:190px;
+  right:-74px;top:-92px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(77,174,190,.10),rgba(77,174,190,0) 68%);
+  pointer-events:none;
+}
+.weather-overview[data-mood="watch"],
+.weather-overview[data-mood="storm"]{background:#fff!important}
+
+.weather-overview-head{
+  position:relative;
+  z-index:1;
+  padding-bottom:15px;
+  border-bottom:0;
+}
+.weather-overview-head h1{
+  margin-top:4px;
+  font-size:clamp(26px,3vw,36px);
+  color:#153b4c;
+}
+.weather-overview-head .updated{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  margin:0;
+  padding:6px 10px;
+  border:1px solid rgba(31,72,88,.09);
+  border-radius:999px;
+  background:#f7fafb;
+  color:#6c828d;
+  font-size:10px;
+}
+.weather-overview-head .updated:before{
+  content:"";
+  width:6px;height:6px;
+  margin-right:6px;
+  border-radius:50%;
+  background:#4ba37b;
+}
+
+.weather-overview-main{
+  position:relative;
+  z-index:1;
+  grid-template-columns:minmax(0,1.45fr) minmax(250px,.55fr);
+  gap:30px;
+  padding-top:6px;
+}
+.weather-now-primary{
+  grid-template-columns:78px auto minmax(0,1fr);
+  gap:18px;
+  min-height:150px;
+}
+.weather-now-icon{
+  width:74px;height:74px;
+  border-radius:22px;
+  background:linear-gradient(180deg,#f2fafb,#e8f5f6);
+  font-size:44px;
+  box-shadow:inset 0 0 0 1px rgba(48,118,137,.06);
+}
+.weather-now-temp{min-width:144px}
+.weather-now-temp strong{
+  font-size:clamp(64px,7vw,88px);
+  color:#102f3e;
+  line-height:.86;
+  letter-spacing:-.075em;
+}
+.weather-now-temp span{
+  margin-top:11px;
+  padding:5px 9px;
+  background:#eef6f6;
+  color:#55737c;
+  font-size:8px;
+  letter-spacing:.08em;
+}
+.weather-now-copy{
+  padding-left:22px;
+  border-left:1px solid rgba(31,72,88,.12);
+}
+.weather-now-copy b{
+  color:#244a5a;
+  font-size:23px;
+  line-height:1.15;
+  letter-spacing:-.02em;
+}
+.weather-now-copy p{
+  display:-webkit-box;
+  max-width:520px;
+  margin-top:8px;
+  overflow:hidden;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  color:#687f8a;
+  font-size:12px;
+  line-height:1.55;
+}
+
+.weather-now-facts{
+  align-self:center;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  min-height:auto;
+  padding-left:24px;
+  border-left:1px solid rgba(31,72,88,.11);
+}
+.weather-now-facts>div{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:baseline;
+  gap:5px;
+  min-height:0;
+  padding:10px 0;
+  border:0;
+  border-bottom:1px solid rgba(31,72,88,.07);
+  border-radius:0;
+  background:transparent;
+}
+.weather-now-facts>div:last-child{border-bottom:0}
+.weather-now-facts span{
+  color:#6f838d;
+  font-size:11px;
+  font-weight:680;
+}
+.weather-now-facts b{
+  margin:0;
+  color:#234b5d;
+  font-size:21px;
+  letter-spacing:-.035em;
+}
+.weather-now-facts small{
+  margin:0;
+  color:#8798a0;
+  font-size:9px;
+}
+
+.point-tabs{padding-top:5px}
+.point-tabs button{
+  min-height:38px;
+  padding:9px 14px!important;
+  font-size:10.5px!important;
+}
+.section-intro-simple{margin-top:28px}
+.section-intro-simple h2{font-size:24px}
+
+/* 72-hour chart should look like a readable weather timeline, not a diagnostics plot. */
+.intraday-panel{
+  margin-top:16px;
+  padding:22px;
+  border-radius:22px;
+  background:#fff;
+}
+.intraday-tabs{
+  gap:8px;
+  padding:4px 0 12px;
+}
+.intraday-tabs button{
+  min-height:38px;
+  padding:8px 14px;
+  border-color:rgba(31,72,88,.10);
+  background:#f7fafb;
+  color:#5f7782;
+  font-size:10.5px;
+  box-shadow:none;
+}
+.intraday-tabs button.active{
+  background:#173f57;
+  border-color:#173f57;
+  color:#fff;
+  box-shadow:none;
+}
+.intraday-chart-shell{
+  border-color:rgba(31,72,88,.09);
+  border-radius:18px;
+  background:#fff;
+  scrollbar-color:#c8d5db transparent;
+}
+.chart-grid{stroke:#e6eef1}
+.chart-time-grid{stroke:#edf2f4;stroke-dasharray:2 5}
+.chart-axis-label{fill:#82939b}
+.chart-axis-date{fill:#425e6b}
+.intraday-under{margin-top:12px}
+.intraday-focus{
+  border-color:rgba(31,72,88,.08);
+  border-radius:14px;
+  background:#f7fafb;
+  text-align:left;
+}
+.intraday-focus b{font-size:11px}
+.intraday-focus span{font-size:9.5px}
+
+/* 10-day surface: large, scannable daily cards. Technical 6/12h rows stay one tap away. */
+.jotrip-forecast-panel{
+  padding:24px;
+  border-radius:24px;
+  background:#fff;
+}
+.jotrip-forecast-panel .panel-head{align-items:flex-start}
+.jotrip-forecast-panel .panel-note{
+  max-width:760px;
+  margin-top:8px;
+  color:#667f8a;
+  font-size:11.5px;
+  line-height:1.55;
+}
+.forecast-region-tabs{
+  gap:8px!important;
+  margin:14px 0 4px!important;
+}
+.forecast-region-tabs button{
+  min-height:40px;
+  padding:9px 15px!important;
+  border-color:rgba(31,72,88,.10)!important;
+  background:#f8fafb!important;
+  color:#5c7580!important;
+  font-size:10.5px!important;
+  font-weight:760!important;
+  box-shadow:none!important;
+}
+.forecast-region-tabs button.active{
+  background:#173f57!important;
+  border-color:#173f57!important;
+  color:#fff!important;
+}
+.forecast-region-meta{
+  justify-content:flex-start!important;
+  gap:12px!important;
+  margin:0!important;
+  padding:7px 2px 13px!important;
+  background:transparent!important;
+  color:#80919a!important;
+  font-size:9px!important;
+}
+.forecast-region-meta b{
+  color:#375a69!important;
+  font-size:10.5px!important;
+}
+.forecast-region-meta span:before{
+  content:"•";
+  margin-right:8px;
+  color:#9caab0;
+}
+
+.forecast-day-ribbon{
+  display:grid!important;
+  grid-auto-flow:column!important;
+  grid-auto-columns:minmax(168px,184px)!important;
+  gap:10px!important;
+  margin:2px 0 14px!important;
+  padding:3px 2px 12px!important;
+  overflow-x:auto!important;
+  scroll-snap-type:x proximity;
+}
+.forecast-day{
+  position:relative;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  min-height:218px!important;
+  padding:15px 13px!important;
+  border:1px solid rgba(31,72,88,.09)!important;
+  border-radius:18px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  text-align:center;
+  scroll-snap-align:start;
+}
+.forecast-day.selected{
+  border-color:#79b7bd!important;
+  background:linear-gradient(180deg,#fbffff,#f4fbfb)!important;
+  box-shadow:0 0 0 2px rgba(79,155,164,.08)!important;
+}
+.forecast-day.selected:before{
+  content:"";
+  position:absolute;
+  left:18px;right:18px;top:-1px;
+  height:3px;
+  border-radius:0 0 99px 99px;
+  background:#4c9ca6;
+}
+.forecast-day.watch{background:#fffdfa!important}
+.forecast-day.variable{background:#fbfcfe!important}
+.forecast-day header{
+  display:grid!important;
+  gap:3px!important;
+  justify-items:center;
+}
+.forecast-day header b{
+  color:#203f4e!important;
+  font-size:15px!important;
+  font-weight:820!important;
+}
+.forecast-day header span{
+  color:#81929a!important;
+  font-size:9px!important;
+  font-weight:720!important;
+}
+.forecast-day-icon{
+  margin:14px 0 8px;
+  font-size:38px;
+  filter:saturate(.92);
+}
+.forecast-day>strong{
+  color:#173e50!important;
+  font-size:20px!important;
+}
+.forecast-day h4{
+  min-height:30px;
+  margin:9px 0 0;
+  color:#324f5c;
+  font-size:12px;
+  line-height:1.25;
+}
+.forecast-day>small{
+  margin-top:auto!important;
+  padding-top:10px;
+  color:#7b8f98!important;
+  font-size:8.8px!important;
+  line-height:1.45!important;
+}
+
+.forecast-detail-toggle{
+  margin-top:2px;
+  border:1px solid rgba(31,72,88,.09);
+  border-radius:15px;
+  background:#fafcfc;
+  overflow:hidden;
+}
+.forecast-detail-toggle>summary{
+  cursor:pointer;
+  list-style:none;
+  padding:12px 14px;
+  color:#536f7b;
+  font-size:10.5px;
+  font-weight:800;
+}
+.forecast-detail-toggle>summary::-webkit-details-marker{display:none}
+.forecast-detail-toggle>summary:after{
+  content:"＋";
+  float:right;
+  color:#8ca0a8;
+  font-size:14px;
+  line-height:1;
+}
+.forecast-detail-toggle[open]>summary{
+  border-bottom:1px solid rgba(31,72,88,.08);
+  background:#fff;
+}
+.forecast-detail-toggle[open]>summary:after{content:"−"}
+.forecast-detail-toggle .forecast-table-shell{
+  margin:0;
+  border:0;
+  border-radius:0;
+}
+
+@media(max-width:980px){
+  .weather-overview-main{grid-template-columns:1fr;gap:14px}
+  .weather-now-facts{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+    padding-left:0;
+    border-left:0;
+  }
+  .weather-now-facts>div{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:12px 10px;
+    border:1px solid rgba(31,72,88,.08);
+    border-radius:14px;
+    background:#f8fbfb;
+  }
+}
+@media(max-width:640px){
+  .weather-overview{
+    padding:18px 16px;
+    border-radius:22px;
+  }
+  .weather-overview-head{padding-bottom:10px}
+  .weather-overview-head .updated{font-size:8.7px}
+  .weather-overview-main{padding-top:4px}
+  .weather-now-primary{
+    grid-template-columns:58px 94px minmax(0,1fr);
+    min-height:118px;
+    gap:10px;
+  }
+  .weather-now-icon{
+    width:56px;height:56px;
+    border-radius:18px;
+    font-size:33px;
+  }
+  .weather-now-temp strong{font-size:48px}
+  .weather-now-temp span{font-size:6.8px;margin-top:7px}
+  .weather-now-copy{padding-left:10px}
+  .weather-now-copy b{font-size:14px}
+  .weather-now-copy p{
+    margin-top:4px;
+    font-size:9px;
+    line-height:1.4;
+    -webkit-line-clamp:2;
+  }
+  .weather-now-facts{gap:6px}
+  .weather-now-facts>div{padding:10px 8px}
+  .weather-now-facts span{font-size:7.6px}
+  .weather-now-facts b{font-size:18px}
+  .weather-now-facts small{font-size:7px}
+  .intraday-panel{padding:15px}
+  .intraday-tabs button{min-height:36px;padding:8px 12px;font-size:10px}
+  .intraday-under{grid-template-columns:1fr}
+  .intraday-focus{min-width:0;max-width:none}
+  .jotrip-forecast-panel{padding:16px;border-radius:20px}
+  .jotrip-forecast-panel .panel-note{font-size:10.5px}
+  .forecast-region-tabs{margin-right:-8px!important}
+  .forecast-region-tabs button{min-height:38px;font-size:10px!important}
+  .forecast-region-meta{display:flex!important}
+  .forecast-region-meta span{margin:0!important;text-align:left!important}
+  .forecast-day-ribbon{grid-auto-columns:148px!important;margin-right:-8px!important}
+  .forecast-day{min-height:205px!important;padding:13px 11px!important}
+  .forecast-day-icon{font-size:33px}
+  .forecast-day>strong{font-size:18px!important}
+  .forecast-day h4{font-size:11px}
+}
+@media(max-width:390px){
+  .weather-now-primary{grid-template-columns:52px 84px minmax(0,1fr)}
+  .weather-now-icon{width:50px;height:50px;font-size:30px}
+  .weather-now-temp strong{font-size:43px}
+  .weather-now-copy b{font-size:13px}
+  .forecast-region-meta{display:block!important}
+  .forecast-region-meta span:before{display:none}
+  .forecast-region-meta span{display:block!important;margin-top:3px!important}
+}

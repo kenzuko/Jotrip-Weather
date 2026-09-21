@@ -4,7 +4,7 @@ const files=[
   'weather-runtime-config.js',
   'weather-scene-v3.html',
   'weather-scene-v3.js',
-  'weather-scene-render-v1.js'
+  'weather-scene-render-v2.js'
 ];
 
 const banned=[

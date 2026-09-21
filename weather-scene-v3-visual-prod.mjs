@@ -1,4 +1,4 @@
-// rerun after V2 renderer production deploy
+// rerun after duplicate render path removal
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 

@@ -83,11 +83,19 @@
     <small class="quick-watch-foot">Chỉ hiện tình huống còn hiệu lực. Khi mưa, gió hoặc vùng mây đã qua và dữ liệu mới không còn đạt ngưỡng theo dõi, mục đó tự biến mất.</small>
   </section>
 
-  <section class="status-strip" aria-label="Tổng quan toàn đảo">
-    <div><span>Khuyến nghị chung</span><b id="decisionNow">-</b></div>
-    <div><span>Độ phủ dữ liệu</span><b id="completenessNow">-</b></div>
-    <div><span>Mức tin cậy</span><b id="confidenceNow">-</b></div>
-    <div><span>Tầm dự báo</span><b id="horizonNow">-</b></div>
+  <section class="decision-strip" aria-label="Tình hình chung">
+    <div class="decision-strip-main">
+      <span>Tình hình chung</span>
+      <b id="decisionNow">-</b>
+    </div>
+    <details class="data-health-details">
+      <summary>Chất lượng dữ liệu</summary>
+      <div class="status-strip data-health-strip" aria-label="Chất lượng dữ liệu thời tiết">
+        <div><span>Độ phủ dữ liệu</span><b id="completenessNow">-</b></div>
+        <div><span>Mức tin cậy</span><b id="confidenceNow">-</b></div>
+        <div><span>Tầm dự báo</span><b id="horizonNow">-</b></div>
+      </div>
+    </details>
   </section>
   <nav id="pointTabs" class="point-tabs" aria-label="Điểm theo dõi thời tiết">
     <span class="inline-loader">Đang tải danh sách điểm...</span>

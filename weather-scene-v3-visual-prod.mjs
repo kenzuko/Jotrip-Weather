@@ -1,3 +1,4 @@
+// rerun after mapPane fix
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 

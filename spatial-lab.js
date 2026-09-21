@@ -596,12 +596,12 @@ function drawRainPatches(rows){
   for(const p of pts){
     if(p.n<.012)continue;
     const rgb=colorAt("rain",p.n);
-    const alpha=clamp(.22+Math.pow(p.n,.66)*.62,.22,.86);
-    const r=radius*(.88+p.n*.38);
+    const alpha=clamp(.34+Math.pow(p.n,.62)*.58,.34,.92);
+    const r=radius*(.94+p.n*.42);
     const g=ctx.createRadialGradient(p.x,p.y,r*.10,p.x,p.y,r);
     g.addColorStop(0,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+alpha.toFixed(3)+")");
-    g.addColorStop(.44,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.78).toFixed(3)+")");
-    g.addColorStop(.78,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.34).toFixed(3)+")");
+    g.addColorStop(.42,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.84).toFixed(3)+")");
+    g.addColorStop(.80,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+","+(alpha*.40).toFixed(3)+")");
     g.addColorStop(1,"rgba("+rgb[0]+","+rgb[1]+","+rgb[2]+",0)");
     ctx.fillStyle=g;
     ctx.beginPath();
@@ -763,7 +763,7 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
   for(let y=0;y<c.height;y++){
     for(let x=0;x<c.width;x++){
       const pos=y*c.width+x,v=densityField[pos];
-      if(v<.07)continue;
+      if(v<.035)continue;
       const density=clamp((v-.04)/.96,0,1);
       const coldN=coldField[pos];
 
@@ -781,8 +781,8 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
 
       const coldC=-(15+coldN*70);
       const core=coldCoreColor(coldC);
-      const base=[214,222,230];
-      const coreMix=clamp((coldN-.28)*1.35,0,.92);
+      const base=[119,139,153];
+      const coreMix=clamp((coldN-.20)*1.48,0,.94);
       const k=pos*4;
       const rr=base[0]*(1-coreMix)+core[0]*coreMix;
       const gg=base[1]*(1-coreMix)+core[1]*coreMix;
@@ -790,7 +790,7 @@ function drawCloudMass(rows,{clear=true,alphaScale=1}={}){
       img.data[k]=Math.round(clamp(rr*relief,0,255));
       img.data[k+1]=Math.round(clamp(gg*relief,0,255));
       img.data[k+2]=Math.round(clamp(bb*relief,0,255));
-      img.data[k+3]=Math.round(226*alphaScale*Math.pow(density,.76));
+      img.data[k+3]=Math.round(244*alphaScale*clamp(.28+Math.pow(density,.70)*.72,.28,1));
     }
   }
   ctx.putImageData(img,0,0);
@@ -1010,13 +1010,13 @@ function renderField(){
 
   // 24h accumulation is a scalar field: location and amount matter, not motion.
   if(state.layer==="rain24"){
-    drawIDW(rows,"rain24",innerWidth<760?.72:.62);
+    drawIDW(rows,"rain24",innerWidth<760?.84:.72);
     return;
   }
 
   // Wave height is secondary context; short direction strokes do the explaining.
   if(state.layer==="waves"){
-    drawIDW(rows,"waves",innerWidth<760?.42:.34);
+    drawIDW(rows,"waves",innerWidth<760?.58:.46);
     return;
   }
 
@@ -1227,9 +1227,9 @@ function startParticles(rows,kind){
         ctx.strokeStyle="rgba(15,67,90,"+(0.34+strength*.48).toFixed(3)+")";
         ctx.lineWidth=(innerWidth<700?.86:.78)+strength*(innerWidth<700?.48:.40);
       }else if(kind==="current"){
-        const strength=clamp((n.mag||0)/1.6,0,1);
-        ctx.strokeStyle="rgba(16,112,121,"+(0.30+strength*.38).toFixed(3)+")";
-        ctx.lineWidth=(innerWidth<700?.76:.70)+strength*.28;
+        const strength=clamp((n.mag||0)/1.2,0,1);
+        ctx.strokeStyle="rgba(10,103,116,"+(0.42+strength*.40).toFixed(3)+")";
+        ctx.lineWidth=(innerWidth<700?.88:.78)+strength*.34;
       }
       ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(nx,ny);ctx.stroke();
       p.x=nx;p.y=ny;p.age++;
@@ -1540,13 +1540,20 @@ function updateReadout(){
     const score=num(row?.convective_score);
     const high=num(row?.cloud_top_high_m??row?.cloud_top_median_m);
     const cold=num(row?.cloud_top_cold_c??row?.cloud_top_median_c);
-    const label=score!==null&&score>=75?"MÂY RẤT CAO":score!==null&&score>=50?"MÂY CAO":score!==null&&score>=25?"MÂY PHÁT TRIỂN":"MÂY THẤP";
+    const label=(high!==null&&high>=10000)||(cold!==null&&cold<=-50)
+      ?"MÂY RẤT CAO"
+      :(high!==null&&high>=7000)||(cold!==null&&cold<=-35)
+        ?"MÂY CAO"
+        :(high!==null&&high>=3500)
+          ?"MÂY TRUNG TẦNG"
+          :"MÂY THẤP";
     const detail=[];
     if(high!==null)detail.push("đỉnh khoảng "+fmt(high/1000,1)+" km");
     if(cold!==null)detail.push(fmt(cold,0)+"°C");
+    if(score!==null&&score>=50)detail.push("đang phát triển");
     $("readoutSource").textContent="HIMAWARI · MÂY";
     $("readoutValue").textContent=label;$("readoutUnit").textContent="";
-    $("readoutMeta").textContent=detail.length?detail.join(" · "):(score>=75?"Có vùng mây rất cao, cần theo dõi mưa dông":score>=50?"Mây cao đang phát triển":"Chưa thấy khối mây cao nổi bật");
+    $("readoutMeta").textContent=detail.length?detail.join(" · "):"Chưa đủ dữ liệu mô tả khối mây";
   }
 }
 
@@ -1744,9 +1751,16 @@ function flagMetric(lat,lon){
   if(state.layer==="rain24")return {value:fmt(row?.rain24_mm,1),unit:"mm",sub:"ECMWF · next 24h"};
   if(state.layer==="waves")return {value:fmt(validWaveHs(row?.wave_hs_m),1),unit:"m",sub:"Sóng từ "+directionText(row?.wave_direction_deg)};
   if(state.layer==="current")return {value:fmt(row?.speed_kmh,2),unit:"km/h",sub:"Chảy về "+directionText(row?.direction_toward_deg)};
-  const score=num(row?.convective_score);
-  const cloudLabel=score!==null&&score>=75?"Mây rất cao":score!==null&&score>=50?"Mây cao":score!==null&&score>=25?"Mây phát triển":"Mây thấp";
-  return {value:cloudLabel,unit:"",sub:"Himawari · trạng thái khối mây"};
+  const high=num(row?.cloud_top_high_m??row?.cloud_top_median_m);
+  const cold=num(row?.cloud_top_cold_c??row?.cloud_top_median_c);
+  const cloudLabel=(high!==null&&high>=10000)||(cold!==null&&cold<=-50)
+    ?"Mây rất cao"
+    :(high!==null&&high>=7000)||(cold!==null&&cold<=-35)
+      ?"Mây cao"
+      :(high!==null&&high>=3500)
+        ?"Mây trung tầng"
+        :"Mây thấp";
+  return {value:cloudLabel,unit:"",sub:"Himawari · độ cao đỉnh mây"};
 }
 function updateSelectionFlag(){
   if(!state.flagMarker)return;

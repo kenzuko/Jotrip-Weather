@@ -523,8 +523,8 @@ function drawVectorTexture(rows,kind){
 
   ctx.save();
   ctx.lineCap="round";
-  ctx.globalCompositeOperation="soft-light";
-  ctx.lineWidth=kind==="waves"?0.85:0.75;
+  ctx.globalCompositeOperation="source-over";
+  ctx.lineWidth=kind==="waves"?0.95:0.75;
 
   let salt=kind==="waves"?7:kind==="current"?13:3;
   for(let y=step/2;y<c.height;y+=step){
@@ -543,7 +543,9 @@ function drawVectorTexture(rows,kind){
           ?clamp((n.mag||0)/2,.15,.62)
           :clamp((n.mag||0)*2.2,.12,.55);
       const l=len*(.65+strength*.7);
-      ctx.strokeStyle="rgba(255,255,255,"+(0.07+strength*.12).toFixed(3)+")";
+      ctx.strokeStyle=kind==="waves"
+        ?"rgba(17,72,96,"+(0.20+strength*.30).toFixed(3)+")"
+        :"rgba(255,255,255,"+(0.07+strength*.12).toFixed(3)+")";
       ctx.beginPath();
       ctx.moveTo(p.x-ux*l*.45,p.y-uy*l*.45);
       ctx.lineTo(p.x+ux*l*.55,p.y+uy*l*.55);
@@ -558,7 +560,9 @@ function drawVectorTexture(rows,kind){
       if(kind==="waves"||kind==="current"){
         const hx=p.x+ux*l*.55,hy=p.y+uy*l*.55;
         const back=kind==="waves"?3.8:2.3,wing=kind==="waves"?2.2:1.25;
-        ctx.strokeStyle="rgba(255,255,255,"+(kind==="waves"?(0.22+strength*.28):(0.13+strength*.18)).toFixed(3)+")";
+        ctx.strokeStyle=kind==="waves"
+          ?"rgba(11,64,88,"+(0.34+strength*.34).toFixed(3)+")"
+          :"rgba(255,255,255,"+(0.13+strength*.18).toFixed(3)+")";
         ctx.beginPath();
         ctx.moveTo(hx,hy);
         ctx.lineTo(hx-ux*back-uy*wing,hy-uy*back+ux*wing);
@@ -1119,8 +1123,8 @@ function resetParticles(){
   const lowMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobile=innerWidth<700;
   const kind=state.layer==="current"?"current":"wind";
-  const normalCount=kind==="wind"?(mobile?300:500):(mobile?120:210);
-  const reducedCount=kind==="wind"?(mobile?100:150):(mobile?70:110);
+  const normalCount=kind==="wind"?(mobile?330:520):(mobile?145:230);
+  const reducedCount=kind==="wind"?(mobile?120:175):(mobile?80:120);
   const count=lowMotion?reducedCount:normalCount;
   state.particles=Array.from({length:count},()=>({
     x:Math.random()*c.width,y:Math.random()*c.height,
@@ -1181,12 +1185,12 @@ function startParticles(rows,kind){
     ctx.fillStyle=lowMotion?"rgba(0,0,0,.075)":"rgba(0,0,0,.036)";
     ctx.fillRect(0,0,c.width,c.height);
     ctx.globalCompositeOperation="source-over";
-    ctx.strokeStyle=kind==="current"?"rgba(185,235,232,.45)":"rgba(245,252,255,.60)";
+    ctx.strokeStyle=kind==="current"?"rgba(20,112,120,.58)":"rgba(17,70,92,.62)";
     ctx.lineWidth=innerWidth<700
-      ?(kind==="current"?1.0:1.15)
-      :(kind==="current"?.92:1.05);
-    ctx.shadowColor="rgba(0,0,0,.46)";
-    ctx.shadowBlur=1.15;
+      ?(kind==="current"?1.05:1.16)
+      :(kind==="current"?.96:1.06);
+    ctx.shadowColor="rgba(255,255,255,.42)";
+    ctx.shadowBlur=.75;
     const dpr=Number(c.dataset.dpr)||1;
     const pv=state.particleRows.map(r=>{
       const p=state.map.latLngToContainerPoint([r.lat,r.lon]);
@@ -1220,12 +1224,12 @@ function startParticles(rows,kind){
       const nx=p.x+p.vx*trail,ny=p.y+p.vy*trail;
       if(kind==="wind"){
         const strength=clamp((n.mag||0)/12,0,1);
-        ctx.strokeStyle="rgba(248,253,255,"+(0.28+strength*.55).toFixed(3)+")";
-        ctx.lineWidth=(innerWidth<700?.78:.72)+strength*(innerWidth<700?.42:.36);
+        ctx.strokeStyle="rgba(15,67,90,"+(0.34+strength*.48).toFixed(3)+")";
+        ctx.lineWidth=(innerWidth<700?.86:.78)+strength*(innerWidth<700?.48:.40);
       }else if(kind==="current"){
         const strength=clamp((n.mag||0)/1.6,0,1);
-        ctx.strokeStyle="rgba(189,238,234,"+(0.20+strength*.34).toFixed(3)+")";
-        ctx.lineWidth=(innerWidth<700?.70:.66)+strength*.22;
+        ctx.strokeStyle="rgba(16,112,121,"+(0.30+strength*.38).toFixed(3)+")";
+        ctx.lineWidth=(innerWidth<700?.76:.70)+strength*.28;
       }
       ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(nx,ny);ctx.stroke();
       p.x=nx;p.y=ny;p.age++;
@@ -1266,7 +1270,7 @@ function showRadar(i){
 function playRadar(){
   stopTimer();
   $("playBtn").textContent="❚❚";
-  state.timer=setInterval(()=>showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1)),800);
+  state.timer=setInterval(()=>showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1)),1300);
 }
 
 function pointMetricLabel(id){
@@ -1594,7 +1598,7 @@ function togglePlay(){
   if(state.timer){stopTimer();return}
   $("playBtn").textContent="❚❚";
   if(state.layer==="radar"){
-    state.timer=setInterval(()=>{showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1));$("timeSlider").value=state.radarIndex},800);
+    state.timer=setInterval(()=>{showRadar((state.radarIndex+1)%(state.radarMeta?.frames?.length||1));$("timeSlider").value=state.radarIndex},1300);
   }else if(state.layer==="storm"){
     const max=Number($("timeSlider").max)||0;
     state.cloudTween=0;
@@ -1609,14 +1613,14 @@ function togglePlay(){
       }
       renderField();
       updateReadout();
-    },150);
+    },250);
   }else{
     const max=Number($("timeSlider").max)||0;
     state.timer=setInterval(()=>{
       state.frameIndex=state.frameIndex>=max?0:state.frameIndex+1;
       $("timeSlider").value=state.frameIndex;
       renderAll(false);
-    },650);
+    },1200);
   }
 }
 

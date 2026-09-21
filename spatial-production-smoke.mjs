@@ -94,10 +94,13 @@ try{
   result.comparisons.windyWind=Boolean(windySrc&&windySrc.includes('embed.windy.com')&&windySrc.includes('overlay=wind'));
 
   await page.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:30000});
+  await page.locator('.jotrip-forecast-panel').screenshot({path:'/tmp/prod-weather-forecast-mobile.png'});
   result.forecast={
     regions:await page.locator('#forecastRegionTabs button[data-region]').allTextContents(),
     pointTabs:await page.locator('#pointTabs button').allTextContents(),
-    state:(await page.locator('#ensembleState').innerText()).trim()
+    state:(await page.locator('#ensembleState').innerText()).trim(),
+    detailOpen:await page.locator('.forecast-detail-toggle').evaluate(el=>el.open),
+    dayCards:await page.locator('.forecast-day').count()
   };
 
   const desktop=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
@@ -105,6 +108,8 @@ try{
   const desktopOverview=desktop.locator('.weather-overview');
   await desktopOverview.waitFor({state:'visible',timeout:30000});
   await desktopOverview.screenshot({path:'/tmp/prod-weather-overview-desktop.png'});
+  await desktop.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:60000});
+  await desktop.locator('.jotrip-forecast-panel').screenshot({path:'/tmp/prod-weather-forecast-desktop.png'});
   await desktop.locator('.map-panel').scrollIntoViewIfNeeded();
   await desktop.locator('[data-map="jotrip"]').click();
   const desktopIframe=desktop.locator('iframe[data-jotrip-scene]');
@@ -144,6 +149,8 @@ try{
     result.forecast?.regions?.includes('Dương Đông') &&
     !result.forecast?.regions?.some(x=>/Bắc|Đông Bắc|Tây Bắc/.test(x)) &&
     !result.forecast?.pointTabs?.some(x=>x.includes('Rạch Giá')) &&
+    result.forecast?.detailOpen===false &&
+    result.forecast?.dayCards>=4 &&
     Number.isFinite(result.desktop?.lonSpan) &&
     result.desktop.lonSpan<2 &&
     result.desktop.latSpan<1 &&

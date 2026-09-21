@@ -1,6 +1,7 @@
 name: Weather runtime mirror
 
 # post-fresh-model-cycle runtime refresh
+# post-ground-nowcast-freshness refresh
 
 on:
   schedule:

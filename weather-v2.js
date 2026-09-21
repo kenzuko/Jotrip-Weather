@@ -1020,8 +1020,11 @@ function renderForecastDayRibbon(rows){
     const rainProb=Math.max(0,...rows.map(r=>num(r.rain_prob_5)).filter(v=>v!==null));
     const windProb=Math.max(0,...rows.map(r=>num(r.wind_prob_30)).filter(v=>v!==null));
     let state=forecastCardState(windProb,rainProb);
-    const hasNowcastHigh=rows.some(r=>["HIGH","ELEVATED"].includes(String(r.nowcast_overlay?.level||"").toUpperCase()));
-    if(hasNowcastHigh)state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
+    const hasNowcastImpact=rows.some(r=>
+      r.nowcast_overlay?.operational_impact===true &&
+      ["HIGH","ELEVATED"].includes(String(r.nowcast_overlay?.level||"").toUpperCase())
+    );
+    if(hasNowcastImpact)state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
     const windMax=winds.length?Math.max(...winds):null;
     const windHigh=windQ90.length?Math.max(...windQ90):null;
     const rainMax=rains.length?Math.max(...rains):null;
@@ -1251,7 +1254,7 @@ function renderJoTripForecast(){
   body.innerHTML=rows.map(r=>{
     let state=forecastCardState(r.wind_prob_30,r.rain_prob_5);
     const nowOverlay=r.nowcast_overlay||null;
-    if(nowOverlay&&["HIGH","ELEVATED"].includes(String(nowOverlay.level||"").toUpperCase()))state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
+    if(nowOverlay?.operational_impact===true&&["HIGH","ELEVATED"].includes(String(nowOverlay.level||"").toUpperCase()))state={label:"NOWCAST CẦN THEO DÕI",cls:"watch"};
     const variation=variationLevel({spread:r.wind_spread},{spread:r.rain_spread});
     if(state.cls==="watch"||variation.score>=3)watch++;
     const bft=beaufort(r.wind_kmh);

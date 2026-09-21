@@ -1809,17 +1809,19 @@ function mapPopup(id,p){
 async function renderJoTripMap(){
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(!box)return;
-  const existing=box.querySelector('iframe[data-jotrip-spatial]');
+  const existing=box.querySelector('iframe[data-jotrip-scene]');
   if(existing){
+    box.classList.add("jotrip-scene-active");
     if(state){state.textContent="LIVE";state.className="badge actual"}
     return;
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
-  box.innerHTML='<iframe data-jotrip-spatial title="JoTrip Spatial Weather Intelligence" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/spatial-lab.html?v=20260921-05&embed=1"></iframe>';
+  box.classList.add("jotrip-scene-active");
+  box.innerHTML='<iframe data-jotrip-scene title="JoTrip Weather Scene - Phú Quốc" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/weather-scene-v3.html?embed=1&integrated=1&v=20260921-merge1"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}
-    if(note)note.textContent="Chạm lớp bên dưới bản đồ: Gió và Dòng thể hiện bằng chuyển động; Mưa theo vùng và cường độ; Mưa 24h theo tích lũy; Sóng theo Hs + hướng; Mây từ Himawari. Radar nằm trong lớp Mưa.";
+    if(note)note.textContent="Chọn Mây, Mưa, Gió hoặc Sóng ngay trên bản đồ. Kéo timeline để xem diễn biến theo thời gian; chạm bản đồ để đọc số tại điểm chọn.";
   };
   frame.onerror=()=>{
     if(state){state.textContent="CHƯA TẢI";state.className="badge deferred"}
@@ -1834,6 +1836,7 @@ function setMap(type){
   if(!mapStarted)return;
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(jotripMap&&type!=="jotrip"){try{jotripMap.remove()}catch{} jotripMap=null}
+  if(type!=="jotrip") box?.classList.remove("jotrip-scene-active");
   if(state){state.textContent="ĐANG TẢI";state.className="badge deferred"}
   if(type==="jotrip"){renderJoTripMap();return}
   if(type==="himawari"){

@@ -33,11 +33,10 @@ try{
 
   const iframe=page.locator('iframe[data-jotrip-scene]');
   await iframe.waitFor({state:'visible',timeout:120000});
-  const frame=await iframe.contentFrame();
-  if(!frame)throw new Error('Scene V3 iframe missing');
-  await frame.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:120000});
+  const frame=iframe.contentFrame();
+  await frame.locator('#loading.hidden').waitFor({state:'attached',timeout:120000});
 
-  result.embed=await frame.evaluate(()=>({
+  result.embed=await frame.locator('html').evaluate(()=>({
     embedMode:document.body.classList.contains('embed-mode'),
     topbarDisplay:getComputedStyle(document.querySelector('.topbar')).display,
     renderer:window.JoTripSceneRenderer?.version||null
@@ -94,11 +93,10 @@ try{
   await desktop.locator('[data-map="jotrip"]').click();
   const desktopIframe=desktop.locator('iframe[data-jotrip-scene]');
   await desktopIframe.waitFor({state:'visible',timeout:120000});
-  const desktopFrame=await desktopIframe.contentFrame();
-  if(!desktopFrame)throw new Error('Desktop Scene V3 iframe missing');
-  await desktopFrame.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:120000});
+  const desktopFrame=desktopIframe.contentFrame();
+  await desktopFrame.locator('#loading.hidden').waitFor({state:'attached',timeout:120000});
   await desktop.waitForTimeout(500);
-  result.desktop=await desktopFrame.evaluate(()=>({
+  result.desktop=await desktopFrame.locator('html').evaluate(()=>({
     lonSpan:Number(document.documentElement.dataset.sceneLonSpan||NaN),
     latSpan:Number(document.documentElement.dataset.sceneLatSpan||NaN),
     freshness:(document.getElementById('freshness')?.textContent||'').trim()

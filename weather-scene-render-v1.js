@@ -188,7 +188,7 @@ function wind(rows,map,field,motion){
   // No fixed dash/grid texture: wind is expressed only by moving particles.
   const pv2=windVectors(rows,map,motion);
   if(!pv2.length)return;
-  const count=innerWidth<760?120:210;
+  const count=innerWidth<760?68:112;
   particles=Array.from({length:count},()=>({x:Math.random()*motion.width,y:Math.random()*motion.height,age:Math.random()*80}));
   const tick=()=>{
     mctx.clearRect(0,0,motion.width,motion.height);mctx.lineCap="round";
@@ -197,8 +197,17 @@ function wind(rows,map,field,motion){
       const m=Math.max(.001,Math.hypot(n.u,n.v)),ux=n.u/m,uy=-n.v/m,speed=.55+clamp(n.mag/8,0,1)*1.7,ox=p.x,oy=p.y;
       p.x+=ux*speed;p.y+=uy*speed;p.age++;
       if(p.x<0||p.y<0||p.x>motion.width||p.y>motion.height||p.age>110){p.x=Math.random()*motion.width;p.y=Math.random()*motion.height;p.age=0;continue;}
-      mctx.strokeStyle=`rgba(17,70,92,${(.30+clamp(n.mag/12,0,1)*.38).toFixed(3)})`;mctx.lineWidth=.9;
-      mctx.beginPath();mctx.moveTo(ox,oy);mctx.lineTo(p.x,p.y);mctx.stroke();
+      const strength=clamp(n.mag/12,0,1);
+      mctx.strokeStyle=`rgba(17,70,92,${(.20+strength*.30).toFixed(3)})`;
+      mctx.fillStyle=`rgba(17,70,92,${(.34+strength*.34).toFixed(3)})`;
+      mctx.lineWidth=.65;
+      mctx.beginPath();
+      mctx.moveTo(ox+(p.x-ox)*.55,oy+(p.y-oy)*.55);
+      mctx.lineTo(p.x,p.y);
+      mctx.stroke();
+      mctx.beginPath();
+      mctx.arc(p.x,p.y,.55+strength*.55,0,Math.PI*2);
+      mctx.fill();
     }
     windRAF=requestAnimationFrame(tick);
   };
@@ -212,5 +221,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"1.5-clarity",render,stop};
+window.JoTripSceneRenderer={version:"1.6-wind-clean",render,stop};
 })();

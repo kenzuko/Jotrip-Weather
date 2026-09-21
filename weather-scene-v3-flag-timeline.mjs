@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const target='https://weather.openphuquoc.com/weather-scene-v3.html?flagqa='+Date.now();
-const result={target,ok:false,scenes:{},play:null,pageErrors:[],consoleErrors:[],failure:null};
+const result={target,ok:false,scenes:{},play:null,selectionUi:null,pageErrors:[],consoleErrors:[],failure:null};
 
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
@@ -40,6 +40,10 @@ try{
 
   await chooseScene('rain');
   await placeFlagOnce();
+  result.selectionUi=await page.locator('.status-card').evaluate(el=>{
+    const cs=getComputedStyle(el);
+    return {opacity:Number(cs.opacity),pointerEvents:cs.pointerEvents};
+  });
 
   for(const scene of ['rain','wind','wave']){
     await chooseScene(scene);
@@ -56,7 +60,9 @@ try{
       first,last,
       changed:first!==last,
       frameChanged:firstTime!==lastTime,
-      forecastPresent:first.includes('JoTrip Forecast')&&last.includes('JoTrip Forecast')
+      forecastPresent:scene==='wave'
+        ? first.includes('Dự báo ô biển gần nhất')&&last.includes('Dự báo ô biển gần nhất')
+        : first.includes('JoTrip Forecast')&&last.includes('JoTrip Forecast')
     };
   }
 
@@ -76,6 +82,8 @@ try{
     Object.values(result.scenes).every(x=>x.max>0&&x.changed&&x.frameChanged&&x.forecastPresent) &&
     result.play.changed &&
     result.play.frameChanged &&
+    result.selectionUi?.opacity===0 &&
+    result.selectionUi?.pointerEvents==='none' &&
     result.pageErrors.length===0;
 }catch(e){
   result.failure=String(e?.stack||e);

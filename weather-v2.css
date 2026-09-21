@@ -2030,6 +2030,7 @@ footer{font-size:9.5px}
 
 .forecast-day-ribbon{
   display:grid!important;
+  grid-template-columns:none!important;
   grid-auto-flow:column!important;
   grid-auto-columns:minmax(168px,184px)!important;
   gap:10px!important;
@@ -2217,3 +2218,6 @@ footer{font-size:9.5px}
   .forecast-region-meta span:before{display:none}
   .forecast-region-meta span{display:block!important;margin-top:3px!important}
 }
+
+/* Hide the redundant region metadata row on the traveller surface. */
+#forecastRegionMeta[hidden]{display:none!important}

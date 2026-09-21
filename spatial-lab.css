@@ -1279,3 +1279,19 @@ body.embed-mode .map[data-weather-layer="storm"] #fieldCanvas{
   filter:contrast(1.12) saturate(1.04)!important;
 }
 body.embed-mode .map[data-weather-layer="current"] #flowCanvas{opacity:1!important}
+
+
+/* V6.13 - visible vector fallback on mobile/Safari.
+   These canvases contain only direction strokes, never scalar gradient washes. */
+body.embed-mode .map[data-weather-layer="wind"] #fieldCanvas{
+  opacity:.44!important;
+  filter:none!important;
+}
+body.embed-mode .map[data-weather-layer="current"] #fieldCanvas{
+  opacity:.38!important;
+  filter:none!important;
+}
+body.embed-mode #flowCanvas{
+  opacity:.96!important;
+  filter:none!important;
+}

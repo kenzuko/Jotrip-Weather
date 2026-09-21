@@ -721,7 +721,9 @@ function selectionHtml(lat,lon){
   const f=frame();
   const cell=nearestCell(f?.cells||[],lat,lon);
   const local=nearestLocalPoint(lat,lon);
+  const frameIso=f?.sampled_time||f?.valid_time||null;
   const rows=['<div class="selection-title">Điểm chọn</div>'];
+  if(frameIso) rows.push('<span class="selection-frame">Frame '+stamp(frameIso)+'</span>');
 
   if(state.scene==="cloud"){
     if(cell?.cloud_top_cold_c!=null) rows.push('<b>JoTrip Cloud:</b> '+Number(cell.cloud_top_cold_c).toFixed(1)+'°C đỉnh mây');
@@ -1036,6 +1038,7 @@ function play(){
     state.index=(state.index+1)%Math.max(1,state.frames.length);
     $("slider").value=String(state.index);
     updateCopy();
+    refreshSelectionFlag();
     seedParticles();
     queueRender();
   },delay);
@@ -1055,6 +1058,7 @@ function bind(){
     stop();
     state.index=Number(e.target.value)||0;
     updateCopy();
+    refreshSelectionFlag();
     seedParticles();
     queueRender();
   });

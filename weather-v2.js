@@ -487,11 +487,9 @@ function islandAssessment(){
 function renderPointTabs(){
   const nav=$("pointTabs");if(!nav||!critical)return;
   const ids=[...islandIds()];
-  if(critical.points?.rach_gia)ids.push("rach_gia");
-  nav.innerHTML=ids.map(id=>{
-    const off=id==="rach_gia";
-    return '<button class="'+(id===current?'active ':'')+(off?'off-island':'')+'" data-point="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+(off?' · đối chiếu':'')+'</button>';
-  }).join("")+
+  nav.innerHTML=ids.map(id=>
+    '<button class="'+(id===current?'active':'')+'" data-point="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+'</button>'
+  ).join("")+
   '<button class="off-island" data-compare="ha_tien" title="Đối chiếu hành lang mây Himawari tại Hà Tiên">Hà Tiên · đối chiếu</button>';
 }
 
@@ -510,7 +508,8 @@ function renderStatus(){
   $("confidenceNow").textContent=confidence+"/100 · "+(confidence>=80?"cao":confidence>=60?"khá":"thận trọng");
   const fallbackLead=Math.max(0,...islandIds().flatMap(id=>(critical.points[id]?.ensemble?.rows||[]).map(r=>Number(r.lead_hours)||0)));
   const maxLead=Number(regionalForecast?.horizon_hours||fallbackLead||0);
-  $("horizonNow").textContent=maxLead?(maxLead>=240?"10 NGÀY":maxLead+" giờ"):"CHƯA CÓ";
+  const regionalStale=regionalForecast?regionalForecastFreshness().stale:false;
+  $("horizonNow").textContent=maxLead?(maxLead>=240?(regionalStale?"10 NGÀY · ĐANG CẬP NHẬT":"10 NGÀY"):maxLead+" giờ"):"CHƯA CÓ";
   $("completenessNow").parentElement.title="Tỷ lệ các lớp phân tích hiện tại, dự báo JoTrip, AQI, triều, Himawari và dự báo tổ hợp đang có dữ liệu trên 7 điểm đảo.";
   $("confidenceNow").parentElement.title="Mức tin cậy của toàn bộ dữ liệu đang dùng, không phải xác suất dự báo chắc chắn đúng.";
   const summary=$("islandSummary");
@@ -956,11 +955,33 @@ function regionRows(){
 function regionMeta(){
   return regionalForecast?.regions?.[currentRegion]||null;
 }
+const REGION_PUBLIC_NAMES={
+  north_northwest:"Gành Dầu - Cửa Cạn",
+  central_west:"Dương Đông",
+  east_northeast:"Bãi Thơm - Hàm Ninh",
+  south_southeast:"Bãi Sao - An Thới"
+};
+function regionPublicName(id,region){
+  return REGION_PUBLIC_NAMES[id]||region?.name||id.replaceAll("_"," ");
+}
+function regionalForecastFreshness(){
+  if(!regionalForecast)return {stale:true,ageMin:Infinity,runAgeMin:Infinity,text:"chưa có dữ liệu"};
+  const builtAge=ageMinutes(regionalForecast.generated_at);
+  const runAge=ageMinutes(regionalForecast.run_time);
+  const ageMin=Number.isFinite(builtAge)?builtAge:Infinity;
+  const runAgeMin=Number.isFinite(runAge)?runAge:Infinity;
+  const stale=ageMin>12*60||runAgeMin>18*60;
+  const ref=regionalForecast.generated_at||regionalForecast.run_time;
+  return {
+    stale,ageMin,runAgeMin,
+    text:ref?(stale?"Dữ liệu dự báo đang trễ · tổng hợp "+localTime(ref):"Cập nhật "+ageText(ref)):"không rõ thời gian"
+  };
+}
 function renderForecastRegionTabs(){
   const nav=$("forecastRegionTabs");if(!nav)return;
   const regions=regionalForecast?.regions||{};
   nav.innerHTML=Object.entries(regions).map(([id,r])=>
-    '<button class="'+(id===currentRegion?'active':'')+'" data-region="'+esc(id)+'">'+esc(r.name||id)+'</button>'
+    '<button class="'+(id===currentRegion?'active':'')+'" data-region="'+esc(id)+'">'+esc(regionPublicName(id,r))+'</button>'
   ).join("")||'<span class="inline-loader">Đang chờ dữ liệu vùng...</span>';
 }
 function phuQuocDay(iso){
@@ -1136,16 +1157,18 @@ function buildQuickWatchEvents(){
     });
   });
 
-  // 4) One near-term ensemble watch, only when it is meaningfully elevated.
+  // 4) One near-term ensemble watch, only from a fresh regional product.
+  // Stale D0-D10 data remains visible for context but must not generate a live alert.
   const forecast=[];
-  Object.values(regionalForecast?.regions||{}).forEach(region=>{
+  const regionalFresh=!regionalForecastFreshness().stale;
+  if(regionalFresh) Object.entries(regionalForecast?.regions||{}).forEach(([regionId,region])=>{
     (region.rows||[]).forEach(row=>{
       const validMs=rowValidMs(row);
       const hours=validMs===null?num(row.lead_hours):(validMs-now)/3600000;
       if(hours===null||hours<0||hours>12)return;
       const rain=num(row.rain_prob_5)||0,wind=num(row.wind_prob_30)||0,varScore=rowVariability(row)/100;
       if(rain<.50&&wind<.25&&varScore<.70)return;
-      forecast.push({region:region.name||"Phú Quốc",row,hours,rain,wind,varScore});
+      forecast.push({region:regionPublicName(regionId,region),row,hours,rain,wind,varScore});
     });
   });
   forecast.sort((a,b)=>a.hours-b.hours);
@@ -1186,10 +1209,13 @@ function renderJoTripForecast(){
   const body=$("jotripForecastRows");
   const meta=regionMeta();
   const rows=futureForecastRows(regionRows());
+  const fresh=regionalForecastFreshness();
   const cal=regionalForecast?.calibration_status||point().ensemble?.calibration_status||"LEARNING";
-  setBadge("ensembleState",cal,viCal(cal));
+  if(fresh.stale)setBadge("ensembleState","UNAVAILABLE","DỮ LIỆU ĐANG TRỄ");
+  else setBadge("ensembleState",cal,viCal(cal));
 
-  if(title)title.textContent=(regionalForecast?.horizon_hours>=240?"10 ngày tới":"Dự báo hiện có")+" - "+(meta?.name||"theo vùng");
+  const regionName=regionPublicName(currentRegion,meta);
+  if(title)title.textContent=(regionalForecast?.horizon_hours>=240?"10 ngày tới":"Dự báo hiện có")+" - "+regionName;
 
   if(!regionalForecast||!meta){
     if(body)body.innerHTML='<tr><td colspan="8"><span class="inline-loader">Đang tải dự báo JoTrip theo vùng...</span></td></tr>';
@@ -1201,7 +1227,7 @@ function renderJoTripForecast(){
   renderForecastRegionTabs();
   renderForecastDayRibbon(rows);
   const metaBox=$("forecastRegionMeta");
-  if(metaBox)metaBox.innerHTML='<b>'+esc(meta.name)+'</b><span>Điểm đại diện: '+esc((meta.points||[]).join(" · "))+'</span>';
+  if(metaBox)metaBox.innerHTML='<b>'+esc(regionName)+'</b><span>Điểm theo dõi: '+esc((meta.points||[]).join(" · "))+'</span>';
 
   if(!rows.length){
     body.innerHTML='<tr><td colspan="8"><div class="data-empty"><b>CHƯA ĐỦ DỮ LIỆU 10 NGÀY</b><span>Vùng này chưa có đủ dữ liệu dự báo tổ hợp để công bố.</span></div></td></tr>';
@@ -1237,13 +1263,16 @@ function renderJoTripForecast(){
   }).join("");
 
   const horizon=regionalForecast.horizon_hours||0;
-  $("jotripForecastSummary").textContent=(horizon>=240
+  $("jotripForecastSummary").textContent=(fresh.stale
+    ? fresh.text+". Các mốc vẫn được giữ để tham khảo nhưng không dùng tạo cảnh báo nhanh cho đến khi có chu kỳ mới. "
+    : "")+(horizon>=240
     ? "D0-D3 mỗi 6 giờ; D4-D10 mỗi 12 giờ. "
     : "Nguồn hiện tại mới đủ "+Math.round(horizon/24)+" ngày. ")+
     (watch?watch+" mốc trong vùng có rủi ro hoặc mức chênh giữa các kịch bản đáng theo dõi. ":"")+
     "Mỗi vùng được tổng hợp từ các điểm đại diện tại Phú Quốc, không lấy riêng Dương Đông làm chuẩn cho cả đảo. Trong 0-12 giờ đầu, Himawari/nowcast được chồng thêm để phát hiện diễn biến cục bộ nhưng không sửa các số q50/q90 gốc của ensemble. Thẻ ngày ưu tiên số ước tính q50 và biên cao q90; xác suất vượt ngưỡng vẫn được giữ trong engine để đánh giá rủi ro nhưng không dùng làm con số chính trên giao diện.";
 
-  $("ensembleMeta").textContent="Dự báo JoTrip theo vùng · dữ liệu đầy đủ "+
+  $("ensembleMeta").textContent="Dự báo JoTrip theo khu vực · "+
+    fresh.text+" · dữ liệu đầy đủ "+
     (num(regionalForecast.ensemble_completion_ratio)===null?"-":Math.round(regionalForecast.ensemble_completion_ratio*100)+"%")+
     " · "+viCal(regionalForecast.calibration_status||"LEARNING").toLowerCase()+
     " · càng xa ngày càng giảm độ tin cậy.";

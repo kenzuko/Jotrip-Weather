@@ -67,8 +67,11 @@ function rainRgb(mm){
   ],t);
 }
 function waveRgb(hs){
-  const t=clamp(hs/2.2,0,1);
-  return ramp([[0,[231,244,247]],[.25,[139,203,213]],[.48,[75,165,189]],[.72,[57,122,171]],[1,[92,61,137]]],t);
+  const t=clamp(hs/1.6,0,1);
+  return ramp([
+    [0,[226,244,247]],[.15,[170,222,229]],[.30,[105,194,208]],
+    [.48,[61,158,187]],[.66,[48,113,170]],[.84,[76,79,149]],[1,[103,50,133]]
+  ],t);
 }
 function stop(){
   if(windRAF)cancelAnimationFrame(windRAF);
@@ -136,7 +139,7 @@ function wave(rows,map,field,motion){
   const r0=clamp(spacing(pts)*1.42,18,74);
   ctx.save();
   pts.forEach((p,i)=>{
-    const hs=num(p.wave_hs_m)||0,t=clamp(hs/1.5,0,1),rgb=waveRgb(hs),a=.20+t*.52,r=r0*(.92+t*.34);
+    const hs=num(p.wave_hs_m)||0,t=clamp(hs/1.6,0,1),rgb=waveRgb(hs),a=.18+Math.pow(t,.68)*.58,r=r0*(.88+t*.28);
     const g=ctx.createRadialGradient(p.x,p.y,r*.05,p.x,p.y,r);
     g.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`);
     g.addColorStop(.58,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(a*.68).toFixed(3)})`);
@@ -222,5 +225,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"1.7-active-v2-clarity",render,stop};
+window.JoTripSceneRenderer={version:"1.8-wave-field",render,stop};
 })();

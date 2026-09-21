@@ -38,6 +38,7 @@ const state={
   particleRaf:null,
   particles:[],
   actualLayer:null,
+  anchorLayer:null,
   selectedMarker:null,
   probe:null,
   runtimeManifest:null,
@@ -122,6 +123,16 @@ function initMap(){
     {subdomains:"abcd",maxZoom:19,pane:"sceneLabels"}
   ).addTo(state.map);
 
+  // A very light map copy above weather preserves island/coast orientation.
+  state.map.createPane("sceneAnchor");
+  const anchorPane=state.map.getPane("sceneAnchor");
+  anchorPane.style.zIndex="500";
+  anchorPane.style.pointerEvents="none";
+  state.anchorLayer=L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}{r}.png?key="+CARTO_KEY,
+    {subdomains:"abcd",maxZoom:19,pane:"sceneAnchor",opacity:.18}
+  ).addTo(state.map);
+
   // Dedicated Leaflet pane keeps weather above base tiles and below labels/markers.
   state.map.createPane("weatherCanvas");
   const weatherPane=state.map.getPane("weatherCanvas");
@@ -172,6 +183,7 @@ function setScene(scene){
   if(!sceneAvailable(scene)) return;
   state.scene=scene;
   document.querySelector(".map-shell").dataset.scene=scene;
+  if(state.anchorLayer) state.anchorLayer.setOpacity(scene==="cloud"?.22:scene==="rain"?.12:scene==="wave"?.10:.06);
   stop();
   stopSceneParticles();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.scene===scene));

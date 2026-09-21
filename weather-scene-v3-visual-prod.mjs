@@ -34,6 +34,7 @@ try{
     scripts:[...document.scripts].map(s=>s.src),
     rendererLoaded:!!window.JoTripSceneRenderer,
     rendererKeys:window.JoTripSceneRenderer?Object.keys(window.JoTripSceneRenderer):[],
+    rendererVersion:window.JoTripSceneRenderer?.version||null,
     appScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-v3.js'))||null,
     renderScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-render-v1.js'))||null
   }));

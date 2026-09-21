@@ -832,7 +832,7 @@ function placeSelectionFlag(lat,lon){
   state.selectedMarker=L.marker([lat,lon],{icon,pane:"sceneLabels",zIndexOffset:1200})
     .bindPopup(selectionHtml(lat,lon),{
       className:"selection-popup",
-      closeButton:false,
+      closeButton:true,
       offset:[0,-2],
       autoPan:true,
       maxWidth:230
@@ -1124,6 +1124,18 @@ function stop(){
   state.timer=null;
 }
 
+function setSourcePanel(open){
+  const panel=$("sourcePanel");
+  if(!panel)return;
+  panel.hidden=!open;
+  $("infoBtn")?.setAttribute("aria-expanded",String(open));
+  if(open)updateSourcePanel();
+}
+function setStatusPanel(open){
+  const panel=$("statusCard"),restore=$("statusOpenBtn");
+  if(panel)panel.hidden=!open;
+  if(restore)restore.hidden=open;
+}
 function bind(){
   document.querySelectorAll(".tabs button").forEach(b=>{
     b.addEventListener("click",()=>setScene(b.dataset.scene));
@@ -1137,12 +1149,31 @@ function bind(){
     queueRender();
   });
   $("playBtn").addEventListener("click",play);
-  $("infoBtn").addEventListener("click",()=>{
-    const panel=$("sourcePanel");
-    const open=panel.hidden;
-    panel.hidden=!open;
-    $("infoBtn").setAttribute("aria-expanded",String(open));
-    if(open) updateSourcePanel();
+  $("infoBtn").addEventListener("click",()=>setSourcePanel($("sourcePanel")?.hidden!==false));
+  $("sourceCloseBtn")?.addEventListener("click",()=>setSourcePanel(false));
+  $("statusOpenBtn")?.addEventListener("click",()=>setStatusPanel(true));
+  document.querySelectorAll("[data-close-panel]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      if(btn.dataset.closePanel==="statusCard")setStatusPanel(false);
+      else{
+        const panel=$(btn.dataset.closePanel);
+        if(panel)panel.hidden=true;
+      }
+    });
+  });
+  document.addEventListener("click",e=>{
+    const panel=$("sourcePanel"),button=$("infoBtn");
+    if(!panel||panel.hidden)return;
+    if(panel.contains(e.target)||button?.contains(e.target))return;
+    setSourcePanel(false);
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape")return;
+    const source=$("sourcePanel");
+    if(source&&!source.hidden){setSourcePanel(false);return}
+    if(state.selectedMarker?.isPopupOpen?.()){state.selectedMarker.closePopup();return}
+    const status=$("statusCard");
+    if(status&&!status.hidden)setStatusPanel(false);
   });
   addEventListener("resize",queueRender,{passive:true});
 }

@@ -197,3 +197,38 @@ body.embed-mode .leaflet-control-attribution{opacity:.55}
   body.embed-mode .legend{bottom:91px}
   body.embed-mode .timeline{bottom:7px}
 }
+
+/* Dismissible overlay/popup lock */
+.panel-close{
+  appearance:none;border:0;background:rgba(238,244,247,.96);color:#506c7a;
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  font:700 19px/1 system-ui,-apple-system,sans-serif;cursor:pointer;
+  touch-action:manipulation;box-shadow:0 3px 10px rgba(25,55,62,.10)
+}
+.panel-close:active{transform:scale(.94)}
+.panel-close:focus-visible,.panel-open-chip:focus-visible{outline:2px solid #2a748e;outline-offset:2px}
+.status-card{padding-right:48px}
+.status-card-close{position:absolute;top:8px;right:8px}
+.source-panel{padding-right:48px}
+.source-panel-close{position:absolute;top:7px;right:7px}
+.panel-open-chip{
+  border:1px solid rgba(255,255,255,.82);background:var(--glass);color:#36545e;
+  border-radius:999px;padding:9px 12px;font-size:10px;font-weight:800;
+  box-shadow:var(--shadow);backdrop-filter:blur(12px);cursor:pointer
+}
+.status-open-btn{position:absolute;z-index:910;left:14px;top:14px}
+.leaflet-popup.selection-popup .leaflet-popup-content{margin:10px 36px 10px 12px}
+.leaflet-popup.selection-popup .leaflet-popup-close-button{
+  width:34px;height:34px;display:grid;place-items:center;padding:0;
+  font-size:22px;line-height:1;color:#506c7a
+}
+@media(max-width:760px){
+  .panel-close{width:36px;height:36px;font-size:21px}
+  .status-card{padding-right:50px}
+  .source-panel{padding-right:50px}
+  .status-open-btn{left:9px;top:54px}
+}
+body.embed-mode .status-open-btn{top:50px}
+@media(max-width:760px){
+  body.embed-mode .status-open-btn{top:48px}
+}

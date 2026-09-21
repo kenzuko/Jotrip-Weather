@@ -7,7 +7,7 @@
 <title>JoTrip Weather Scene V3</title>
 <link rel="icon" href="/weather-app-icon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="/weather-scene-v3.css?v=20260921-6">
+<link rel="stylesheet" href="/weather-scene-v3.css?v=20260921-7">
 </head>
 <body>
 <main class="app">
@@ -29,7 +29,7 @@
     <button data-scene="wave" type="button">Sóng</button>
   </nav>
 
-  <aside class="status-card" aria-live="polite">
+  <aside id="statusCard" class="status-card" aria-live="polite"><button type="button" class="panel-close status-card-close" data-close-panel="statusCard" aria-label="Đóng thông tin thời tiết">×</button>
     <div class="status-top">
       <span id="eyebrow">QUAN TRẮC</span>
       <span id="freshness" class="freshness">--</span>
@@ -39,8 +39,10 @@
     <div class="facts" id="facts"></div>
   </aside>
 
+  <button id="statusOpenBtn" class="panel-open-chip status-open-btn" type="button" hidden aria-controls="statusCard">Thông tin</button>
   <button id="infoBtn" class="info-btn" type="button" aria-expanded="false" aria-controls="sourcePanel">i</button>
-  <aside id="sourcePanel" class="source-panel" hidden>
+  <aside id="sourcePanel" class="source-panel" role="dialog" aria-label="Nguồn dữ liệu" hidden>
+    <button id="sourceCloseBtn" type="button" class="panel-close source-panel-close" aria-label="Đóng nguồn dữ liệu">×</button>
     <b id="sourceTitle">Nguồn dữ liệu</b>
     <p id="sourceText"></p>
     <div id="sourceMeta" class="source-meta"></div>
@@ -62,6 +64,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/weather-runtime-config.js?v=20260921-1"></script>
 <script src="/weather-scene-render-v2.js?v=20260921-5"></script>
-<script src="/weather-scene-v3.js?v=20260921-17"></script>
+<script src="/weather-scene-v3.js?v=20260921-18"></script>
 </body>
 </html>

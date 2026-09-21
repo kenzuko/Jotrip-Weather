@@ -831,23 +831,23 @@ function cloudStateLabel(n){
   if(score>=75&&top!==null&&top>=12000){
     if(cool!==null&&cool<=-3){
       label="Cụm mây rất cao, đang phát triển nhanh";
-      detail="Nguy cơ mưa dông tăng";
+      detail="Đỉnh mây lạnh đi rõ trong 20 phút";
     }else if(cool!==null&&cool<=-1){
       label="Cụm mây rất cao, đang phát triển";
-      detail="Có thể kèm mưa dông";
+      detail="Đỉnh mây tiếp tục lạnh đi";
     }else if(cool!==null&&cool>=1.5){
-      label="Cụm mây rất cao, đang chậm lại";
-      detail="Vẫn có thể còn mưa cục bộ";
+      label="Cụm mây rất cao, có xu hướng yếu dần";
+      detail="Đỉnh mây đang ấm lên";
     }else{
       label="Cụm mây rất cao";
-      detail="Có khả năng gây mưa dông";
+      detail="Ít thay đổi trong 20 phút gần đây";
     }
   }else if(score>=50){
-    label="Mây cao đang phát triển";
-    detail="Có khả năng mưa cục bộ";
+    label="Mây cao đáng chú ý";
+    detail=cool!==null&&cool<=-1?"Đỉnh mây đang lạnh đi":"Theo dõi thêm trên ảnh vệ tinh";
   }else if(score>=25){
     label="Có cụm mây đáng chú ý";
-    detail="Nên theo dõi thêm";
+    detail="Tín hiệu vệ tinh ở mức cần theo dõi";
   }else{
     label="Chưa thấy cụm mây dông rõ";
     detail="Tín hiệu vệ tinh hiện thấp";
@@ -987,8 +987,14 @@ function renderMapConvective(){
       cool.textContent="Ấm lên "+fmt(delta,1)+"°C";
       meaning.textContent="Đỉnh mây có xu hướng yếu dần";
     }else{
-      cool.textContent="Gần như không đổi";
-      meaning.textContent=Math.abs(delta)<.05?"Biến động rất nhỏ":("Thay đổi "+(delta>0?"+":"")+fmt(delta,1)+"°C");
+      cool.textContent="Ít thay đổi";
+      if(Math.abs(delta)<.5){
+        meaning.textContent="Đỉnh mây gần như ổn định trong 20 phút";
+      }else if(delta<0){
+        meaning.textContent="Đỉnh mây lạnh nhẹ "+fmt(Math.abs(delta),1)+"°C trong 20 phút";
+      }else{
+        meaning.textContent="Đỉnh mây ấm nhẹ "+fmt(delta,1)+"°C trong 20 phút";
+      }
     }
   }
   if(fresh){
@@ -2190,12 +2196,30 @@ function shareWeather(){
   if(navigator.share){navigator.share(data).catch(()=>{})}
   else if(navigator.clipboard){navigator.clipboard.writeText(location.href).then(()=>{const b=$("shareWeather");if(b)b.textContent="Đã sao chép link"})}
 }
+function setDismissedPanel(id,dismissed){
+  const target=document.getElementById(id||"");
+  if(!target)return;
+  target.hidden=Boolean(dismissed);
+  document.querySelectorAll("[data-open-target]").forEach(btn=>{
+    if(btn.dataset.openTarget===id)btn.hidden=!dismissed;
+  });
+}
 function events(){
   document.addEventListener("click",e=>{
     const close=e.target.closest("[data-close-target]");
-    if(!close)return;
-    const target=document.getElementById(close.dataset.closeTarget||"");
-    if(target)target.hidden=true;
+    if(close){
+      setDismissedPanel(close.dataset.closeTarget||"",true);
+      return;
+    }
+    const open=e.target.closest("[data-open-target]");
+    if(open){
+      setDismissedPanel(open.dataset.openTarget||"",false);
+    }
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape")return;
+    const target=[...document.querySelectorAll("[data-esc-close]")].find(el=>!el.hidden);
+    if(target)setDismissedPanel(target.id,true);
   });
   $("pointTabs")?.addEventListener("click",e=>{
     const compare=e.target.closest("[data-compare]");

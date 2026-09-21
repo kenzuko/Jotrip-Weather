@@ -2281,3 +2281,20 @@ footer{font-size:9.5px}
   .map-convective span:nth-of-type(3){border-right:0}
   .map-convective strong{font-size:11px}
 }
+
+/* Dismissible floating/info panels */
+.panel-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.panel-open-chip{
+  appearance:none;border:1px solid #dbe7ed;background:#f7fafb;color:#456777;
+  border-radius:999px;padding:7px 10px;font-size:9px;font-weight:800;line-height:1;
+  cursor:pointer;touch-action:manipulation
+}
+.panel-open-chip:hover{background:#eef5f7}
+.panel-open-chip:focus-visible,.panel-close:focus-visible{outline:2px solid #2a748e;outline-offset:2px}
+.map-convective[hidden]{display:none!important}
+.panel-close{width:32px;height:32px}
+@media(max-width:620px){
+  .panel-close{width:36px;height:36px;font-size:20px}
+  .map-convective-close{top:7px;right:7px}
+  .panel-open-chip{min-height:34px;padding:8px 11px}
+}

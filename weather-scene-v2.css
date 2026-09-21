@@ -146,3 +146,23 @@ button,a,input{font:inherit}
   .timecopy b{font-size:10px}.timecopy small{font-size:7.5px}
   .time-class{grid-column:2/4;justify-self:end;min-width:auto;font-size:7px;padding:3px 6px}
 }
+
+.selection-flag-wrap{background:transparent!important;border:0!important}
+.selection-flag{position:relative;width:28px;height:38px;filter:drop-shadow(0 2px 3px rgba(12,38,47,.28))}
+.flag-pole{position:absolute;left:5px;top:4px;width:2px;height:30px;border-radius:2px;background:#153b47}
+.flag-cloth{position:absolute;left:7px;top:4px;width:17px;height:11px;border-radius:2px 4px 4px 2px;background:#f4b942;border:1px solid rgba(89,67,20,.18);clip-path:polygon(0 0,100% 0,82% 50%,100% 100%,0 100%)}
+.flag-dot{position:absolute;left:2px;bottom:1px;width:8px;height:8px;border-radius:50%;background:#153b47;border:2px solid rgba(255,255,255,.92)}
+.leaflet-popup.selection-popup .leaflet-popup-content-wrapper{
+  background:rgba(249,252,252,.96);color:#17333d;border-radius:13px;
+  border:1px solid rgba(255,255,255,.84);box-shadow:0 12px 34px rgba(16,48,57,.18)
+}
+.leaflet-popup.selection-popup .leaflet-popup-content{margin:10px 12px;font-size:9.5px;line-height:1.45}
+.leaflet-popup.selection-popup .leaflet-popup-tip{background:rgba(249,252,252,.96)}
+.selection-title{font-size:10px;font-weight:850;letter-spacing:.06em;margin-bottom:3px;color:#153b47}
+.selection-near{color:#5a7078}
+.selection-coord{color:#84949a;font-size:8px}
+.map-shell[data-scene="wave"] .leaflet-pane.leaflet-tile-pane{filter:saturate(.48) brightness(.97) contrast(.94)}
+@media(max-width:760px){
+  .tabs{max-width:calc(100% - 18px)}
+  .tabs button{padding-left:9px;padding-right:9px}
+}

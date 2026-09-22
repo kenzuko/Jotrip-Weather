@@ -154,7 +154,6 @@ try{
     result.forecast?.regions?.includes('Dương Đông') &&
     result.forecast?.regionSelectorHidden===true &&
     !result.forecast?.regions?.some(x=>/Bắc|Đông Bắc|Tây Bắc/.test(x)) &&
-    !result.forecast?.pointTabs?.some(x=>x.includes('Rạch Giá')) &&
     result.forecast?.detailOpen===false &&
     result.forecast?.dayCards>=4 &&
     Number.isFinite(result.desktop?.lonSpan) &&

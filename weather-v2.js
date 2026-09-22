@@ -11,6 +11,7 @@ const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weathe
 const JOTRIP_FORECAST="https://kenzuko.github.io/Jotrip-Lab/weather/jotrip-forecast.json";
 const ENGINE_DASHBOARD="/data/dashboard-data.json";
 const LIVE_REFRESH_MS=2*60*1000;
+const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,...NOWCAST];
 const WEATHER_LIVE_API="https://jotrip-weather-live.kenzuko.workers.dev";
 const FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback";
 const RECENT_FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback/recent?minutes=90&limit=30";
@@ -67,8 +68,9 @@ const HIMAWARI_HA1_BOUNDS=[[7.0,99.0],[16.0,110.0]];
 
 async function getJSON(url,ttlMs=120000){
   const sep=url.includes("?")?"&":"?";
-  const bucket=Math.floor(Date.now()/Math.max(30000,ttlMs));
-  const r=await fetch(url+sep+"v="+bucket,{cache:"default"});
+  const live=LIVE_NO_STORE_URLS.includes(url);
+  const token=live?Date.now():Math.floor(Date.now()/Math.max(30000,ttlMs));
+  const r=await fetch(url+sep+"v="+token,{cache:live?"no-store":"default",headers:live?{"cache-control":"no-cache"}:{}});
   if(!r.ok)throw new Error("HTTP "+r.status);
   return r.json();
 }
@@ -86,9 +88,17 @@ function ageMinutes(iso){
 function liveTimestamp(){
   return critical?.local_generated_at||critical?.generated_at||null;
 }
-function localDataFresh(maxMinutes=45){
+function localDataFresh(maxMinutes=35){
   return freshEnough(liveTimestamp(),maxMinutes);
 }
+function sourceAgeLabel(iso,limit){
+  const age=ageMinutes(iso);
+  if(!Number.isFinite(age))return "không rõ";
+  return (age<=limit?"MỚI · ":"TRỄ · ")+ageText(iso);
+}
+function actualTimestamp(){return critical?.actual?.vvpq?.observed_at||null}
+function nowcastTimestamp(){return fullNowcast?.sampled_time||effectiveNowcast()?.sampled_time||null}
+function forecastTimestamp(){return engineDashboard?.generated_at||regionalForecast?.generated_at||critical?.generated_at||null}
 function ageText(iso){
   const m=ageMinutes(iso);
   if(!Number.isFinite(m))return "không rõ";
@@ -508,6 +518,48 @@ function islandAssessment(){
   const attention=rows.filter(x=>x.risk.level>=2).slice(0,4);
   return {label,attention,rows};
 }
+function renderTechnicalPointTabs(){
+  const nav=$("technicalPointTabs");if(!nav||!critical)return;
+  const ids=[...islandIds()];
+  nav.innerHTML=ids.map(id=>'<button type="button" class="'+(id===current?'active':'')+'" data-technical-point="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+'</button>').join("");
+  const title=$("technicalPointTitle");if(title)title.textContent=point().name||current;
+}
+function renderTechnicalFreshness(){
+  const set=(id,iso,limit)=>{const el=$(id);if(!el)return;el.textContent=sourceAgeLabel(iso,limit);el.classList.toggle("stale",ageMinutes(iso)>limit)};
+  set("technicalLocalAge",critical?.local_generated_at,35);
+  set("technicalActualAge",actualTimestamp(),35);
+  set("technicalNowcastAge",nowcastTimestamp(),35);
+  set("technicalForecastAge",forecastTimestamp(),180);
+}
+function renderTechnicalPointForecast(){
+  const body=$("technicalForecastRows"),title=$("technicalForecastTitle"),meta=$("technicalForecastMeta");
+  if(!body)return;
+  if(title)title.textContent="Chi tiết mô hình tại "+(point().name||current);
+  const rows=(engineDashboard?.points?.[current]?.hours||[]).filter(r=>Date.parse(r.time_iso||"")>=Date.now()-30*60*1000);
+  if(!rows.length){
+    body.innerHTML='<tr><td colspan="6">Chưa có chuỗi dự báo theo điểm.</td></tr>';
+    if(meta)meta.textContent="Đang chờ JoTrip Engine.";
+    return;
+  }
+  body.innerHTML=rows.map(r=>'<tr>'+
+    '<td><b>'+esc(localTime(r.time_iso))+'</b></td>'+
+    '<td>'+ (num(r.temperature)===null?'-':fmt(r.temperature,1)+'°C') +'</td>'+
+    '<td>'+ (num(r.wind)===null?'-':fmt(r.wind,1)+' km/h') +'</td>'+
+    '<td>'+ (num(r.gust)===null?'-':fmt(r.gust,1)+' km/h') +'</td>'+
+    '<td>'+ (num(r.rain)===null?'-':fmt(r.rain,2)+' mm/mốc') +'</td>'+
+    '<td>'+ (num(r.wave)===null?'-':fmt(r.wave,2)+' m') +'</td>'+
+  '</tr>').join("");
+  if(meta)meta.textContent=rows.length+" mốc · JoTrip Engine · "+sourceAgeLabel(engineDashboard?.generated_at,180)+". D0-D3 có độ phân giải cao hơn; các ngày xa chỉ dùng như xu hướng.";
+}
+function renderTechnical(){
+  renderTechnicalPointTabs();
+  renderTechnicalFreshness();
+  renderIntradayChart();
+  renderTechnicalPointForecast();
+  renderCurrent();
+  renderHealth();
+}
+
 function renderPointTabs(){
   const nav=$("pointTabs");if(!nav||!critical)return;
   const ids=[...islandIds()];
@@ -523,10 +575,14 @@ function renderPointTabs(){
 
 function renderStatus(){
   if(!critical)return;
-  const m=ageMinutes(liveTimestamp());
-  const stale=m>60,delayed=m>25;
+  const localAge=ageMinutes(critical?.local_generated_at);
+  const actualAge=ageMinutes(actualTimestamp());
+  const nowAge=ageMinutes(nowcastTimestamp());
+  const best=Math.min(localAge,actualAge,nowAge);
+  const stale=best>45,delayed=best>25;
   $("liveDot").className=stale||delayed?"warn":"ok";
-  $("liveLabel").textContent=(stale?"DỮ LIỆU CŨ":delayed?"CẬP NHẬT CHẬM":critical.report_status==="LIVE"?"ĐANG HOẠT ĐỘNG":"SUY GIẢM")+" · "+ageText(liveTimestamp());
+  const ref=[critical?.local_generated_at,actualTimestamp(),nowcastTimestamp()].filter(Boolean).sort((a,b)=>Date.parse(b)-Date.parse(a))[0]||liveTimestamp();
+  $("liveLabel").textContent=(stale?"DỮ LIỆU LIVE ĐANG TRỄ":delayed?"ĐANG CẬP NHẬT":critical.report_status==="LIVE"?"ĐANG HOẠT ĐỘNG":"SUY GIẢM")+" · "+ageText(ref);
 
   const assessment=islandAssessment();
   const coverage=coverageScore();
@@ -556,7 +612,7 @@ function renderStatus(){
 function summary(p){
   const l=p.local||{},m=p.model||{},bits=[];
   const localFresh=localDataFresh();
-  const nowFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
+  const nowFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,35);
   const rain=localFresh?num(l.rain_rate_mm_h):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
   const conv=nowFresh?num(effectiveNowcast()?.convective_score??l.convection_score):null;
@@ -719,7 +775,7 @@ function todayLiveOverride(){
   if(actual?.thunder&&actual?.rain)return {cls:"avoid",label:"Nên né khung này",reason:"Quan trắc gần khu vực đang ghi nhận mưa dông"};
   if(actual?.rain)return {cls:"watch",label:"Cần để ý",reason:"Quan trắc gần khu vực đang ghi nhận mưa"};
   const localFresh=localDataFresh();
-  const nowcastFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
+  const nowcastFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,35);
   const imminence=localFresh?num(l.rain_imminence_score):null;
   const conv=nowcastFresh?num(n?.convective_score??l.convection_score):null;
   if((imminence!==null&&imminence>=80)||(conv!==null&&conv>=85))return {cls:"avoid",label:"Nên né khung này",reason:"Tín hiệu đối lưu ngắn hạn đang mạnh"};
@@ -807,6 +863,7 @@ async function loadEngineDashboard(){
   try{
     engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
     renderTodayDecision();
+    if($("deepWeatherDetails")?.open){renderTechnicalPointForecast();renderTechnicalFreshness()}
   }catch(e){
     console.warn("[Weather V2] JoTrip Engine today",e);
     const root=$("todayDecisionStrip"),summaryEl=$("todayDecisionSummary");
@@ -1959,8 +2016,8 @@ function renderIntradayChart(){
 
 function renderAll(){
   if(!critical)return;
-  renderPointTabs();renderStatus();renderHero();renderCurrent();renderTodayDecision();renderActual();renderFeedbackPoint();renderAQI();renderTide();renderMapConvective();renderQuickAlert();
-  renderIntradayChart();renderJoTripForecast();renderHealth();
+  renderPointTabs();renderStatus();renderHero();renderTodayDecision();renderActual();renderFeedbackPoint();renderMapConvective();renderQuickAlert();renderJoTripForecast();
+  if($("deepWeatherDetails")?.open)renderTechnical();
 }
 
 async function loadAQI(){
@@ -2429,6 +2486,12 @@ function events(){
     const target=[...document.querySelectorAll("[data-esc-close]")].find(el=>!el.hidden);
     if(target)setDismissedPanel(target.id,true);
   });
+  $("technicalPointTabs")?.addEventListener("click",e=>{
+    const b=e.target.closest("[data-technical-point]");if(!b)return;
+    current=b.dataset.technicalPoint;
+    const linkedRegion=regionForPoint(current);if(linkedRegion)currentRegion=linkedRegion;
+    renderAll();refreshActiveMap();
+  });
   $("pointTabs")?.addEventListener("click",e=>{
     const compare=e.target.closest("[data-compare]");
     if(compare?.dataset.compare==="ha_tien"){
@@ -2464,7 +2527,10 @@ function events(){
     feedback(b.dataset.feedback,b);
   });
   $("deepWeatherDetails")?.addEventListener("toggle",e=>{
-    if(e.currentTarget.open)Promise.allSettled([loadTide(),loadAQI()]);
+    if(e.currentTarget.open){
+      renderTechnical();
+      Promise.allSettled([loadTide(),loadAQI()]).then(()=>renderTechnical());
+    }
   });
   $("shareWeather")?.addEventListener("click",shareWeather);
 }
@@ -2483,9 +2549,8 @@ async function refreshLive(){
     renderAll();
     refreshActiveMap();
     lastLiveRefreshAt=Date.now();
-    const jobs=[loadEngineDashboard(),loadRegionalForecast(),loadRecentFeedback()];
+    const jobs=[loadEngineDashboard(),loadRegionalForecast(),loadRecentFeedback(),loadNowcast()];
     if($("deepWeatherDetails")?.open)jobs.push(loadTide(),loadAQI());
-    if(!fullNowcast)jobs.push(loadNowcast());
     await Promise.allSettled(jobs);
   }catch(e){
     console.warn("[Weather V2] live refresh",e);

@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui5">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui6">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260922-prod76-ui5"></script>
+  <script defer src="/weather-v2.js?v=20260922-prod76-ui6"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -61,6 +61,8 @@
     <span class="inline-loader">Đang tải danh sách điểm...</span>
   </nav>
 
+  <section class="customer-weather-block" aria-label="Thời tiết lúc này và hôm nay">
+    <div class="customer-weather-kicker"><span>LÚC NÀY & HÔM NAY</span><small>Một điểm đã chọn - xem trạng thái hiện tại và các mốc còn lại trong ngày</small></div>
   <section class="weather-overview" aria-label="Thời tiết Phú Quốc tại điểm đang chọn">
     <div class="weather-overview-head">
       <div>
@@ -108,33 +110,6 @@
     </div>
   </section>
 
-  <div class="journey-heading journey-heading-compact">
-    <div><span class="eyebrow">72 GIỜ TỚI</span><h2>Xu hướng thời tiết tiếp theo</h2></div>
-    <small>Cùng điểm đang chọn. Biểu đồ chi tiết hơn để nhìn xu hướng mưa, gió, nhiệt độ và biển.</small>
-  </div>
-  <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ tại điểm đang chọn">
-    <div class="panel-head intraday-head">
-      <div><span class="eyebrow">72 GIỜ TỚI</span><h2 id="intradayTitle">Gió 72 giờ</h2></div>
-      <div class="intraday-head-meta"><small id="intradayMeta">72 giờ tới · Giờ Phú Quốc UTC+7</small><span id="intradaySignal" class="intraday-signal"></span></div>
-    </div>
-    <nav id="intradayTabs" class="intraday-tabs" aria-label="Chọn lớp biểu đồ">
-      <button class="active" type="button" data-intraday="wind">💨 Gió</button>
-      <button type="button" data-intraday="rain">🌧️ Mưa</button>
-      <button type="button" data-intraday="temperature">🌡️ Nhiệt độ</button>
-      <button type="button" data-intraday="wave">🌊 Sóng</button>
-      <button type="button" data-intraday="convective">☁️ Mây</button>
-      <button type="button" data-intraday="tide">↕️ Triều</button>
-    </nav>
-    <div class="intraday-chart-shell">
-      <svg id="intradayChart" class="intraday-chart" viewBox="0 0 960 270" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Biểu đồ diễn biến thời tiết 72 giờ">
-        <text x="360" y="118" text-anchor="middle" class="chart-empty">Đang dựng biểu đồ...</text>
-      </svg>
-    </div>
-    <div class="intraday-under">
-      <div id="intradayLegend" class="intraday-legend"></div>
-      <div id="intradayFocus" class="intraday-focus"><b>Chạm một điểm</b><span>Xem giờ và số liệu chi tiết</span></div>
-    </div>
-    <small id="intradayNote" class="panel-foot">Ước tính hiện tại và dự báo 72 giờ được tách rõ để không nhầm số đang xảy ra với số dự báo.</small>
   </section>
 
   <div class="journey-heading">
@@ -145,7 +120,7 @@
   <section class="panel jotrip-forecast-panel">
     <div class="panel-head">
       <div><span class="eyebrow">DỰ BÁO JOTRIP</span><h2 id="jotripForecastTitle">10 ngày tới theo khu vực</h2></div>
-      <span id="ensembleState" class="badge learning">ĐANG HỌC TỪ DỮ LIỆU THỰC TẾ</span>
+      
     </div>
     <p id="jotripForecastSummary" class="panel-note">Xem nhanh ngày nào thuận lợi hơn. Ba ngày đầu có nhiều mốc hơn; từ ngày 4 trở đi nên xem như xu hướng và kiểm tra lại gần ngày đi.</p>
     <nav id="forecastRegionTabs" class="forecast-region-tabs forecast-region-tabs-auto" aria-label="Vùng dự báo Phú Quốc">
@@ -155,34 +130,38 @@
     <div id="forecastDayRibbon" class="forecast-day-ribbon" aria-label="Tóm tắt dự báo 10 ngày">
       <span class="inline-loader">Đang tổng hợp 10 ngày...</span>
     </div>
-    <details class="forecast-detail-toggle">
-      <summary>Xem dự báo chi tiết theo giờ</summary>
-      <div class="forecast-table-shell">
-        <table class="jotrip-forecast-table">
-          <thead>
-            <tr>
-              <th>Thời điểm</th>
-              <th>Nhiệt độ</th>
-              <th>Gió ước tính</th>
-              <th>Beaufort</th>
-              <th>Mưa ước tính</th>
-              <th>Biến động</th>
-              <th>Độ tin cậy</th>
-              <th>Điểm nhạy nhất</th>
-            </tr>
-          </thead>
-          <tbody id="jotripForecastRows">
-            <tr><td colspan="8"><span class="inline-loader">Đang tổng hợp dự báo JoTrip 10 ngày...</span></td></tr>
-          </tbody>
-        </table>
+
+  </section>  <div class="section-intro section-intro-spaced">
+    <div><span class="eyebrow">THỰC ĐỊA</span><h2>Đang xảy ra ngoài kia thế nào?</h2></div>
+    <small>Quan trắc thật và phản hồi tại chỗ để đối chiếu với dự báo JoTrip.</small>
+  </div>
+
+  <section class="panel actual-panel">
+    <div class="panel-head">
+      <div><span class="eyebrow">QUAN TRẮC THỰC TẾ</span><h2>Dữ liệu đo được</h2></div>
+      <small id="actualState">ĐANG TẢI</small>
+    </div>
+
+    <div class="field-strip field-strip-first" aria-label="Phản hồi thực địa">
+      <div class="field-strip-head">
+        <span><b>Phản hồi tại chỗ</b> · bạn đang thấy thực tế thế nào?</span>
+        <select id="feedbackPoint" aria-label="Khu vực phản hồi"></select>
       </div>
-    </details>
-    <small id="ensembleMeta" class="panel-foot"></small>
-    <details class="forecast-method">
-      <summary>JoTrip tính dự báo theo khu vực như thế nào?</summary>
-      <div>Nhiệt độ của vùng lấy giá trị trung tâm từ các điểm đại diện. Với gió, mưa và rủi ro, hệ thống ưu tiên điểm có tín hiệu bất lợi hơn để không làm mất cảnh báo cục bộ. Gió tại các điểm ven bờ có thể được hiệu chỉnh theo hướng phơi gió và mức che chắn địa phương trước khi tính xác suất. Điểm biến động /100 là chỉ số độ phân tán ensemble, còn điểm tin cậy /100 là chỉ số chất lượng vận hành - cả hai đều không phải xác suất dự báo chắc chắn đúng. Ba ngày đầu giữ bước 6 giờ; từ ngày 4 đến ngày 10 dùng bước 12 giờ và giảm dần mức tin cậy.</div>
-    </details>
-  </section>  <div class="journey-heading">
+      <div class="feedback-actions compact">
+        <button type="button" data-feedback="MATCH">Khớp</button>
+        <button type="button" data-feedback="RAIN_MORE">Mưa nhiều hơn</button>
+        <button type="button" data-feedback="RAIN_LESS">Mưa ít hơn</button>
+        <button type="button" data-feedback="WIND_MORE">Gió mạnh hơn</button>
+        <button type="button" data-feedback="WIND_LESS">Gió yếu hơn</button>
+        <button type="button" data-feedback="THUNDER">Có dông</button>
+      </div>
+      <small id="feedbackState">Không thu GPS · phản hồi được gửi về hệ thống JoTrip; nếu mất mạng, thiết bị sẽ lưu lại và tự gửi khi có kết nối.</small><div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <div id="actualStrip" class="actual-strip"><div class="skeleton wide"></div></div>
+    <small class="panel-foot rain-standard-note">Mưa quan trắc: trạng thái có/không mưa dựa trên chênh lệch giữa hai mẫu đo liên tiếp. Lượng mưa ghi bằng mm trong đúng cửa sổ quan trắc; cường độ được quy đổi về mm/h theo chuẩn biến quan trắc WMO.</small>
+  </section>
+  <div class="journey-heading">
     <div><span class="eyebrow">ĐANG DIỄN RA Ở ĐÂU?</span><h2>Radar & bản đồ</h2></div>
     <small>Khi có mưa hoặc mây đối lưu, dùng bản đồ để nhìn vị trí và hướng di chuyển.</small>
   </div>
@@ -231,10 +210,95 @@
     </details>
   </section>  <details class="deep-weather-disclosure" id="deepWeatherDetails">
     <summary>
-      <div><span class="eyebrow">XEM SÂU HƠN</span><b>Chi tiết tại điểm, số liệu chuyên sâu & kiểm chứng</b></div>
-      <small>Gió giật, Hmax, triều, AQI, quan trắc và nguồn dữ liệu</small>
+      <div><span class="eyebrow">XEM SÂU HƠN</span><b>Phân tích kỹ thuật theo điểm</b></div>
+      <small>Biểu đồ 72 giờ, dự báo theo điểm, ensemble, biển, AQI, triều và tuổi dữ liệu</small>
     </summary>
     <div class="deep-weather-body">
+      <div class="technical-point-control">
+        <div class="technical-subhead"><div><span class="eyebrow">CHỌN ĐIỂM KỸ THUẬT</span><h3 id="technicalPointTitle">Dương Đông</h3></div><small>Đổi điểm tại đây cũng đồng bộ toàn bộ trang.</small></div>
+        <nav id="technicalPointTabs" class="technical-point-tabs" aria-label="Chọn điểm phân tích kỹ thuật"></nav>
+      </div>
+      <div class="technical-freshness" aria-label="Tuổi dữ liệu theo nguồn">
+        <span><b>Local Now</b><em id="technicalLocalAge">-</em></span>
+        <span><b>Quan trắc</b><em id="technicalActualAge">-</em></span>
+        <span><b>Himawari</b><em id="technicalNowcastAge">-</em></span>
+        <span><b>Forecast</b><em id="technicalForecastAge">-</em></span>
+      </div>
+      <div class="section-intro section-intro-simple technical-72-intro">
+        <div><span class="eyebrow">72 GIỜ</span><h2>Biểu đồ theo điểm</h2></div>
+        <small>Dành cho người muốn xem diễn biến và độ phân tán, không phải lớp quyết định nhanh cho khách.</small>
+      </div>
+  <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ tại điểm đang chọn">
+    <div class="panel-head intraday-head">
+      <div><span class="eyebrow">72 GIỜ TỚI</span><h2 id="intradayTitle">Gió 72 giờ</h2></div>
+      <div class="intraday-head-meta"><small id="intradayMeta">72 giờ tới · Giờ Phú Quốc UTC+7</small><span id="intradaySignal" class="intraday-signal"></span></div>
+    </div>
+    <nav id="intradayTabs" class="intraday-tabs" aria-label="Chọn lớp biểu đồ">
+      <button class="active" type="button" data-intraday="wind">💨 Gió</button>
+      <button type="button" data-intraday="rain">🌧️ Mưa</button>
+      <button type="button" data-intraday="temperature">🌡️ Nhiệt độ</button>
+      <button type="button" data-intraday="wave">🌊 Sóng</button>
+      <button type="button" data-intraday="convective">☁️ Mây</button>
+      <button type="button" data-intraday="tide">↕️ Triều</button>
+    </nav>
+    <div class="intraday-chart-shell">
+      <svg id="intradayChart" class="intraday-chart" viewBox="0 0 960 270" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Biểu đồ diễn biến thời tiết 72 giờ">
+        <text x="360" y="118" text-anchor="middle" class="chart-empty">Đang dựng biểu đồ...</text>
+      </svg>
+    </div>
+    <div class="intraday-under">
+      <div id="intradayLegend" class="intraday-legend"></div>
+      <div id="intradayFocus" class="intraday-focus"><b>Chạm một điểm</b><span>Xem giờ và số liệu chi tiết</span></div>
+    </div>
+    <small id="intradayNote" class="panel-foot">Ước tính hiện tại và dự báo 72 giờ được tách rõ để không nhầm số đang xảy ra với số dự báo.</small>
+  </section>
+
+
+      <section class="panel technical-point-forecast-panel">
+        <div class="panel-head">
+          <div><span class="eyebrow">DỰ BÁO THEO ĐIỂM</span><h2 id="technicalForecastTitle">Chi tiết mô hình tại Dương Đông</h2></div>
+          <span class="badge model">JOTRIP ENGINE</span>
+        </div>
+        <div class="technical-table-shell">
+          <table class="technical-point-table">
+            <thead><tr><th>Thời gian</th><th>Nhiệt độ</th><th>Gió</th><th>Giật</th><th>Mưa</th><th>Sóng</th></tr></thead>
+            <tbody id="technicalForecastRows"><tr><td colspan="6">Mở phần chuyên sâu để tải bảng theo điểm.</td></tr></tbody>
+          </table>
+        </div>
+        <small id="technicalForecastMeta" class="panel-foot"></small>
+      </section>
+  <div class="technical-region-forecast">
+    <div class="technical-subhead"><div><span class="eyebrow">DỰ BÁO VÙNG</span><h3>Ensemble & chi tiết vùng</h3></div><span id="ensembleState" class="badge learning">ĐANG HIỆU CHỈNH</span></div>
+    <details class="forecast-detail-toggle">
+      <summary>Xem dự báo chi tiết theo giờ</summary>
+      <div class="forecast-table-shell">
+        <table class="jotrip-forecast-table">
+          <thead>
+            <tr>
+              <th>Thời điểm</th>
+              <th>Nhiệt độ</th>
+              <th>Gió ước tính</th>
+              <th>Beaufort</th>
+              <th>Mưa ước tính</th>
+              <th>Biến động</th>
+              <th>Độ tin cậy</th>
+              <th>Điểm nhạy nhất</th>
+            </tr>
+          </thead>
+          <tbody id="jotripForecastRows">
+            <tr><td colspan="8"><span class="inline-loader">Đang tổng hợp dự báo JoTrip 10 ngày...</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    <small id="ensembleMeta" class="panel-foot"></small>
+    <details class="forecast-method">
+      <summary>JoTrip tính dự báo theo khu vực như thế nào?</summary>
+      <div>Nhiệt độ của vùng lấy giá trị trung tâm từ các điểm đại diện. Với gió, mưa và rủi ro, hệ thống ưu tiên điểm có tín hiệu bất lợi hơn để không làm mất cảnh báo cục bộ. Gió tại các điểm ven bờ có thể được hiệu chỉnh theo hướng phơi gió và mức che chắn địa phương trước khi tính xác suất. Điểm biến động /100 là chỉ số độ phân tán ensemble, còn điểm tin cậy /100 là chỉ số chất lượng vận hành - cả hai đều không phải xác suất dự báo chắc chắn đúng. Ba ngày đầu giữ bước 6 giờ; từ ngày 4 đến ngày 10 dùng bước 12 giờ và giảm dần mức tin cậy.</div>
+    </details>
+    <small id="ensembleMeta" class="panel-foot"></small>
+  </div>
+
   <section class="decision-strip" aria-label="Tình hình chung">
     <div class="decision-strip-main">
       <span>Tình hình chung</span>
@@ -251,8 +315,8 @@
   </section>
 
   <div class="section-intro section-intro-simple">
-    <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Những gì khách cần biết ngay</h2></div>
-    <small>Các chỉ số chính trước. Thông số chuyên sâu được đặt riêng bên dưới.</small>
+    <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Phân tích kỹ thuật tại điểm đang chọn</h2></div>
+    <small>Tách riêng lớp quan trắc, ước tính hiện tại và mô hình để dễ kiểm tra vì sao hệ thống đưa ra kết luận.</small>
   </div>
   <section class="now-grid now-grid-primary" aria-label="Tình hình hiện tại">
     <article class="metric-card">
@@ -301,7 +365,7 @@
     <summary>Các con số phía trên nghĩa là gì?</summary>
     <div class="number-guide-grid">
       <span><b>Mưa mm/h</b> - cường độ mưa ước tính tại thời điểm hiện tại. % tin cậy cho biết mức chắc chắn của phép ước tính, không phải xác suất sẽ có mưa.</span>
-      <span><b>Nowcast 0-3 giờ</b> - theo dõi vùng mây đang ở đâu, đi hướng nào và có khả năng đi qua khu vực nào. Riêng cảnh báo mưa tăng nhanh vẫn tập trung mạnh nhất ở 0-60 phút đầu.</span>
+      <span><b>Mây đối lưu ngắn hạn</b> - dùng ảnh vệ tinh để đối chiếu vùng mây, hướng di chuyển và tín hiệu phát triển. Đây không phải phép đo mưa hay sét tại đúng vị trí.</span>
       <span><b>Gió giật</b> - giá trị dự báo gió giật của mô hình, khác với gió trung bình tại chỗ.</span>
       <span><b>Hs</b> - chiều cao sóng có ý nghĩa, dùng mô tả trạng thái biển nền. Đây không phải con sóng lớn nhất.</span>
       <span><b>Hmax</b> - chiều cao sóng lớn dùng để nhìn phần rủi ro của trạng thái biển. Khi chưa có giá trị trực tiếp, hệ thống dùng ước tính thống kê và ghi rõ nguồn.</span>
@@ -310,36 +374,6 @@
     </div>
   </details>
 
-  <div class="section-intro section-intro-spaced">
-    <div><span class="eyebrow">KIỂM CHỨNG</span><h2>Quan trắc và phản hồi thực địa</h2></div>
-    <small>Những gì hệ thống đo được hoặc nhận từ người đang ở trên đảo</small>
-  </div>
-
-  <section class="panel actual-panel">
-    <div class="panel-head">
-      <div><span class="eyebrow">QUAN TRẮC THỰC TẾ</span><h2>Dữ liệu đo được</h2></div>
-      <small id="actualState">ĐANG TẢI</small>
-    </div>
-
-    <div class="field-strip field-strip-first" aria-label="Phản hồi thực địa">
-      <div class="field-strip-head">
-        <span><b>Phản hồi tại chỗ</b> · bạn đang thấy thực tế thế nào?</span>
-        <select id="feedbackPoint" aria-label="Khu vực phản hồi"></select>
-      </div>
-      <div class="feedback-actions compact">
-        <button type="button" data-feedback="MATCH">Khớp</button>
-        <button type="button" data-feedback="RAIN_MORE">Mưa nhiều hơn</button>
-        <button type="button" data-feedback="RAIN_LESS">Mưa ít hơn</button>
-        <button type="button" data-feedback="WIND_MORE">Gió mạnh hơn</button>
-        <button type="button" data-feedback="WIND_LESS">Gió yếu hơn</button>
-        <button type="button" data-feedback="THUNDER">Có dông</button>
-      </div>
-      <small id="feedbackState">Không thu GPS · phản hồi được gửi về hệ thống JoTrip; nếu mất mạng, thiết bị sẽ lưu lại và tự gửi khi có kết nối.</small><div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
-    </div>
-
-    <div id="actualStrip" class="actual-strip"><div class="skeleton wide"></div></div>
-    <small class="panel-foot rain-standard-note">Mưa quan trắc: trạng thái có/không mưa dựa trên chênh lệch giữa hai mẫu đo liên tiếp. Lượng mưa ghi bằng mm trong đúng cửa sổ quan trắc; cường độ được quy đổi về mm/h theo chuẩn biến quan trắc WMO.</small>
-  </section>
   <div class="two-col">
     <section class="panel instant-panel">
       <div class="panel-head">

@@ -1933,18 +1933,20 @@ function mapPopup(id,p){
     '<span>'+esc(parts.join(" · ")||"Đang tổng hợp số liệu")+'</span>'+
     '<small>'+esc(cloud.label)+(cloud.detail?" · "+esc(cloud.detail):"")+'</small></div>';
 }
+const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260922-layerfix2";
 async function renderJoTripMap(){
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(!box)return;
   const existing=box.querySelector('iframe[data-jotrip-scene]');
   if(existing){
+    if(existing.getAttribute("src")!==JOTRIP_SCENE_URL)existing.setAttribute("src",JOTRIP_SCENE_URL);
     box.classList.add("jotrip-scene-active");
     if(state){state.textContent="LIVE";state.className="badge actual"}
     return;
   }
   if(jotripMap){try{jotripMap.remove()}catch{} jotripMap=null}
   box.classList.add("jotrip-scene-active");
-  box.innerHTML='<iframe data-jotrip-scene title="JoTrip Weather Scene - Phú Quốc" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="/weather-scene-v3.html?embed=1&integrated=1&v=20260921-merge3"></iframe>';
+  box.innerHTML='<iframe data-jotrip-scene title="JoTrip Weather Scene - Phú Quốc" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="'+JOTRIP_SCENE_URL+'"></iframe>';
   const frame=box.firstChild;
   frame.onload=()=>{
     if(state){state.textContent="LIVE";state.className="badge actual"}

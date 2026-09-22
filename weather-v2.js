@@ -70,7 +70,7 @@ async function getJSON(url,ttlMs=120000){
   const sep=url.includes("?")?"&":"?";
   const live=LIVE_NO_STORE_URLS.includes(url);
   const token=live?Date.now():Math.floor(Date.now()/Math.max(30000,ttlMs));
-  const r=await fetch(url+sep+"v="+token,{cache:live?"no-store":"default",headers:live?{"cache-control":"no-cache"}:{}});
+  const r=await fetch(url+sep+"v="+token,{cache:live?"no-store":"default"});
   if(!r.ok)throw new Error("HTTP "+r.status);
   return r.json();
 }

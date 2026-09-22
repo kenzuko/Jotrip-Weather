@@ -1,0 +1,7 @@
+name = "jotrip-weather-fresh"
+main = "weather-fresh-worker.js"
+compatibility_date = "2026-09-16"
+workers_dev = true
+
+[triggers]
+crons = ["*/10 * * * *"]

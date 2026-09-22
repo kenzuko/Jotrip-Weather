@@ -114,7 +114,7 @@ function modelCycleBadge(scene){
 function freshnessText(iso,kind){
   const a=ageMinutes(iso);
   if(a===null)return {text:"không rõ thời gian",stale:true};
-  const staleLimit=kind==="satellite"?75:kind==="actual"?90:kind==="marine"?360:420;
+  const staleLimit=kind==="satellite"?35:kind==="actual"?90:kind==="marine"?210:420;
   const prefix=kind==="satellite"?"ảnh vệ tinh ":kind==="marine"?"biển ":"";
   return {text:prefix+agePhraseFromMinutes(a),stale:a>staleLimit};
 }
@@ -215,6 +215,8 @@ function initMap(){
 }
 
 function cloudFrames(){
+  const age=ageMinutes(state.nowcast?.sampled_time);
+  if(age===null||age>35)return [];
   return state.nowcast?.spatial?.frames||[];
 }
 function forecastFrames(){
@@ -237,6 +239,7 @@ function forecastFramesFor(scene){
 function marineWaveFrame(){
   const wave=state.marine?.wave;
   if(!wave||wave.status!=="READY"||!(wave.cells||[]).length||!wave.sampled_time)return null;
+  if((ageMinutes(wave.sampled_time)??Infinity)>210)return null;
   return {
     sampled_time:wave.sampled_time,
     valid_time:wave.sampled_time,
@@ -288,7 +291,7 @@ function setScene(scene){
   }else if(
     scene==="wave" &&
     state.frames[0]?.data_class==="OBSERVED_MARINE" &&
-    (ageMinutes(state.frames[0]?.sampled_time)??Infinity)<=360
+    (ageMinutes(state.frames[0]?.sampled_time)??Infinity)<=210
   ){
     state.index=0;
   }else{
@@ -474,9 +477,9 @@ function updateCopy(){
       '<div class="scale"><span>0.2 m</span><span>0.6</span><span>1.0</span><span>1.6+ m</span></div>';
   }
 
-  const fresh=(state.scene==="cloud"||kind==="marine")
-    ? freshnessText(sourceTime,kind)
-    : modelCycleBadge(state.scene);
+  const fresh=kind==="marine"&&sourceTime
+    ? {text:"mốc Copernicus "+stamp(sourceTime)+" · nguồn 3 giờ",stale:(ageMinutes(sourceTime)??Infinity)>210}
+    : (state.scene==="cloud"?freshnessText(sourceTime,kind):modelCycleBadge(state.scene));
   $("freshness").textContent=fresh.text;
   $("freshness").classList.toggle("stale",fresh.stale);
   $("slider").value=String(state.index);
@@ -1270,6 +1273,32 @@ function bind(){
   addEventListener("resize",queueRender,{passive:true});
 }
 
+async function refreshCanonicalRuntime(){
+  try{
+    const manifest=await fetchCanonical(URLS.manifest);
+    const before=JSON.stringify(state.runtimeManifest?.source_times||{});
+    const after=JSON.stringify(manifest?.source_times||{});
+    if(before===after)return;
+    const [n,c,cur,e,d,m]=await Promise.allSettled([
+      fetchCanonical(URLS.nowcast),fetchCanonical(URLS.compact),fetchCanonical(URLS.current),
+      fetchCanonical(URLS.ecmwf),fetchCanonical(URLS.dashboard),fetchCanonical(URLS.marine)
+    ]);
+    state.runtimeManifest=manifest;
+    if(n.status==="fulfilled")state.nowcast=n.value;
+    if(c.status==="fulfilled")state.compact=c.value;
+    if(cur.status==="fulfilled")state.current=cur.value;
+    if(e.status==="fulfilled")state.ecmwf=e.value;
+    if(d.status==="fulfilled")state.dashboard=d.value;
+    if(m.status==="fulfilled")state.marine=m.value;
+    setTabAvailability();
+    let next=state.scene;
+    if(!sceneAvailable(next))next=sceneAvailable("cloud")?"cloud":sceneAvailable("rain")?"rain":sceneAvailable("wind")?"wind":"wave";
+    if(sceneAvailable(next))setScene(next);
+  }catch(e){
+    console.warn("[Weather Scene] runtime refresh",e);
+  }
+}
+
 async function boot(){
   if(EMBED) document.body.classList.add("embed-mode");
   initMap();
@@ -1311,8 +1340,10 @@ async function boot(){
     setScene(initial);
     $("loading").classList.add("hidden");
   }else{
-    $("loading").textContent="Chưa có nguồn dữ liệu nào đủ để dựng Weather Scene.";
+    $("loading").textContent="Chưa có nguồn dữ liệu nào đủ mới để dựng Weather Scene.";
   }
+  setInterval(()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()},5*60*1000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()});
 }
 
 boot();

@@ -2482,3 +2482,24 @@ footer{font-size:9.5px}
   .forecast-day-nav{display:none}
   .forecast-day-ribbon-shell .forecast-day-ribbon{margin-right:-8px!important}
 }
+
+
+/* ui9 - field feedback + actual before 10-day; technical duplicate removed */
+.field-feedback-panel{margin-top:14px}
+.field-feedback-head{align-items:flex-end}
+.feedback-point-label{font-size:9px;font-weight:900;color:#174c66;background:#eef7fa;border:1px solid #d7e9ef;padding:6px 9px;border-radius:8px}
+.field-feedback-panel .feedback-actions{margin-top:10px}
+.field-feedback-panel .feedback-actions button{border-radius:8px}
+.actual-panel{margin-top:9px}
+.deep-weather-body>.technical-point-control{margin-top:4px}
+.deep-weather-body>.now-advanced{margin-top:14px}
+.deep-weather-body>.technical-region-forecast{margin-top:18px}
+.deep-weather-body>.two-col{margin-top:18px}
+.deep-weather-body>.decision-strip{margin-top:18px}
+@media(max-width:720px){
+  .field-feedback-panel{margin-top:10px}
+  .field-feedback-head{align-items:flex-start}
+  .feedback-point-label{background:transparent;border:0;padding:0}
+  .field-feedback-panel .feedback-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .field-feedback-panel .feedback-actions button{min-height:38px;padding:8px 6px}
+}

@@ -896,7 +896,7 @@ function renderCurrent(){
     rainCtx.innerHTML=[actualCtx,nowCtx].filter(Boolean).map(x=>'<span class="ctx-line">'+x+'</span>').join("");
   }
   const cloudNow=cloudStateLabel(n);
-  $("convectiveNow").textContent=cloudNow.label==="Chưa đủ dữ liệu mây"?"-":
+  if($("convectiveNow"))$("convectiveNow").textContent=cloudNow.label==="Chưa đủ dữ liệu mây"?"-":
     (num(n.convective_score)>=75?"MÂY RẤT CAO":num(n.convective_score)>=50?"ĐANG PHÁT TRIỂN":num(n.convective_score)>=25?"CÓ MÂY ĐÁNG CHÚ Ý":"ÍT TÍN HIỆU");
   if($("convectiveMeta"))$("convectiveMeta").textContent=cloudNow.detail||"Himawari · chưa đủ chi tiết";
   setMetric("waveNow",localFresh?(l.wave_hs_m??m.wave_hs_m):m.wave_hs_m,2);
@@ -949,12 +949,8 @@ function renderActual(){
 }
 
 function renderFeedbackPoint(){
-  const sel=$("feedbackPoint");if(!sel)return;
-  const ids=(critical.island_watch_order||[]).filter(id=>critical.points?.[id]);
-  const prev=sel.value;
-  sel.innerHTML=ids.map(id=>'<option value="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+'</option>').join("");
-  const desired=ids.includes(current)?current:(ids.includes(prev)?prev:"duong_dong");
-  sel.value=desired;
+  const label=$("feedbackPointLabel");if(!label)return;
+  label.textContent=point().name||current;
 }
 
 function aqiLabel(cat){
@@ -2256,7 +2252,7 @@ function mapPopup(id,p){
     '<span>'+esc(parts.join(" · ")||"Đang tổng hợp số liệu")+'</span>'+
     '<small>'+esc(cloud.label)+(cloud.detail?" · "+esc(cloud.detail):"")+'</small></div>';
 }
-const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260922-wave5";
+const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260922-fresh1";
 async function renderJoTripMap(){
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(!box)return;
@@ -2450,7 +2446,7 @@ async function flushFeedbackQueue(){
   return {sent,pending:readFeedbackQueue().length};
 }
 async function feedback(kind,button){
-  const feedbackPoint=$("feedbackPoint")?.value||current;
+  const feedbackPoint=current;
   const p=critical?.points?.[feedbackPoint]||point(),l=p.local||{};
   const labels={
     MATCH:"Khớp",

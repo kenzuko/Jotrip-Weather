@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui8">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui9">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260922-prod76-ui8"></script>
+  <script defer src="/weather-v2.js?v=20260922-prod76-ui9"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -112,6 +112,38 @@
 
   </section>
 
+  <section class="panel field-feedback-panel" aria-label="Phản hồi tại chỗ">
+    <div class="panel-head field-feedback-head">
+      <div><span class="eyebrow">PHẢN HỒI TẠI CHỖ</span><h2>Bạn đang thấy thực tế thế nào?</h2></div>
+      <span id="feedbackPointLabel" class="feedback-point-label">Dương Đông</span>
+    </div>
+    <p class="panel-note">Phản hồi tự bám theo điểm đã chọn phía trên. Không cần chọn lại khu vực.</p>
+    <div class="feedback-actions compact">
+      <button type="button" data-feedback="MATCH">Khớp</button>
+      <button type="button" data-feedback="RAIN_MORE">Mưa nhiều hơn</button>
+      <button type="button" data-feedback="RAIN_LESS">Mưa ít hơn</button>
+      <button type="button" data-feedback="WIND_MORE">Gió mạnh hơn</button>
+      <button type="button" data-feedback="WIND_LESS">Gió yếu hơn</button>
+      <button type="button" data-feedback="THUNDER">Có dông</button>
+    </div>
+    <small id="feedbackState" class="panel-foot">Không thu GPS · phản hồi được gắn với điểm bạn đang xem và gửi về JoTrip.</small>
+    <div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
+  </section>
+
+  <div class="section-intro section-intro-spaced">
+    <div><span class="eyebrow">THỰC ĐỊA</span><h2>Đang đo được gì ngoài kia?</h2></div>
+    <small>Quan trắc thật từ các nguồn đang hoạt động để đối chiếu với dự báo JoTrip.</small>
+  </div>
+
+  <section class="panel actual-panel">
+    <div class="panel-head">
+      <div><span class="eyebrow">QUAN TRẮC THỰC TẾ</span><h2>Dữ liệu đo được</h2></div>
+      <small id="actualState">ĐANG TẢI</small>
+    </div>
+
+    <div id="actualStrip" class="actual-strip"><div class="skeleton wide"></div></div>
+    <small class="panel-foot rain-standard-note">Mưa quan trắc: trạng thái có/không mưa dựa trên chênh lệch giữa hai mẫu đo liên tiếp. Lượng mưa ghi bằng mm trong đúng cửa sổ quan trắc; cường độ được quy đổi về mm/h theo chuẩn biến quan trắc WMO.</small>
+  </section>
   <div class="journey-heading">
     <div><span class="eyebrow">MẤY NGÀY TỚI</span><h2>Lên kế hoạch 10 ngày</h2></div>
     <small>Nhìn xu hướng trước. Càng gần ngày đi, dữ liệu càng có giá trị để quyết định.</small>
@@ -143,37 +175,7 @@
       <div id="forecastDayDetailSlots" class="forecast-day-detail-slots"></div>
     </section>
 
-  </section>  <div class="section-intro section-intro-spaced">
-    <div><span class="eyebrow">THỰC ĐỊA</span><h2>Đang xảy ra ngoài kia thế nào?</h2></div>
-    <small>Quan trắc thật và phản hồi tại chỗ để đối chiếu với dự báo JoTrip.</small>
-  </div>
-
-  <section class="panel actual-panel">
-    <div class="panel-head">
-      <div><span class="eyebrow">QUAN TRẮC THỰC TẾ</span><h2>Dữ liệu đo được</h2></div>
-      <small id="actualState">ĐANG TẢI</small>
-    </div>
-
-    <div class="field-strip field-strip-first" aria-label="Phản hồi thực địa">
-      <div class="field-strip-head">
-        <span><b>Phản hồi tại chỗ</b> · bạn đang thấy thực tế thế nào?</span>
-        <select id="feedbackPoint" aria-label="Khu vực phản hồi"></select>
-      </div>
-      <div class="feedback-actions compact">
-        <button type="button" data-feedback="MATCH">Khớp</button>
-        <button type="button" data-feedback="RAIN_MORE">Mưa nhiều hơn</button>
-        <button type="button" data-feedback="RAIN_LESS">Mưa ít hơn</button>
-        <button type="button" data-feedback="WIND_MORE">Gió mạnh hơn</button>
-        <button type="button" data-feedback="WIND_LESS">Gió yếu hơn</button>
-        <button type="button" data-feedback="THUNDER">Có dông</button>
-      </div>
-      <small id="feedbackState">Không thu GPS · phản hồi được gửi về hệ thống JoTrip; nếu mất mạng, thiết bị sẽ lưu lại và tự gửi khi có kết nối.</small><div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
-    </div>
-
-    <div id="actualStrip" class="actual-strip"><div class="skeleton wide"></div></div>
-    <small class="panel-foot rain-standard-note">Mưa quan trắc: trạng thái có/không mưa dựa trên chênh lệch giữa hai mẫu đo liên tiếp. Lượng mưa ghi bằng mm trong đúng cửa sổ quan trắc; cường độ được quy đổi về mm/h theo chuẩn biến quan trắc WMO.</small>
-  </section>
-  <div class="journey-heading">
+  </section>  <div class="journey-heading">
     <div><span class="eyebrow">ĐANG DIỄN RA Ở ĐÂU?</span><h2>Radar & bản đồ</h2></div>
     <small>Khi có mưa hoặc mây đối lưu, dùng bản đồ để nhìn vị trí và hướng di chuyển.</small>
   </div>
@@ -223,11 +225,11 @@
   </section>  <details class="deep-weather-disclosure" id="deepWeatherDetails">
     <summary>
       <div><span class="eyebrow">XEM SÂU HƠN</span><b>Phân tích kỹ thuật theo điểm</b></div>
-      <small>Biểu đồ 72 giờ, dự báo theo điểm, ensemble, biển, AQI, triều và tuổi dữ liệu</small>
+      <small>72 giờ, dự báo theo điểm, gió/biển nâng cao, ensemble, AQI, triều và chất lượng nguồn</small>
     </summary>
     <div class="deep-weather-body">
       <div class="technical-point-control">
-        <div class="technical-subhead"><div><span class="eyebrow">CHỌN ĐIỂM KỸ THUẬT</span><h3 id="technicalPointTitle">Dương Đông</h3></div><small>Đổi điểm tại đây cũng đồng bộ toàn bộ trang.</small></div>
+        <div class="technical-subhead"><div><span class="eyebrow">CHỌN ĐIỂM KỸ THUẬT</span><h3 id="technicalPointTitle">Dương Đông</h3></div><small>Đổi điểm để xem toàn bộ phân tích kỹ thuật tương ứng.</small></div>
         <nav id="technicalPointTabs" class="technical-point-tabs" aria-label="Chọn điểm phân tích kỹ thuật"></nav>
       </div>
       <div class="technical-freshness" aria-label="Tuổi dữ liệu theo nguồn">
@@ -279,6 +281,42 @@
         </div>
         <small id="technicalForecastMeta" class="panel-foot"></small>
       </section>
+  <details class="now-advanced">
+    <summary>Thông số gió & biển nâng cao</summary>
+    <section class="now-grid now-grid-advanced" aria-label="Thông số thời tiết chuyên sâu">
+      <article class="metric-card">
+        <div><span>Gió giật</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="gustNow">--</b><small>km/h</small>
+      </article>
+      <article class="metric-card">
+        <div><span>Sóng cao Hmax</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="hmaxNow">--</b><small>m · giá trị ước tính khi cần</small>
+      </article>
+      <article class="metric-card">
+        <div><span>Chu kỳ sóng</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="periodNow">--</b><small>giây</small>
+      </article>
+      <article class="metric-card">
+        <div><span>Dòng chảy</span><em class="badge model">MÔ HÌNH</em></div>
+        <b id="currentNow">--</b><small>km/h</small>
+      </article>
+    </section>
+  </details>
+
+
+  <details class="number-guide">
+    <summary>Giải thích các chỉ số kỹ thuật</summary>
+    <div class="number-guide-grid">
+      <span><b>Mưa mm/h</b> - cường độ mưa ước tính tại thời điểm hiện tại. % tin cậy cho biết mức chắc chắn của phép ước tính, không phải xác suất sẽ có mưa.</span>
+      <span><b>Mây đối lưu ngắn hạn</b> - dùng ảnh vệ tinh để đối chiếu vùng mây, hướng di chuyển và tín hiệu phát triển. Đây không phải phép đo mưa hay sét tại đúng vị trí.</span>
+      <span><b>Gió giật</b> - giá trị dự báo gió giật của mô hình, khác với gió trung bình tại chỗ.</span>
+      <span><b>Hs</b> - chiều cao sóng có ý nghĩa, dùng mô tả trạng thái biển nền. Đây không phải con sóng lớn nhất.</span>
+      <span><b>Hmax</b> - chiều cao sóng lớn dùng để nhìn phần rủi ro của trạng thái biển. Khi chưa có giá trị trực tiếp, hệ thống dùng ước tính thống kê và ghi rõ nguồn.</span>
+      <span><b>Chu kỳ sóng</b> - khoảng thời gian giữa các đỉnh sóng. Cùng chiều cao nhưng chu kỳ khác nhau có thể cho cảm giác biển rất khác.</span>
+      <span><b>Dòng chảy</b> - tốc độ dòng chảy mô hình gần điểm biển hợp lệ nhất, không phải phép đo tại bờ.</span>
+    </div>
+  </details>
+
   <div class="technical-region-forecast">
     <div class="technical-subhead"><div><span class="eyebrow">DỰ BÁO VÙNG</span><h3>Ensemble & chi tiết vùng</h3></div><span id="ensembleState" class="badge learning">ĐANG HIỆU CHỈNH</span></div>
     <details class="forecast-detail-toggle">
@@ -311,81 +349,6 @@
     <small id="ensembleMeta" class="panel-foot"></small>
   </div>
 
-  <section class="decision-strip" aria-label="Tình hình chung">
-    <div class="decision-strip-main">
-      <span>Tình hình chung</span>
-      <b id="decisionNow">-</b>
-    </div>
-    <details class="data-health-details">
-      <summary>Chất lượng dữ liệu</summary>
-      <div class="status-strip data-health-strip" aria-label="Chất lượng dữ liệu thời tiết">
-        <div><span>Độ phủ dữ liệu</span><b id="completenessNow">-</b></div>
-        <div><span>Mức tin cậy</span><b id="confidenceNow">-</b></div>
-        <div><span>Tầm dự báo</span><b id="horizonNow">-</b></div>
-      </div>
-    </details>
-  </section>
-
-  <div class="section-intro section-intro-simple">
-    <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Phân tích kỹ thuật tại điểm đang chọn</h2></div>
-    <small>Tách riêng lớp quan trắc, ước tính hiện tại và mô hình để dễ kiểm tra vì sao hệ thống đưa ra kết luận.</small>
-  </div>
-  <section class="now-grid now-grid-primary" aria-label="Tình hình hiện tại">
-    <article class="metric-card">
-      <div><span>Gió</span><em id="windClass" class="badge estimated">ƯỚC TÍNH</em></div>
-      <b id="windNow">--</b><small>km/h</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Mưa tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
-      <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
-    </article>
-    <article class="metric-card">
-      <div><span>Mây quanh khu vực</span><em class="badge remote">VỆ TINH</em></div>
-      <b id="convectiveNow">--</b><small id="convectiveMeta">Himawari · đang phân tích</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Sóng Hs</span><em id="marineClass" class="badge model">MÔ HÌNH</em></div>
-      <b id="waveNow">--</b><small>m · độ cao sóng có nghĩa</small>
-    </article>
-  </section>
-
-
-  <details class="now-advanced">
-    <summary>Xem thêm thông số gió và biển</summary>
-    <section class="now-grid now-grid-advanced" aria-label="Thông số thời tiết chuyên sâu">
-      <article class="metric-card">
-        <div><span>Gió giật</span><em class="badge model">MÔ HÌNH</em></div>
-        <b id="gustNow">--</b><small>km/h</small>
-      </article>
-      <article class="metric-card">
-        <div><span>Sóng cao Hmax</span><em class="badge model">MÔ HÌNH</em></div>
-        <b id="hmaxNow">--</b><small>m · giá trị ước tính khi cần</small>
-      </article>
-      <article class="metric-card">
-        <div><span>Chu kỳ sóng</span><em class="badge model">MÔ HÌNH</em></div>
-        <b id="periodNow">--</b><small>giây</small>
-      </article>
-      <article class="metric-card">
-        <div><span>Dòng chảy</span><em class="badge model">MÔ HÌNH</em></div>
-        <b id="currentNow">--</b><small>km/h</small>
-      </article>
-    </section>
-  </details>
-
-
-  <details class="number-guide">
-    <summary>Các con số phía trên nghĩa là gì?</summary>
-    <div class="number-guide-grid">
-      <span><b>Mưa mm/h</b> - cường độ mưa ước tính tại thời điểm hiện tại. % tin cậy cho biết mức chắc chắn của phép ước tính, không phải xác suất sẽ có mưa.</span>
-      <span><b>Mây đối lưu ngắn hạn</b> - dùng ảnh vệ tinh để đối chiếu vùng mây, hướng di chuyển và tín hiệu phát triển. Đây không phải phép đo mưa hay sét tại đúng vị trí.</span>
-      <span><b>Gió giật</b> - giá trị dự báo gió giật của mô hình, khác với gió trung bình tại chỗ.</span>
-      <span><b>Hs</b> - chiều cao sóng có ý nghĩa, dùng mô tả trạng thái biển nền. Đây không phải con sóng lớn nhất.</span>
-      <span><b>Hmax</b> - chiều cao sóng lớn dùng để nhìn phần rủi ro của trạng thái biển. Khi chưa có giá trị trực tiếp, hệ thống dùng ước tính thống kê và ghi rõ nguồn.</span>
-      <span><b>Chu kỳ sóng</b> - khoảng thời gian giữa các đỉnh sóng. Cùng chiều cao nhưng chu kỳ khác nhau có thể cho cảm giác biển rất khác.</span>
-      <span><b>Dòng chảy</b> - tốc độ dòng chảy mô hình gần điểm biển hợp lệ nhất, không phải phép đo tại bờ.</span>
-    </div>
-  </details>
-
   <div class="two-col">
     <section class="panel instant-panel">
       <div class="panel-head">
@@ -407,6 +370,21 @@
     </section>
   </div>
 
+
+  <section class="decision-strip" aria-label="Tình hình chung">
+    <div class="decision-strip-main">
+      <span>Đánh giá tổng hợp</span>
+      <b id="decisionNow">-</b>
+    </div>
+    <details class="data-health-details">
+      <summary>Chất lượng dữ liệu</summary>
+      <div class="status-strip data-health-strip" aria-label="Chất lượng dữ liệu thời tiết">
+        <div><span>Độ phủ dữ liệu</span><b id="completenessNow">-</b></div>
+        <div><span>Mức tin cậy</span><b id="confidenceNow">-</b></div>
+        <div><span>Tầm dự báo</span><b id="horizonNow">-</b></div>
+      </div>
+    </details>
+  </section>
 
   <section class="panel health-panel" id="dataHealth">
     <div class="panel-head">

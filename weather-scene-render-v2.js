@@ -50,7 +50,7 @@ function grid(rows,key){
     lat0:lats[0],lat1:lats.at(-1),lon0:lons[0],lon1:lons.at(-1)
   };
 }
-function sampleGrid(g,lat,lon){
+function sampleGrid(g,lat,lon,minSupport=0){
   if(!g||lat<g.lat0||lat>g.lat1||lon<g.lon0||lon>g.lon1)return null;
   const fy=(lat-g.lat0)/g.dLat,fx=(lon-g.lon0)/g.dLon;
   const y0=clamp(Math.floor(fy),0,g.lats.length-2),x0=clamp(Math.floor(fx),0,g.lons.length-2);
@@ -62,7 +62,7 @@ function sampleGrid(g,lat,lon){
   ];
   let sw=0,sv=0;
   for(const [v,w] of q){if(Number.isFinite(v)){sw+=w;sv+=v*w}}
-  return sw?sv/sw:null;
+  return sw>minSupport?sv/sw:null;
 }
 function gridMask(lat,lon,g){
   if(!g||lat<g.lat0||lat>g.lat1||lon<g.lon0||lon>g.lon1)return 0;
@@ -164,7 +164,7 @@ function raster(scene,rows,map,field,motion){
         if(scene==="cloud"){
           col=alphaOver(cloudBody(sampleGrid(body,lat,lon)),cloudCore(sampleGrid(core,lat,lon)));
         }else{
-          const v=sampleGrid(scalar,lat,lon);
+          const v=sampleGrid(scalar,lat,lon,scene==="wave"?.58:0);
           col=scene==="rain"?rainColor(v):waveColor(v);
         }
         col=withAlpha(col,mask);
@@ -274,5 +274,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"3.1-grid-projected-field",render,stop};
+window.JoTripSceneRenderer={version:"3.2-wide-domain-marine-near-now",render,stop};
 })();

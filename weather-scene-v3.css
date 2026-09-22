@@ -270,3 +270,15 @@ body.embed-mode .legend{bottom:75px}
   body.embed-mode .legend{bottom:73px}
   body.embed-mode .status-open-btn{top:48px}
 }
+
+/* V3.4 - keep the map readable on phones */
+@media(max-width:760px){
+  .status-card{width:220px;max-height:176px;overflow:hidden}
+  .status-card p{
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:3;
+    overflow:hidden
+  }
+  .status-card .facts span:nth-child(n+3){display:none}
+}

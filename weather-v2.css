@@ -2298,3 +2298,8 @@ footer{font-size:9.5px}
   .map-convective-close{top:7px;right:7px}
   .panel-open-chip{min-height:34px;padding:8px 11px}
 }
+
+.weather-overview-head .updated.stale:before{
+  background:#e7a62f;
+  box-shadow:0 0 0 4px rgba(231,166,47,.12)
+}

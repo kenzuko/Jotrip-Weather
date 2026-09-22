@@ -23,8 +23,8 @@ const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Numbe
 
 const EMBED=new URLSearchParams(location.search).get("embed")==="1";
 const HOME_VIEW={lat:10.20,lon:103.98,mobileZoom:9.65,desktopZoom:10.25};
-const NAV_BOUNDS=[[9.68,103.52],[10.66,104.46]];
-const PROBE_BOUNDS={south:9.82,north:10.50,west:103.70,east:104.26};
+const NAV_BOUNDS=[[8.90,102.60],[11.10,105.65]];
+const PROBE_BOUNDS={south:9.15,north:10.90,west:102.95,east:105.35};
 function probeAllowed(lat,lon){
   return lat>=PROBE_BOUNDS.south&&lat<=PROBE_BOUNDS.north&&lon>=PROBE_BOUNDS.west&&lon<=PROBE_BOUNDS.east;
 }
@@ -108,7 +108,7 @@ function ageMinutes(iso){
 function freshnessText(iso,kind){
   const a=ageMinutes(iso);
   if(a===null) return {text:"không rõ thời gian",stale:true};
-  const staleLimit=kind==="satellite"?75:kind==="actual"?90:420;
+  const staleLimit=kind==="satellite"?75:kind==="actual"?90:kind==="marine"?360:420;
   if(a>staleLimit) return {text:"dữ liệu trễ · "+Math.round(a)+"p",stale:true};
   if(a<2) return {text:"vừa cập nhật",stale:false};
   return {text:Math.round(a)+"p trước",stale:false};
@@ -199,9 +199,46 @@ function forecastFrames(){
   });
   return sliced.length?sliced:all.slice(0,25);
 }
+function forecastFramesFor(scene){
+  const key=scene==="rain"?"rain_mm":scene==="wind"?"u10_ms":scene==="wave"?"wave_hs_m":null;
+  if(!key)return forecastFrames();
+  return forecastFrames().filter(f=>(f.cells||[]).some(c=>{
+    if(scene==="wind")return num(c.u10_ms)!==null&&num(c.v10_ms)!==null;
+    return num(c[key])!==null;
+  }));
+}
+function marineWaveFrame(){
+  const wave=state.marine?.wave;
+  if(!wave||wave.status!=="READY"||!(wave.cells||[]).length||!wave.sampled_time)return null;
+  return {
+    sampled_time:wave.sampled_time,
+    valid_time:wave.sampled_time,
+    data_class:"OBSERVED_MARINE",
+    source:"COPERNICUS_MARINE",
+    cells:(wave.cells||[]).map(c=>({
+      ...c,
+      wave_period_s:num(c.wave_mean_period_s)??num(c.wave_peak_period_s)
+    }))
+  };
+}
+function waveFrames(){
+  const observed=marineWaveFrame();
+  const forecast=forecastFramesFor("wave");
+  if(!observed)return forecast;
+  const observedAt=Date.parse(observed.sampled_time||"");
+  const future=forecast.filter(f=>{
+    const t=Date.parse(f.valid_time||"");
+    return !Number.isFinite(observedAt)||!Number.isFinite(t)||t>observedAt+60*60*1000;
+  });
+  return [observed,...future];
+}
+function sceneFrames(scene){
+  if(scene==="cloud")return cloudFrames();
+  if(scene==="wave")return waveFrames();
+  return forecastFramesFor(scene);
+}
 function sceneAvailable(scene){
-  if(scene==="cloud") return cloudFrames().length>0;
-  return forecastFrames().length>0;
+  return sceneFrames(scene).length>0;
 }
 function setTabAvailability(){
   document.querySelectorAll(".tabs button").forEach(b=>{
@@ -217,14 +254,20 @@ function setScene(scene){
   stop();
   stopSceneParticles();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.scene===scene));
-  state.frames=scene==="cloud"?cloudFrames():forecastFrames();
+  state.frames=sceneFrames(scene);
 
   if(scene==="cloud"){
     state.index=Math.max(0,state.frames.length-1);
+  }else if(
+    scene==="wave" &&
+    state.frames[0]?.data_class==="OBSERVED_MARINE" &&
+    (ageMinutes(state.frames[0]?.sampled_time)??Infinity)<=360
+  ){
+    state.index=0;
   }else{
     let best=0,dist=Infinity;
     state.frames.forEach((f,i)=>{
-      const d=Math.abs(Date.parse(f.valid_time||"")-Date.now());
+      const d=Math.abs(Date.parse(f.valid_time||f.sampled_time||"")-Date.now());
       if(d<dist){dist=d;best=i}
     });
     state.index=best;
@@ -277,7 +320,7 @@ function cloudSummary(){
   if(motionTrusted(motion)){
     summary+=" Motion quan trắc đủ chuẩn: "+(motion.motion_heading||"đang được theo dõi")+".";
   }else if(score>=40){
-    summary+=" Hướng dịch chuyển hiện chưa đạt chuẩn public.";
+    summary+=" Chưa đủ chắc để nói cụm mây đang đi theo hướng nào.";
   }
 
   const facts=[];
@@ -345,9 +388,9 @@ function updateCopy(){
   if(state.scene==="rain"){
     const actual=rainActualState();
     const peak=maxRainInFrame(f);
-    $("eyebrow").textContent="DỰ BÁO + ĐIỂM ACTUAL";
+    $("eyebrow").textContent="DỰ BÁO + ĐO THỰC";
     $("headline").textContent=peak<.2?"Mưa dự báo rất ít trong bước này":"Trường mưa ECMWF";
-    $("summary").textContent="Màu là dự báo ECMWF 0.25°. Các chấm trạm VRain là quan trắc thực tế và không được trộn vào field dự báo.";
+    $("summary").textContent="Màu là mưa dự báo. Các chấm trên bản đồ là trạm VRain đo thực tế và được giữ tách riêng.";
     $("facts").innerHTML=
       "<span>"+actual.label+"</span>"+
       "<span>Đỉnh ô model "+peak.toFixed(1)+" mm</span>";
@@ -368,7 +411,7 @@ function updateCopy(){
     const peak=maxWindInFrame(f);
     $("eyebrow").textContent="DỰ BÁO";
     $("headline").textContent="Gió mặt đất 10 m";
-    $("summary").textContent="Particle biểu diễn trường gió JoTrip Weather ở 10 m. Đây không phải hướng dịch chuyển của mây.";
+    $("summary").textContent="Các hạt chuyển động cho biết hướng và độ mạnh của gió ở độ cao 10 m. Đây không phải hướng đi của mây.";
     $("facts").innerHTML="<span>Gió mạnh nhất trên khung ≈ "+Math.round(peak)+" km/h</span><span>JoTrip Weather</span>";
     $("timeLabel").textContent=stamp(f?.valid_time);
     $("timeMeta").textContent="JoTrip Weather · ECMWF IFS · run "+utcCycleLabel(modelRunIso("wind"));
@@ -382,24 +425,29 @@ function updateCopy(){
 
   if(state.scene==="wave"){
     const peak=maxWaveInFrame(f);
-    $("eyebrow").textContent="DỰ BÁO BIỂN";
+    const observed=f?.data_class==="OBSERVED_MARINE";
+    $("eyebrow").textContent=observed?"BIỂN GẦN HIỆN TẠI":"DỰ BÁO BIỂN";
     $("headline").textContent="Sóng quanh Phú Quốc";
-    $("summary").textContent="Màu là độ cao sóng có nghĩa Hs trong JoTrip Weather. Hướng và chu kỳ được đọc tại điểm chọn.";
-    $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>JoTrip Weather</span>";
-    $("timeLabel").textContent=stamp(f?.valid_time);
-    $("timeMeta").textContent="JoTrip Weather · ECMWF Wave · run "+utcCycleLabel(modelRunIso("wave"));
-    $("modelBadge").textContent="ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
-    $("timeClass").textContent="FORECAST";
-    $("timeClass").className="time-class forecast";
-    sourceTime=state.ecmwf?.generated_at||f?.valid_time;
-    kind="forecast";
+    $("summary").textContent=observed
+      ?"Màu là Hs từ Copernicus Marine gần thời điểm hiện tại. Hướng và chu kỳ được đọc tại điểm chọn."
+      :"Màu là Hs dự báo từ ECMWF Wave. Hướng và chu kỳ được đọc tại điểm chọn.";
+    $("facts").innerHTML="<span>Hs lớn nhất trên khung ≈ "+peak.toFixed(1)+" m</span><span>"+(observed?"Copernicus Marine":"ECMWF Wave")+"</span>";
+    $("timeLabel").textContent=stamp(observed?f?.sampled_time:f?.valid_time);
+    $("timeMeta").textContent=observed
+      ?"JoTrip Weather · Copernicus Marine · near-now"
+      :"JoTrip Weather · ECMWF Wave · run "+utcCycleLabel(modelRunIso("wave"));
+    $("modelBadge").textContent=observed?"COPERNICUS · NEAR-NOW":"ECMWF WAVE · RUN "+utcCycleLabel(modelRunIso("wave"));
+    $("timeClass").textContent=observed?"NEAR-NOW":"FORECAST";
+    $("timeClass").className="time-class "+(observed?"observed":"forecast");
+    sourceTime=observed?f?.sampled_time:(state.ecmwf?.generated_at||f?.valid_time);
+    kind=observed?"marine":"forecast";
     $("legend").innerHTML=
       '<b>Sóng Hs</b>'+
       '<div class="bar" style="background:linear-gradient(90deg,#e6f6f8,#b8e5e9,#79cdd7,#43aec5,#2b87b5,#2f61a3,#4e4591,#6a3080)"></div>'+
       '<div class="scale"><span>0.2 m</span><span>0.6</span><span>1.0</span><span>1.6+ m</span></div>';
   }
 
-  const fresh=state.scene==="cloud"
+  const fresh=(state.scene==="cloud"||kind==="marine")
     ? freshnessText(sourceTime,kind)
     : modelCycleBadge(state.scene);
   $("freshness").textContent=fresh.text;
@@ -444,15 +492,23 @@ function updateSourcePanel(){
       "Data class: JoTrip Weather forecast"
     ];
   }else{
-    title="JoTrip Weather · Marine";
-    text="Forecast timeline dùng ECMWF Wave. Trạng thái biển gần hiện tại được JoTrip Marine đối chiếu thêm Copernicus Marine khi feed sẵn sàng.";
-    meta=[
+    const observed=f?.data_class==="OBSERVED_MARINE";
+    title=observed?"JoTrip Weather · Copernicus Marine":"JoTrip Weather · ECMWF Wave";
+    text=observed
+      ?"Lớp đầu timeline là trường sóng Copernicus Marine gần hiện tại. Các mốc sau chuyển sang ECMWF Wave và được ghi rõ là dự báo."
+      :"Đây là phần dự báo ECMWF Wave sau lớp biển gần hiện tại của Copernicus Marine.";
+    meta=observed?[
+      "Nguồn: Copernicus Marine",
+      "Sampled: "+localRunLabel(f?.sampled_time),
+      "Biến: Hs / hướng / chu kỳ",
+      "Native grid: "+(state.marine?.wave?.native_resolution_deg?.lat||"-")+"° × "+(state.marine?.wave?.native_resolution_deg?.lon||"-")+"°",
+      "Interpolation: render only"
+    ]:[
       "Forecast cycle: "+localRunLabel(modelRunIso("wave"))+" ("+utcCycleLabel(modelRunIso("wave"))+")",
       "Forecast build: "+localRunLabel(state.ecmwf?.generated_at),
-      "Copernicus sampled: "+localRunLabel(state.marine?.wave?.sampled_time),
       "Biến: Hs / hướng / chu kỳ",
       "Source grid: "+(state.ecmwf?.spatial?.requested_grid_deg||0.25)+"°",
-      "Data class: JoTrip Weather marine forecast"
+      "Data class: forecast"
     ];
   }
 
@@ -810,7 +866,7 @@ function selectionHtml(lat,lon){
   }else if(state.scene==="wave"){
     if(local?.wave_hs_m!=null){ rows.push('<b>'+localState.label+':</b> Hs '+Number(local.wave_hs_m).toFixed(2)+' m'); localRendered=true; }
     if(local?.wave_period_s!=null) rows.push('Chu kỳ gần nhất '+Number(local.wave_period_s).toFixed(1)+' s');
-    if(cell?.wave_hs_m!=null) rows.push('<b>Dự báo ô biển gần nhất:</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
+    if(cell?.wave_hs_m!=null) rows.push('<b>'+(f?.data_class==="OBSERVED_MARINE"?"Copernicus gần hiện tại":"Dự báo ô biển gần nhất")+':</b> Hs '+Number(cell.wave_hs_m).toFixed(2)+' m');
     if(cell?.wave_period_s!=null) rows.push('Chu kỳ '+Number(cell.wave_period_s).toFixed(1)+' s');
     if(cell?.wave_direction_deg!=null){
       const from=Math.round(Number(cell.wave_direction_deg))%360;

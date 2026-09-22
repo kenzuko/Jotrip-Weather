@@ -630,6 +630,7 @@ function renderHero(){
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   $("heroSummary").textContent=summary(p);
   $("updatedAt").textContent="Cập nhật "+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
+  $("updatedAt").classList.toggle("stale",!localFresh);
   if($("scenePoint"))$("scenePoint").textContent=p.name||current;
   if($("sceneTemp"))$("sceneTemp").textContent=t===null?"--":fmt(t,1)+"°";
   if($("sceneUpdated"))$("sceneUpdated").textContent=(localFresh?"JoTrip Local Now":"JoTrip gần nhất")+" · "+ageText(liveTimestamp());
@@ -1299,6 +1300,7 @@ function renderJoTripForecast(){
   const fresh=regionalForecastFreshness();
   const cal=regionalForecast?.calibration_status||point().ensemble?.calibration_status||"LEARNING";
   if(fresh.stale)setBadge("ensembleState","UNAVAILABLE","DỮ LIỆU ĐANG TRỄ");
+  else if(String(cal).toUpperCase()==="LEARNING")setBadge("ensembleState","LEARNING","XU HƯỚNG");
   else setBadge("ensembleState",cal,viCal(cal));
 
   const regionName=regionPublicName(currentRegion,meta);
@@ -1359,9 +1361,11 @@ function renderJoTripForecast(){
   const horizonText=horizon>=240
     ?"Xem nhanh xu hướng 10 ngày; 3 ngày đầu được theo dõi dày hơn."
     :"Hiện hệ thống có khoảng "+Math.round(horizon/24)+" ngày dự báo cho khu vực này.";
-  const watchText=watch
-    ?" Có "+watch+" mốc đáng chú ý hơn bình thường."
-    :" Chưa thấy mốc nổi bật cần cảnh báo thêm.";
+  const watchText=watch>=8
+    ?" Có nhiều khung giờ cần để ý thêm, nhất là trong vài ngày đầu."
+    :watch
+      ?" Có "+watch+" khung giờ cần để ý thêm."
+      :" Chưa thấy khung giờ nào nổi bật cần cảnh báo thêm.";
   const nowcastText=nowcastContext.applied
     ?" Mây vệ tinh mới nhất cũng được dùng để kiểm tra phần rất gần."
     :" Phần rất gần đang chờ ảnh vệ tinh mới hơn.";
@@ -1370,10 +1374,8 @@ function renderJoTripForecast(){
     :"")+horizonText+watchText+nowcastText;
 
   $("ensembleMeta").textContent="Dự báo JoTrip theo khu vực · "+
-    fresh.text+" · dữ liệu đầy đủ "+
-    (num(regionalForecast.ensemble_completion_ratio)===null?"-":Math.round(regionalForecast.ensemble_completion_ratio*100)+"%")+
-    " · "+viCal(regionalForecast.calibration_status||"LEARNING").toLowerCase()+
-    " · càng xa ngày càng giảm độ tin cậy.";
+    fresh.text+
+    " · càng xa ngày, độ chắc chắn càng giảm. Chi tiết chất lượng dữ liệu nằm ở phần nguồn bên dưới.";
 }
 
 function publicSourceName(key){
@@ -1933,7 +1935,7 @@ function mapPopup(id,p){
     '<span>'+esc(parts.join(" · ")||"Đang tổng hợp số liệu")+'</span>'+
     '<small>'+esc(cloud.label)+(cloud.detail?" · "+esc(cloud.detail):"")+'</small></div>';
 }
-const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260922-layerfix2";
+const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260922-wide3";
 async function renderJoTripMap(){
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(!box)return;

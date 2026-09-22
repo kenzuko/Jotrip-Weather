@@ -999,7 +999,7 @@ function renderActual(){
 
 function renderFeedbackPoint(){
   const label=$("feedbackPointLabel");if(!label)return;
-  label.textContent=point().name||current;
+  label.textContent="Theo "+(point().name||current);
 }
 
 function aqiLabel(cat){

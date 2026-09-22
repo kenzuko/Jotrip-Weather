@@ -2503,3 +2503,13 @@ footer{font-size:9.5px}
   .field-feedback-panel .feedback-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
   .field-feedback-panel .feedback-actions button{min-height:38px;padding:8px 6px}
 }
+
+/* prod76-ui9 - feedback follows selected point; technical reading order */
+.feedback-point-label{background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important;color:#6f8794!important;font-size:8px!important;font-weight:750!important}
+.deep-weather-body>.now-advanced{margin:10px 0 14px}
+.deep-weather-body>.number-guide{margin-top:16px}
+.deep-weather-body>.technical-region-forecast{margin-top:16px}
+@media(max-width:720px){
+  .field-feedback-head{align-items:flex-start}
+  .feedback-point-label{margin-top:2px!important}
+}

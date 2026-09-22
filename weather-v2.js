@@ -9,6 +9,7 @@ const TIDE=["https://kenzuko.github.io/Jotrip-Lab/weather/data/tide.json","https
 const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
 const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"];
 const JOTRIP_FORECAST="https://kenzuko.github.io/Jotrip-Lab/weather/jotrip-forecast.json";
+const ENGINE_DASHBOARD="/data/dashboard-data.json";
 const LIVE_REFRESH_MS=2*60*1000;
 const WEATHER_LIVE_API="https://jotrip-weather-live.kenzuko.workers.dev";
 const FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback";
@@ -42,7 +43,15 @@ let fullAQI=null;
 let fullTide=null;
 let fullNowcast=null;
 let regionalForecast=null;
+let engineDashboard=null;
 let currentRegion="central_west";
+const POINT_REGION={
+  duong_dong:"central_west",
+  cua_can:"north_northwest",ganh_dau:"north_northwest",
+  bai_thom:"east_northeast",ham_ninh:"east_northeast",
+  bai_sao:"south_southeast",an_thoi:"south_southeast"
+};
+function regionForPoint(id){return POINT_REGION[id]||null}
 let mapStarted=false;
 let mapLayer="jotrip";
 let jotripMap=null;
@@ -86,6 +95,7 @@ function ageText(iso){
   if(m<2)return "vừa cập nhật";
   if(m<60)return Math.round(m)+" phút trước";
   const h=Math.floor(m/60),rest=Math.round(m-h*60);
+  if(rest>=60)return (h+1)+" giờ trước";
   if(rest<8)return h+" giờ trước";
   return h+" giờ "+rest+" phút trước";
 }
@@ -652,6 +662,101 @@ function renderHero(){
   if($("sceneTemp"))$("sceneTemp").textContent=t===null?"--":fmt(t,1)+"°";
   if($("sceneUpdated"))$("sceneUpdated").textContent=(localFresh?"JoTrip Local Now":"JoTrip gần nhất")+" · "+ageText(liveTimestamp());
   document.querySelector(".weather-overview")?.setAttribute("data-mood",condition.mood);
+}
+
+function phuQuocDateKey(iso){
+  const d=new Date(iso);
+  if(!Number.isFinite(d.getTime()))return "";
+  const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(d);
+  const get=t=>parts.find(x=>x.type===t)?.value||"";
+  return get("year")+"-"+get("month")+"-"+get("day");
+}
+function phuQuocClock(iso){
+  const d=new Date(iso);
+  return Number.isFinite(d.getTime())?d.toLocaleTimeString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",minute:"2-digit",hour12:false}):"-";
+}
+function todayUiState(row){
+  // JoTrip Engine land_tour gates v1:
+  // rain_3h watch/avoid = 20/50 mm; gust watch/avoid = 50/62 km/h.
+  const rain=num(row?.rain),gust=num(row?.gust);
+  if((rain!==null&&rain>=50)||(gust!==null&&gust>=62))return {cls:"avoid",label:"Nên né khung này"};
+  if((rain!==null&&rain>=20)||(gust!==null&&gust>=50))return {cls:"watch",label:"Cần để ý"};
+  return {cls:"good",label:"Khá thuận lợi"};
+}
+function todayWeatherIcon(row){
+  const rain=num(row?.rain)||0,gust=num(row?.gust)||0;
+  const d=new Date(row?.time_iso||"");
+  const hour=Number.isFinite(d.getTime())?Number(d.toLocaleString("en-US",{timeZone:"Asia/Ho_Chi_Minh",hour:"numeric",hour12:false})):12;
+  if(rain>=20||gust>=50)return "⛈️";
+  if(rain>=3)return "🌧️";
+  if(rain>=.5)return "🌦️";
+  if(hour>=18||hour<6)return "🌙";
+  return "🌤️";
+}
+function engineTodayRows(){
+  const rows=engineDashboard?.points?.[current]?.hours||[];
+  if(!Array.isArray(rows)||!rows.length)return [];
+  const now=Date.now(),today=phuQuocDateKey(new Date(now).toISOString());
+  return rows.filter(r=>{
+    const t=Date.parse(r?.time_iso||"");
+    return Number.isFinite(t)&&t>=now&&phuQuocDateKey(r.time_iso)===today;
+  }).slice(0,5);
+}
+function renderTodayDecision(){
+  const root=$("todayDecisionStrip"),summaryEl=$("todayDecisionSummary"),meta=$("todayEngineMeta"),badge=$("todayEngineBadge");
+  if(!root||!summaryEl)return;
+  if(!engineDashboard){
+    root.innerHTML='<span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>';
+    summaryEl.textContent="Đang đọc các mốc thời tiết còn lại hôm nay.";
+    return;
+  }
+  const rows=engineTodayRows();
+  const enginePoint=engineDashboard.points?.[current]||{};
+  if(badge)badge.textContent=(enginePoint.name||point().name||"Phú Quốc")+" · JoTrip Engine";
+  const cycle=engineDashboard.source_cycles?.ECMWF;
+  if(meta)meta.textContent="JoTrip Engine · ECMWF · mốc thật 3 giờ"+(cycle?" · chu kỳ "+localTime(cycle):"");
+  if(!rows.length){
+    root.innerHTML='<div class="today-decision-empty"><b>Không còn mốc 3 giờ nào trong hôm nay</b><span>Xem 10 ngày bên dưới cho ngày mai và các ngày tiếp theo.</span></div>';
+    summaryEl.textContent="Hôm nay đã gần hết. JoTrip không nội suy thêm giờ giả để lấp khoảng trống.";
+    return;
+  }
+  const rank={good:0,watch:1,avoid:2};
+  let worst=null,goodCount=0;
+  root.innerHTML=rows.map(r=>{
+    const state=todayUiState(r),icon=todayWeatherIcon(r);
+    if(state.cls==="good")goodCount++;
+    if(!worst||rank[state.cls]>rank[worst.state.cls])worst={row:r,state};
+    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),temp=num(r.temperature);
+    return '<article class="today-decision-card '+state.cls+'">'+
+      '<time>'+esc(phuQuocClock(r.time_iso))+'</time>'+
+      '<div class="today-weather-icon" aria-hidden="true">'+icon+'</div>'+
+      '<strong>'+(temp===null?'-':fmt(temp,0)+'°')+'</strong>'+
+      '<b>'+state.label+'</b>'+
+      '<div class="today-mini">'+
+        '<span>Mưa '+(rain===null?'-':fmt(rain,1)+' mm/3h')+'</span>'+
+        '<span>Gió '+(wind===null?'-':fmt(wind,0)+' km/h')+'</span>'+
+        '<span>Giật '+(gust===null?'-':fmt(gust,0)+' km/h')+'</span>'+
+      '</div>'+
+    '</article>';
+  }).join("");
+  if(worst?.state.cls==="avoid"){
+    summaryEl.textContent="Có mốc nên né khoảng "+phuQuocClock(worst.row.time_iso)+". Nếu lịch linh hoạt, ưu tiên các ô xanh.";
+  }else if(worst?.state.cls==="watch"){
+    summaryEl.textContent=(goodCount?"Vẫn còn "+goodCount+" mốc khá thuận lợi. ":"")+"Có thời điểm cần để ý thêm mưa hoặc gió giật.";
+  }else{
+    summaryEl.textContent="Các mốc còn lại hôm nay hiện đều nằm trong ngưỡng khá thuận lợi của JoTrip Engine.";
+  }
+}
+async function loadEngineDashboard(){
+  try{
+    engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
+    renderTodayDecision();
+  }catch(e){
+    console.warn("[Weather V2] JoTrip Engine today",e);
+    const root=$("todayDecisionStrip"),summaryEl=$("todayDecisionSummary");
+    if(root)root.innerHTML='<div class="today-decision-empty"><b>Chưa tải được các mốc hôm nay</b><span>Phần Lúc này, 10 ngày và Radar vẫn hoạt động bình thường.</span></div>';
+    if(summaryEl)summaryEl.textContent="JoTrip Engine đang cập nhật lại dữ liệu theo giờ.";
+  }
 }
 
 function renderCurrent(){
@@ -1775,7 +1880,7 @@ function renderIntradayChart(){
 
 function renderAll(){
   if(!critical)return;
-  renderPointTabs();renderStatus();renderHero();renderCurrent();renderActual();renderFeedbackPoint();renderAQI();renderTide();renderMapConvective();renderCloudMotionTable();renderQuickAlert();
+  renderPointTabs();renderStatus();renderHero();renderCurrent();renderTodayDecision();renderActual();renderFeedbackPoint();renderAQI();renderTide();renderMapConvective();renderCloudMotionTable();renderQuickAlert();
   renderIntradayChart();renderJoTripForecast();renderHealth();
 }
 
@@ -2250,7 +2355,9 @@ function events(){
       return;
     }
     const b=e.target.closest("[data-point]");if(!b)return;
-    current=b.dataset.point;renderAll();refreshActiveMap();
+    current=b.dataset.point;
+    const linkedRegion=regionForPoint(current);if(linkedRegion)currentRegion=linkedRegion;
+    renderAll();refreshActiveMap();
   });
   document.querySelectorAll("[data-map]").forEach(b=>b.addEventListener("click",()=>{startMap();setMap(b.dataset.map)}));
   $("intradayTabs")?.addEventListener("click",e=>{
@@ -2274,6 +2381,9 @@ function events(){
     e.preventDefault();
     feedback(b.dataset.feedback,b);
   });
+  $("deepWeatherDetails")?.addEventListener("toggle",e=>{
+    if(e.currentTarget.open)Promise.allSettled([loadTide(),loadAQI()]);
+  });
   $("shareWeather")?.addEventListener("click",shareWeather);
 }
 
@@ -2291,7 +2401,8 @@ async function refreshLive(){
     renderAll();
     refreshActiveMap();
     lastLiveRefreshAt=Date.now();
-    const jobs=[loadTide(),loadAQI(),loadRegionalForecast(),loadRecentFeedback()];
+    const jobs=[loadEngineDashboard(),loadRegionalForecast(),loadRecentFeedback()];
+    if($("deepWeatherDetails")?.open)jobs.push(loadTide(),loadAQI());
     if(!fullNowcast)jobs.push(loadNowcast());
     await Promise.allSettled(jobs);
   }catch(e){
@@ -2308,15 +2419,15 @@ async function boot(){
   try{
     critical=await getCriticalWithFreshLocal();
     current=critical.default_point||"duong_dong";
+    currentRegion=regionForPoint(current)||currentRegion;
     lastLiveRefreshAt=Date.now();
     renderAll();
     installMapObserver();
-    loadTide();
-    defer(loadAQI,350);
-    if(!fullNowcast)defer(loadNowcast,500);
-    defer(loadRegionalForecast,700);
-    defer(loadRecentFeedback,900);
-    setInterval(()=>{renderStatus();renderHero()},60000);
+    defer(loadEngineDashboard,120);
+    if(!fullNowcast)defer(loadNowcast,450);
+    defer(loadRegionalForecast,620);
+    defer(loadRecentFeedback,850);
+    setInterval(()=>{renderStatus();renderHero();renderTodayDecision()},60000);
     setInterval(refreshLive,LIVE_REFRESH_MS);
     setInterval(()=>{if(mapLayer==="himawari"&&document.visibilityState==="visible")refreshActiveMap()},10*60*1000);
     document.addEventListener("visibilitychange",()=>{

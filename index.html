@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui2">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui3">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260922-prod76"></script>
+  <script defer src="/weather-v2.js?v=20260922-prod76-ui3"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -80,6 +80,7 @@
       <span id="quickWatchCount">0</span>
     </div>
     <div id="quickAlertList" class="quick-watch-list"></div>
+    <div class="quick-watch-actions"><a href="#weatherMap">Xem radar ngay</a></div>
     <small class="quick-watch-foot">Chỉ hiện tình huống còn hiệu lực. Khi mưa, gió hoặc vùng mây đã qua và dữ liệu mới không còn đạt ngưỡng theo dõi, mục đó tự biến mất.</small>
   </section>
 
@@ -101,35 +102,24 @@
     <span class="inline-loader">Đang tải danh sách điểm...</span>
   </nav>
 
-  <div class="journey-heading">
-    <div><span class="eyebrow">HÔM NAY</span><h2>Diễn biến theo giờ</h2></div>
-    <small>Xem mưa, gió, nhiệt độ, sóng và mây theo thời gian. Có thể kéo tiếp tới 72 giờ.</small>
-  </div>
+  <section class="panel today-decision-panel" id="todayDecisionPanel" aria-label="Hôm nay theo các mốc 3 giờ">
+    <div class="panel-head today-decision-head">
+      <div><span class="eyebrow">HÔM NAY</span><h2>Giờ nào đẹp, giờ nào nên né?</h2></div>
+      <span id="todayEngineBadge" class="today-engine-badge">JoTrip Engine</span>
+    </div>
+    <p id="todayDecisionSummary" class="today-decision-summary">Đang đọc các mốc thời tiết còn lại hôm nay...</p>
+    <div id="todayDecisionStrip" class="today-decision-strip" aria-label="Các mốc dự báo còn lại hôm nay">
+      <span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>
+    </div>
+    <div class="today-decision-legend">
+      <span class="good">Khá thuận lợi</span>
+      <span class="watch">Cần để ý</span>
+      <span class="avoid">Nên né khung này</span>
+      <small id="todayEngineMeta">JoTrip Engine · ECMWF · mốc thật 3 giờ</small>
+    </div>
+  </section>
 
-  <section class="panel intraday-panel" aria-label="Hôm nay và diễn biến thời tiết 72 giờ">
-    <div class="panel-head intraday-head">
-      <div><span class="eyebrow">HÔM NAY & 72 GIỜ TỚI</span><h2 id="intradayTitle">Gió 72 giờ</h2></div>
-      <div class="intraday-head-meta"><small id="intradayMeta">72 giờ tới · Giờ Phú Quốc UTC+7</small><span id="intradaySignal" class="intraday-signal"></span></div>
-    </div>
-    <nav id="intradayTabs" class="intraday-tabs" aria-label="Chọn lớp biểu đồ">
-      <button class="active" type="button" data-intraday="wind">💨 Gió</button>
-      <button type="button" data-intraday="rain">🌧️ Mưa</button>
-      <button type="button" data-intraday="temperature">🌡️ Nhiệt độ</button>
-      <button type="button" data-intraday="wave">🌊 Sóng</button>
-      <button type="button" data-intraday="convective">☁️ Mây</button>
-      <button type="button" data-intraday="tide">↕️ Triều</button>
-    </nav>
-    <div class="intraday-chart-shell">
-      <svg id="intradayChart" class="intraday-chart" viewBox="0 0 960 270" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Biểu đồ diễn biến thời tiết 72 giờ">
-        <text x="360" y="118" text-anchor="middle" class="chart-empty">Đang dựng biểu đồ...</text>
-      </svg>
-    </div>
-    <div class="intraday-under">
-      <div id="intradayLegend" class="intraday-legend"></div>
-      <div id="intradayFocus" class="intraday-focus"><b>Chạm một điểm</b><span>Xem giờ và số liệu chi tiết</span></div>
-    </div>
-    <small id="intradayNote" class="panel-foot">Ước tính hiện tại và dự báo 72 giờ được tách rõ để không nhầm số đang xảy ra với số dự báo.</small>
-  </section>  <div class="journey-heading">
+  <div class="journey-heading">
     <div><span class="eyebrow">MẤY NGÀY TỚI</span><h2>Lên kế hoạch 10 ngày</h2></div>
     <small>Nhìn xu hướng trước. Càng gần ngày đi, dữ liệu càng có giá trị để quyết định.</small>
   </div>
@@ -244,12 +234,41 @@
       </table>
     </div>
     <small class="panel-foot">Chỉ ghi giờ dự kiến khi hướng di chuyển của vùng mây đã đủ rõ. Nếu chưa đủ chắc, hệ thống chỉ mô tả vị trí mây và tiếp tục theo dõi, không tự đoán giờ tới.</small>
-  </section>  <details class="deep-weather-disclosure">
+  </section>  <details class="deep-weather-disclosure" id="deepWeatherDetails">
     <summary>
       <div><span class="eyebrow">XEM SÂU HƠN</span><b>Chi tiết tại điểm, số liệu chuyên sâu & kiểm chứng</b></div>
-      <small>Gió, mưa, mây, sóng, Hmax, triều, AQI, quan trắc và nguồn dữ liệu</small>
+      <small>72 giờ, gió, mưa, mây, sóng, Hmax, triều, AQI, quan trắc và nguồn dữ liệu</small>
     </summary>
     <div class="deep-weather-body">
+  <div class="section-intro section-intro-simple deep-72-intro">
+    <div><span class="eyebrow">CHUYÊN SÂU</span><h2>Diễn biến 72 giờ</h2></div>
+    <small>q50/q90 và nội suy chỉ để phân tích sâu - không thay cho các mốc 3 giờ thật của phần Hôm nay.</small>
+  </div>
+  <section class="panel intraday-panel" aria-label="Diễn biến thời tiết 72 giờ chuyên sâu">
+    <div class="panel-head intraday-head">
+      <div><span class="eyebrow">DIỄN BIẾN 72 GIỜ</span><h2 id="intradayTitle">Gió 72 giờ</h2></div>
+      <div class="intraday-head-meta"><small id="intradayMeta">72 giờ tới · Giờ Phú Quốc UTC+7</small><span id="intradaySignal" class="intraday-signal"></span></div>
+    </div>
+    <nav id="intradayTabs" class="intraday-tabs" aria-label="Chọn lớp biểu đồ">
+      <button class="active" type="button" data-intraday="wind">💨 Gió</button>
+      <button type="button" data-intraday="rain">🌧️ Mưa</button>
+      <button type="button" data-intraday="temperature">🌡️ Nhiệt độ</button>
+      <button type="button" data-intraday="wave">🌊 Sóng</button>
+      <button type="button" data-intraday="convective">☁️ Mây</button>
+      <button type="button" data-intraday="tide">↕️ Triều</button>
+    </nav>
+    <div class="intraday-chart-shell">
+      <svg id="intradayChart" class="intraday-chart" viewBox="0 0 960 270" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Biểu đồ diễn biến thời tiết 72 giờ">
+        <text x="360" y="118" text-anchor="middle" class="chart-empty">Đang dựng biểu đồ...</text>
+      </svg>
+    </div>
+    <div class="intraday-under">
+      <div id="intradayLegend" class="intraday-legend"></div>
+      <div id="intradayFocus" class="intraday-focus"><b>Chạm một điểm</b><span>Xem giờ và số liệu chi tiết</span></div>
+    </div>
+    <small id="intradayNote" class="panel-foot">Ước tính hiện tại và dự báo 72 giờ được tách rõ để không nhầm số đang xảy ra với số dự báo.</small>
+  </section>
+
   <div class="section-intro section-intro-simple">
     <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Những gì khách cần biết ngay</h2></div>
     <small>Các chỉ số chính trước. Thông số chuyên sâu được đặt riêng bên dưới.</small>

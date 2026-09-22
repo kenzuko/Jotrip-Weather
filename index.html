@@ -25,10 +25,10 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui6">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui7">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
-  <script defer src="/weather-v2.js?v=20260922-prod76-ui6a"></script>
+  <script defer src="/weather-v2.js?v=20260922-prod76-ui7"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -130,6 +130,14 @@
     <div id="forecastDayRibbon" class="forecast-day-ribbon" aria-label="Tóm tắt dự báo 10 ngày">
       <span class="inline-loader">Đang tổng hợp 10 ngày...</span>
     </div>
+    <section id="forecastDayDetail" class="forecast-day-detail" hidden aria-live="polite">
+      <div class="forecast-day-detail-head">
+        <div><span class="eyebrow">CHI TIẾT TRONG NGÀY</span><h3 id="forecastDayDetailTitle">-</h3></div>
+        <button id="forecastDayDetailClose" type="button" aria-label="Đóng chi tiết ngày">×</button>
+      </div>
+      <p id="forecastDayDetailNote">Các mốc dưới đây lấy trực tiếp từ JoTrip Engine tại điểm đang chọn.</p>
+      <div id="forecastDayDetailSlots" class="forecast-day-detail-slots"></div>
+    </section>
 
   </section>  <div class="section-intro section-intro-spaced">
     <div><span class="eyebrow">THỰC ĐỊA</span><h2>Đang xảy ra ngoài kia thế nào?</h2></div>

@@ -45,6 +45,7 @@ let fullTide=null;
 let fullNowcast=null;
 let regionalForecast=null;
 let engineDashboard=null;
+let selectedForecastDayKey=null;
 let currentRegion="central_west";
 const POINT_REGION={
   duong_dong:"central_west",
@@ -837,7 +838,7 @@ function renderTodayDecision(){
     const state=todayUiState(r,index),icon=todayWeatherIcon(r);
     if(state.cls==="good")goodCount++;
     if(!worst||rank[state.cls]>rank[worst.state.cls])worst={row:r,state};
-    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),temp=num(r.temperature);
+    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),wave=num(r.wave),temp=num(r.temperature);
     return '<article class="today-decision-card '+state.cls+'">'+
       '<time>'+esc(phuQuocClock(r.time_iso))+'</time>'+
       '<div class="today-weather-icon" aria-hidden="true">'+icon+'</div>'+
@@ -848,6 +849,7 @@ function renderTodayDecision(){
         '<span>Mưa '+(rain===null?'-':fmt(rain,1)+' mm/3h')+'</span>'+
         '<span>Gió '+(wind===null?'-':fmt(wind,0)+' km/h')+'</span>'+
         '<span>Giật '+(gust===null?'-':fmt(gust,0)+' km/h')+'</span>'+
+        '<span>Sóng '+(wave===null?'-':fmt(wave,2)+' m')+'</span>'+
       '</div>'+
     '</article>';
   }).join("");
@@ -863,6 +865,7 @@ async function loadEngineDashboard(){
   try{
     engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
     renderTodayDecision();
+    renderForecastDayDetail();
     if($("deepWeatherDetails")?.open){renderTechnicalPointForecast();renderTechnicalFreshness()}
   }catch(e){
     console.warn("[Weather V2] JoTrip Engine today",e);
@@ -1342,12 +1345,14 @@ function renderForecastDayRibbon(rows){
       windMax===null?null:"Gió "+fmt(windMax,0)+" km/h"
     ].filter(Boolean).join(" · ");
     const dayLabel=index===0?"Hôm nay":index===1?"Ngày mai":day.label;
-    return '<article class="forecast-day '+state.cls+(index===0?' selected':'')+'">'+
+    const selected=selectedForecastDayKey===day.key;
+    return '<article class="forecast-day '+state.cls+(selected?' selected':'')+'" role="button" tabindex="0" data-forecast-day="'+esc(day.key)+'" aria-expanded="'+(selected?'true':'false')+'">'+
       '<header><b>'+esc(day.date)+'</b><span>'+esc(dayLabel)+'</span></header>'+
       '<div class="forecast-day-icon" aria-hidden="true">'+state.icon+'</div>'+
       '<strong>'+tempText+'</strong>'+
       '<h4>'+esc(state.label)+'</h4>'+
       '<small>'+esc(meta||"Đang cập nhật")+'</small>'+
+      '<em class="forecast-day-open">'+(selected?'Đang mở':'Xem theo giờ')+'</em>'+
     '</article>';
   }).join("")||'<span class="inline-loader">Chưa đủ dữ liệu để tóm tắt 10 ngày.</span>';
 }
@@ -1550,6 +1555,58 @@ function renderQuickAlert(){
   ).join("");
 }
 
+function engineRowsForDay(dayKey){
+  const rows=engineDashboard?.points?.[current]?.hours||[];
+  return rows.filter(r=>phuQuocDateKey(r.time_iso)===dayKey);
+}
+function engineDayStepHours(rows){
+  if(rows.length<2)return null;
+  const gaps=rows.slice(1).map((r,i)=>(Date.parse(r.time_iso)-Date.parse(rows[i].time_iso))/3600000).filter(x=>Number.isFinite(x)&&x>0);
+  return gaps.length?Math.min(...gaps):null;
+}
+function renderForecastDayDetail(){
+  const box=$("forecastDayDetail"),slots=$("forecastDayDetailSlots"),title=$("forecastDayDetailTitle"),note=$("forecastDayDetailNote");
+  if(!box||!slots)return;
+  if(!selectedForecastDayKey){box.hidden=true;return}
+  box.hidden=false;
+  const dayRows=engineRowsForDay(selectedForecastDayKey);
+  const p=engineDashboard?.points?.[current]||{};
+  const first=dayRows[0];
+  const day=first?phuQuocDay(first.time_iso):null;
+  if(title)title.textContent=(day?.date||selectedForecastDayKey)+" · "+(p.name||point().name||current);
+  if(!engineDashboard){
+    slots.innerHTML='<span class="inline-loader">Đang lấy các mốc từ JoTrip Engine...</span>';
+    if(note)note.textContent="Đang tải dự báo theo điểm.";
+    return;
+  }
+  if(!dayRows.length){
+    slots.innerHTML='<div class="forecast-day-detail-empty">JoTrip Engine chưa có mốc point-level cho ngày này.</div>';
+    if(note)note.textContent="Không dùng dữ liệu vùng để giả thành dữ liệu tại điểm.";
+    return;
+  }
+  const step=engineDayStepHours(dayRows);
+  if(note)note.textContent="JoTrip Engine · "+(step?("mốc "+fmt(step,0)+" giờ"):"mốc theo chu kỳ nguồn")+" · chạm ngày khác để đổi.";
+  slots.innerHTML=dayRows.map(r=>{
+    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),wave=num(r.wave),temp=num(r.temperature);
+    return '<article class="forecast-hour-slot">'+
+      '<header><time>'+esc(phuQuocClock(r.time_iso))+'</time><span aria-hidden="true">'+todayWeatherIcon(r)+'</span></header>'+
+      '<strong>'+(temp===null?'-':fmt(temp,0)+'°')+'</strong>'+
+      '<div>'+
+        '<span><b>Mưa</b><em>'+(rain===null?'-':fmt(rain,2)+' mm/mốc')+'</em></span>'+
+        '<span><b>Gió</b><em>'+(wind===null?'-':fmt(wind,0)+' km/h')+'</em></span>'+
+        '<span><b>Giật</b><em>'+(gust===null?'-':fmt(gust,0)+' km/h')+'</em></span>'+
+        '<span><b>Sóng</b><em>'+(wave===null?'-':fmt(wave,2)+' m')+'</em></span>'+
+      '</div>'+
+    '</article>';
+  }).join("");
+}
+function toggleForecastDay(dayKey){
+  selectedForecastDayKey=selectedForecastDayKey===dayKey?null:dayKey;
+  renderJoTripForecast();
+  renderForecastDayDetail();
+  if(selectedForecastDayKey)$("forecastDayDetail")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
 function renderJoTripForecast(){
   const title=$("jotripForecastTitle");
   const body=$("jotripForecastRows");
@@ -1573,6 +1630,7 @@ function renderJoTripForecast(){
 
   renderForecastRegionTabs();
   renderForecastDayRibbon(rows);
+  renderForecastDayDetail();
   const metaBox=$("forecastRegionMeta");
   if(metaBox){
     // Region names themselves are already traveller-facing. Keep the extra
@@ -2490,7 +2548,7 @@ function events(){
     const b=e.target.closest("[data-technical-point]");if(!b)return;
     current=b.dataset.technicalPoint;
     const linkedRegion=regionForPoint(current);if(linkedRegion)currentRegion=linkedRegion;
-    renderAll();refreshActiveMap();
+    renderAll();renderForecastDayDetail();refreshActiveMap();
   });
   $("pointTabs")?.addEventListener("click",e=>{
     const compare=e.target.closest("[data-compare]");
@@ -2502,7 +2560,7 @@ function events(){
     const b=e.target.closest("[data-point]");if(!b)return;
     current=b.dataset.point;
     const linkedRegion=regionForPoint(current);if(linkedRegion)currentRegion=linkedRegion;
-    renderAll();refreshActiveMap();
+    renderAll();renderForecastDayDetail();refreshActiveMap();
   });
   document.querySelectorAll("[data-map]").forEach(b=>b.addEventListener("click",()=>{startMap();setMap(b.dataset.map)}));
   $("intradayTabs")?.addEventListener("click",e=>{
@@ -2515,6 +2573,18 @@ function events(){
     const key=el.dataset.key;
     document.querySelectorAll("#intradayChart [data-key]").forEach(node=>node.classList.toggle("selected",Boolean(key)&&node.dataset.key===key));
     setIntradayFocus(el.dataset.tip||"");
+  });
+  $("forecastDayRibbon")?.addEventListener("click",e=>{
+    const card=e.target.closest("[data-forecast-day]");if(!card)return;
+    toggleForecastDay(card.dataset.forecastDay);
+  });
+  $("forecastDayRibbon")?.addEventListener("keydown",e=>{
+    if(!["Enter"," "].includes(e.key))return;
+    const card=e.target.closest("[data-forecast-day]");if(!card)return;
+    e.preventDefault();toggleForecastDay(card.dataset.forecastDay);
+  });
+  $("forecastDayDetailClose")?.addEventListener("click",()=>{
+    selectedForecastDayKey=null;renderJoTripForecast();renderForecastDayDetail();
   });
   $("forecastRegionTabs")?.addEventListener("click",e=>{
     const b=e.target.closest("[data-region]");if(!b)return;

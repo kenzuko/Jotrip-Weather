@@ -2439,3 +2439,34 @@ footer{font-size:9.5px}
   .technical-freshness{grid-template-columns:1fr 1fr}
   .technical-subhead{align-items:flex-start}.technical-subhead small{max-width:130px;text-align:right}
 }
+
+
+/* prod76-ui7 - public point-level time slots inside each 10-day day */
+.today-mini{grid-template-columns:1fr 1fr}
+.forecast-day[role="button"]{cursor:pointer;position:relative}
+.forecast-day[role="button"]:focus-visible{outline:2px solid #1f789e;outline-offset:2px}
+.forecast-day-open{display:block;margin-top:7px;font-size:7px;font-style:normal;font-weight:850;color:#26728f}
+.forecast-day.selected .forecast-day-open{color:#173f57}
+.forecast-day-detail{margin:12px 0 2px;padding:14px;border:1px solid #dce7ec;border-radius:14px;background:#f8fbfc}
+.forecast-day-detail[hidden]{display:none}
+.forecast-day-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.forecast-day-detail-head h3{margin:3px 0 0;font-size:16px;color:#234e65}
+.forecast-day-detail-head button{border:0;background:transparent;padding:2px 5px;font-size:22px;line-height:1;color:#78909c;cursor:pointer}
+.forecast-day-detail>p{margin:7px 0 10px;font-size:8px;line-height:1.45;color:#718690}
+.forecast-day-detail-slots{display:flex;gap:8px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+.forecast-day-detail-slots::-webkit-scrollbar{display:none}
+.forecast-hour-slot{flex:0 0 142px;border:1px solid #e0e8ec;border-radius:10px;background:#fff;padding:10px}
+.forecast-hour-slot header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.forecast-hour-slot time{font-size:10px;font-weight:900;color:#31576b}
+.forecast-hour-slot header span{font-size:23px}
+.forecast-hour-slot>strong{display:block;margin:5px 0 8px;font-size:20px;color:#173f57}
+.forecast-hour-slot>div{display:grid;gap:5px}
+.forecast-hour-slot>div span{display:flex;justify-content:space-between;gap:7px;font-size:7.5px}
+.forecast-hour-slot>div b{color:#728792}.forecast-hour-slot>div em{font-style:normal;font-weight:800;color:#31576b;text-align:right}
+.forecast-day-detail-empty{padding:12px;font-size:9px;color:#778c97}
+@media(max-width:720px){
+  .today-mini{grid-template-columns:1fr 1fr}
+  .forecast-day-open{font-size:8px}
+  .forecast-day-detail{margin:9px -3px 0;padding:11px;border-radius:10px}
+  .forecast-hour-slot{flex-basis:132px;padding:9px}
+}

@@ -1278,14 +1278,15 @@ function enforceSceneFreshness(){
   const active=frame();
   const cloudExpired=state.scene==="cloud"&&!sceneAvailable("cloud");
   const waveExpired=state.scene==="wave"&&active?.data_class==="OBSERVED_MARINE"&&!marineWaveFrame();
-  if(!cloudExpired&&!waveExpired){setTabAvailability();return}
+  const forecastExpired=!sceneAvailable(state.scene);
+  if(!cloudExpired&&!waveExpired&&!forecastExpired){setTabAvailability();return}
   setTabAvailability();
   const next=cloudExpired
     ?(["rain","wind","wave"].find(s=>sceneAvailable(s))||null)
-    :(sceneAvailable("wave")?"wave":(["rain","wind"].find(s=>sceneAvailable(s))||null));
+    :(waveExpired&&sceneAvailable("wave")?"wave":(["rain","wind","wave","cloud"].find(s=>sceneAvailable(s))||null));
   if(next){
     setScene(next);
-    const reason=cloudExpired?"Ảnh Himawari đã quá hạn - tạm chuyển sang dự báo, không dùng mây cũ.":"Mốc sóng quan trắc đã quá hạn - chuyển sang dự báo ECMWF Wave.";
+    const reason=cloudExpired?"Ảnh Himawari đã quá hạn - tạm chuyển sang dự báo, không dùng mây cũ.":waveExpired?"Mốc sóng quan trắc đã quá hạn - chuyển sang dự báo ECMWF Wave.":"Trường dự báo đang xem đã hết hạn - chỉ hiển thị nguồn còn hiệu lực.";
     $("freshness").textContent=reason;
     $("freshness").classList.add("stale");
   }else{

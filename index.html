@@ -86,30 +86,12 @@
       </div>
 
       <div class="weather-now-facts" aria-label="Thông tin nhanh">
-        <div><span>Mưa tại điểm</span><b id="heroRain">--</b><small>mm/h</small></div>
-        <div><span>Gió</span><b id="heroWind">--</b><small>km/h</small></div>
-        <div><span>Sóng biển</span><b id="heroWave">--</b><small>m Hs</small></div>
+        <div><span>Mưa tại điểm</span><b id="heroRain">--</b><small id="heroRainMeta">mm/h · ước tính tại điểm</small></div>
+        <div><span>Gió</span><b id="heroWind">--</b><small id="heroWindMeta">km/h · JoTrip</small></div>
+        <div><span>Gió giật</span><b id="heroGust">--</b><small>km/h · mô hình</small></div>
+        <div><span>Sóng nền</span><b id="heroWave">--</b><small id="heroWaveMeta">m Hs · mô hình biển</small></div>
       </div>
     </div>
-  </section>
-
-  <section class="panel today-decision-panel" id="todayDecisionPanel" aria-label="Hôm nay theo các mốc 3 giờ">
-    <div class="panel-head today-decision-head">
-      <div><span class="eyebrow">HÔM NAY</span><h2>Giờ nào đẹp, giờ nào nên né?</h2></div>
-      <span id="todayEngineBadge" class="today-engine-badge">JoTrip Engine</span>
-    </div>
-    <p id="todayDecisionSummary" class="today-decision-summary">Đang đọc các mốc thời tiết còn lại hôm nay...</p>
-    <div id="todayDecisionStrip" class="today-decision-strip" aria-label="Các mốc dự báo còn lại hôm nay">
-      <span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>
-    </div>
-    <div class="today-decision-legend">
-      <span class="good">Khá thuận lợi</span>
-      <span class="watch">Cần để ý</span>
-      <span class="avoid">Nên né khung này</span>
-      <small id="todayEngineMeta">JoTrip Engine · ECMWF · mốc thật 3 giờ</small>
-    </div>
-  </section>
-
   </section>
 
   <section class="panel field-feedback-panel" aria-label="Phản hồi tại chỗ">
@@ -129,6 +111,27 @@
     <small id="feedbackState" class="panel-foot">Không thu GPS · phản hồi được gắn với điểm bạn đang xem và gửi về JoTrip.</small>
     <div id="feedbackToast" class="feedback-toast" role="status" aria-live="polite"></div>
   </section>
+
+  <section class="panel today-decision-panel" id="todayDecisionPanel" aria-label="Hôm nay theo các mốc 3 giờ">
+    <div class="panel-head today-decision-head">
+      <div><span class="eyebrow">HÔM NAY</span><h2>Mưa gió những giờ còn lại</h2></div>
+      <span id="todayEngineBadge" class="today-engine-badge">JoTrip Engine</span>
+    </div>
+    <p id="todayDecisionSummary" class="today-decision-summary">Đang đọc các mốc thời tiết còn lại hôm nay...</p>
+    <small id="todayMarineReference" class="today-marine-reference">Sóng nền hiển thị riêng theo chu kỳ biển, không thay cho dự báo sóng từng giờ.</small>
+    <div id="todayDecisionStrip" class="today-decision-strip" aria-label="Các mốc dự báo còn lại hôm nay">
+      <span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>
+    </div>
+    <div class="today-decision-legend">
+      <span class="good">Khá thuận lợi</span>
+      <span class="watch">Cần để ý</span>
+      <span class="avoid">Nên né khung này</span>
+      <small id="todayEngineMeta">JoTrip Engine · ECMWF · mốc thật 3 giờ</small>
+    </div>
+  </section>
+
+  </section>
+
 
   <div class="section-intro section-intro-spaced">
     <div><span class="eyebrow">THỰC ĐỊA</span><h2>Đang đo được gì ngoài kia?</h2></div>
@@ -230,7 +233,7 @@
     <div class="deep-weather-body">
 <div class="technical-point-control">
         <div class="technical-subhead"><div><span class="eyebrow">CHỌN ĐIỂM KỸ THUẬT</span><h3 id="technicalPointTitle">Dương Đông</h3></div><small>Đổi điểm để xem toàn bộ phân tích kỹ thuật tương ứng.</small></div>
-        <nav id="technicalPointTabs" class="technical-point-tabs" aria-label="Chọn điểm phân tích kỹ thuật"></nav>
+        <small class="technical-point-follow">Tự đi theo điểm đã chọn ở đầu trang.</small>
       </div>
       <div class="technical-freshness" aria-label="Tuổi dữ liệu theo nguồn">
         <span><b>Local Now</b><em id="technicalLocalAge">-</em></span>
@@ -274,6 +277,7 @@
 
 
       
+<details class="technical-raw-hourly"><summary>Bảng số liệu gốc theo giờ (mở khi cần)</summary>
 <section class="panel technical-point-forecast-panel">
         <div class="panel-head">
           <div><span class="eyebrow">DỰ BÁO THEO ĐIỂM</span><h2 id="technicalForecastTitle">Chi tiết mô hình tại Dương Đông</h2></div>
@@ -287,6 +291,7 @@
         </div>
         <small id="technicalForecastMeta" class="panel-foot"></small>
       </section>
+</details>
 
       <div class="technical-current-head"><span class="eyebrow">GẦN HIỆN TẠI</span><small>Đây là các thông số kỹ thuật của mô hình, không phải quan trắc trực tiếp.</small></div>
       <details class="now-advanced">

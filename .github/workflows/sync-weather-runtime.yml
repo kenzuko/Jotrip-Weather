@@ -347,3 +347,5 @@ jobs:
           git push origin HEAD:main
 
 # refresh-after-local-nowcast-audit-20260921
+
+# manual-authority-resync-after-gefs-20260922-1728

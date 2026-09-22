@@ -142,7 +142,7 @@ try{
     result.overview?.temp!=='--' &&
     result.embed?.embedMode===true &&
     result.embed?.topbarDisplay==='none' &&
-    String(result.embed?.renderer||'').includes('wave-direction-convention') &&
+    String(result.embed?.renderer||'').includes('wide-domain-marine-near-now') &&
     sceneOk &&
     result.flag?.visible===true &&
     result.flag?.changed===true &&

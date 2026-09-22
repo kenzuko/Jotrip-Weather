@@ -61,7 +61,10 @@ try{
       changed:first!==last,
       frameChanged:firstTime!==lastTime,
       forecastPresent:scene==='wave'
-        ? first.includes('Dự báo ô biển gần nhất')&&last.includes('Dự báo ô biển gần nhất')
+        ? (
+            (first.includes('Copernicus gần hiện tại')||first.includes('Dự báo ô biển gần nhất')) &&
+            last.includes('Dự báo ô biển gần nhất')
+          )
         : first.includes('JoTrip Forecast')&&last.includes('JoTrip Forecast')
     };
   }

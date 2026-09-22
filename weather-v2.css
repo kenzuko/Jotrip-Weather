@@ -2331,3 +2331,10 @@ footer{font-size:9.5px}
   .deep-weather-disclosure>summary small{max-width:135px}
   .deep-weather-body{padding:0 12px 14px}
 }
+
+/* prod76-ui2 - make the decision flow visible immediately after location tabs */
+.deep-weather-body>.section-intro-simple{margin-top:16px}
+.point-tabs + .journey-heading{margin-top:22px}
+@media(max-width:720px){
+  .point-tabs + .journey-heading{margin-top:18px}
+}

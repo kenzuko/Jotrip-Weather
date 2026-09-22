@@ -25,7 +25,7 @@
   <meta name="twitter:title" content="JoTrip Weather Intelligence - Phú Quốc">
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
-  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui1">
+  <link rel="stylesheet" href="/weather-v2.css?v=20260922-prod76-ui2">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
   <script defer src="/weather-v2.js?v=20260922-prod76"></script>
@@ -100,29 +100,6 @@
   <nav id="pointTabs" class="point-tabs" aria-label="Điểm theo dõi thời tiết">
     <span class="inline-loader">Đang tải danh sách điểm...</span>
   </nav>
-
-  <div class="section-intro section-intro-simple">
-    <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Những gì khách cần biết ngay</h2></div>
-    <small>Các chỉ số chính trước. Thông số chuyên sâu được đặt riêng bên dưới.</small>
-  </div>
-  <section class="now-grid now-grid-primary" aria-label="Tình hình hiện tại">
-    <article class="metric-card">
-      <div><span>Gió</span><em id="windClass" class="badge estimated">ƯỚC TÍNH</em></div>
-      <b id="windNow">--</b><small>km/h</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Mưa tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
-      <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
-    </article>
-    <article class="metric-card">
-      <div><span>Mây quanh khu vực</span><em class="badge remote">VỆ TINH</em></div>
-      <b id="convectiveNow">--</b><small id="convectiveMeta">Himawari · đang phân tích</small>
-    </article>
-    <article class="metric-card">
-      <div><span>Sóng Hs</span><em id="marineClass" class="badge model">MÔ HÌNH</em></div>
-      <b id="waveNow">--</b><small>m · độ cao sóng có nghĩa</small>
-    </article>
-  </section>
 
   <div class="journey-heading">
     <div><span class="eyebrow">HÔM NAY</span><h2>Diễn biến theo giờ</h2></div>
@@ -269,10 +246,34 @@
     <small class="panel-foot">Chỉ ghi giờ dự kiến khi hướng di chuyển của vùng mây đã đủ rõ. Nếu chưa đủ chắc, hệ thống chỉ mô tả vị trí mây và tiếp tục theo dõi, không tự đoán giờ tới.</small>
   </section>  <details class="deep-weather-disclosure">
     <summary>
-      <div><span class="eyebrow">XEM SÂU HƠN</span><b>Số liệu chuyên sâu & kiểm chứng</b></div>
-      <small>Gió giật, Hmax, triều, AQI, quan trắc, nguồn dữ liệu</small>
+      <div><span class="eyebrow">XEM SÂU HƠN</span><b>Chi tiết tại điểm, số liệu chuyên sâu & kiểm chứng</b></div>
+      <small>Gió, mưa, mây, sóng, Hmax, triều, AQI, quan trắc và nguồn dữ liệu</small>
     </summary>
     <div class="deep-weather-body">
+  <div class="section-intro section-intro-simple">
+    <div><span class="eyebrow">CHI TIẾT TẠI ĐIỂM</span><h2>Những gì khách cần biết ngay</h2></div>
+    <small>Các chỉ số chính trước. Thông số chuyên sâu được đặt riêng bên dưới.</small>
+  </div>
+  <section class="now-grid now-grid-primary" aria-label="Tình hình hiện tại">
+    <article class="metric-card">
+      <div><span>Gió</span><em id="windClass" class="badge estimated">ƯỚC TÍNH</em></div>
+      <b id="windNow">--</b><small>km/h</small>
+    </article>
+    <article class="metric-card">
+      <div><span>Mưa tại điểm</span><em id="rainClass" class="badge estimated">ƯỚC TÍNH</em></div>
+      <b id="rainNow">--</b><small id="rainMeta">mm/h · <span id="rainConfidence">--</span>% tin cậy</small><small id="rainActualContext" class="metric-context"></small>
+    </article>
+    <article class="metric-card">
+      <div><span>Mây quanh khu vực</span><em class="badge remote">VỆ TINH</em></div>
+      <b id="convectiveNow">--</b><small id="convectiveMeta">Himawari · đang phân tích</small>
+    </article>
+    <article class="metric-card">
+      <div><span>Sóng Hs</span><em id="marineClass" class="badge model">MÔ HÌNH</em></div>
+      <b id="waveNow">--</b><small>m · độ cao sóng có nghĩa</small>
+    </article>
+  </section>
+
+
   <details class="now-advanced">
     <summary>Xem thêm thông số gió và biển</summary>
     <section class="now-grid now-grid-advanced" aria-label="Thông số thời tiết chuyên sâu">

@@ -7,12 +7,13 @@ const GROUND_TRUTH="/data/groundtruth.json";
 const CURRENT_BUNDLE="/data/current-bundle.json";
 const TIDE=["/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
 const AQI=["/data/air-quality.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
-const NOWCAST=["/data/nowcast-compact.json"];
+const NOWCAST=["https://jotrip-weather-fresh.kenzuko.workers.dev/nowcast-compact.json","/data/nowcast-compact.json"];
+const FRESH_BUNDLE="https://jotrip-weather-fresh.kenzuko.workers.dev/current-bundle.json";
 const JOTRIP_FORECAST="/data/jotrip-forecast.json";
 const ENGINE_DASHBOARD="/data/dashboard-data.json";
 const RUNTIME_AUTHORITY="/data/runtime-authority.json";
 const LIVE_REFRESH_MS=2*60*1000;
-const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,JOTRIP_FORECAST,ENGINE_DASHBOARD,RUNTIME_AUTHORITY,...NOWCAST];
+const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,JOTRIP_FORECAST,ENGINE_DASHBOARD,RUNTIME_AUTHORITY,FRESH_BUNDLE,...NOWCAST];
 const WEATHER_LIVE_API="https://jotrip-weather-live.kenzuko.workers.dev";
 const FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback";
 const RECENT_FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback/recent?minutes=90&limit=30";
@@ -260,21 +261,35 @@ function overlayFreshGroundTruth(base,ground){
     rain_recently_observed:s.rain_recently_observed,
     increment_qc:s.increment_qc,
     observed_at:s.observed_at,
+    period_start:s.period_start||ground.rainfall?.period_start||null,
+    period_end:s.period_end||ground.rainfall?.period_end||null,
     qc:s.qc
   }));
   if(ground.rainfall?.status)base.source_state={...(base.source_state||{}),vrain:ground.rainfall.status};
   return base;
 }
 async function getCriticalWithFreshLocal(){
-  const [base,bundle]=await Promise.allSettled([getJSON(CRITICAL,2*60*1000),getJSON(CURRENT_BUNDLE,2*60*1000)]);
+  // The read-only Cloudflare gateway reads the SAME canonical JoTrip-Lab
+  // data-weather branch. Select the newest valid snapshot, never combine
+  // unrelated model baselines or treat data recency as forecast accuracy.
+  const [base,mirror,edge]=await Promise.allSettled([
+    getJSON(CRITICAL,2*60*1000),
+    getJSON(CURRENT_BUNDLE,2*60*1000),
+    getJSON(FRESH_BUNDLE,60*1000)
+  ]);
   if(base.status!=="fulfilled")throw base.reason;
   critical=base.value;
-  if(bundle.status==="fulfilled"){
-    const live=bundle.value||{};
+  const bundles=[mirror,edge].filter(x=>x.status==="fulfilled")
+    .map(x=>x.value).filter(x=>x?.local_now?.points&&x?.groundtruth);
+  bundles.sort((a,b)=>Date.parse(b.local_now.generated_at||b.generated_at||0)-Date.parse(a.local_now.generated_at||a.generated_at||0));
+  if(bundles.length){
+    const live=bundles[0];
     currentBundle=live;
-    if(live.local_now)overlayFreshLocalNow(critical,live.local_now);
-    if(live.groundtruth)overlayFreshGroundTruth(critical,live.groundtruth);
-    if(live.nowcast&&live.nowcast.points)fullNowcast=live.nowcast;
+    overlayFreshLocalNow(critical,live.local_now);
+    overlayFreshGroundTruth(critical,live.groundtruth);
+    if(live.nowcast?.points&&(
+      !fullNowcast||Date.parse(live.nowcast.sampled_time||0)>Date.parse(fullNowcast.sampled_time||0)
+    ))fullNowcast=live.nowcast;
     return critical;
   }
   const [local,ground]=await Promise.allSettled([getJSON(LOCAL_NOW,2*60*1000),getJSON(GROUND_TRUTH,2*60*1000)]);
@@ -1433,6 +1448,43 @@ function buildQuickWatchEvents(){
   const events=[];
   const now=Date.now();
 
+  // Independent freshness warning. An old successful payload is NOT live.
+  const localAge=ageMinutes(liveTimestamp()),cloudAge=ageMinutes(nowcastTimestamp());
+  if(localAge>35||cloudAge>45){
+    const stale=[];
+    if(localAge>35)stale.push("số liệu tại điểm "+ageText(liveTimestamp()));
+    if(cloudAge>45)stale.push("ảnh mây "+ageText(nowcastTimestamp()));
+    events.push({
+      key:"weather-data-delayed",
+      severity:"alert",when:"DỮ LIỆU ĐANG TRỄ",
+      title:"Chưa có cập nhật đủ mới để kết luận thời tiết đã ổn",
+      detail:stale.join(" · ")+". Không xem dữ liệu cũ là điều kiện hiện tại; ưu tiên cảnh báo chính thức và thông tin thực địa.",
+      sort:-9
+    });
+  }
+
+  // Observed cumulative rainfall is a screening signal for possible low-
+  // lying-area flooding, NEVER a claim that a particular road is flooded.
+  // Do not convert a multi-hour accumulation into hourly rain intensity.
+  const heavyGauges=(critical?.actual?.rain_gauges||[])
+    .filter(g=>num(g.accum_mm)!==null&&num(g.accum_mm)>=80&&freshEnough(g.observed_at,360))
+    .sort((a,b)=>b.accum_mm-a.accum_mm);
+  if(heavyGauges.length){
+    const main=heavyGauges[0],veryHeavy=heavyGauges.filter(g=>g.accum_mm>=100);
+    const seen=heavyGauges.slice(0,3).map(g=>g.name+" "+fmt(g.accum_mm,0)+" mm");
+    const starts=heavyGauges.map(g=>g.period_start).filter(Boolean);
+    const sharedStart=starts.length===heavyGauges.length&&new Set(starts).size===1?starts[0]:null;
+    const when=sharedStart?"từ "+localTime(sharedStart):"trong kỳ quan trắc";
+    events.push({
+      key:"heavy-cumulative-rain:"+main.observed_at,
+      severity:veryHeavy.length?"alert":"watch",
+      when:"MƯA TÍCH LŨY · SỐ ĐO GẦN NHẤT",
+      title:"Mưa tích lũy lớn, đề phòng ngập ở những nơi thấp",
+      detail:seen.join(" · ")+" ("+when+", cập nhật "+localTime(main.observed_at)+"). Đây không phải lượng mưa một giờ và chưa xác nhận vị trí đường nào đang ngập.",
+      sort:-4
+    });
+  }
+
   // 0) Recent field reports are operational context only, never numeric ground truth.
   const field=combinedRecentFeedback();
   field.slice(0,8).forEach(x=>{
@@ -2159,7 +2211,13 @@ async function loadTide(){
 }
 async function loadNowcast(){
   try{
-    fullNowcast=await getFirst(NOWCAST,5*60*1000);
+    const results=await Promise.allSettled(NOWCAST.map(url=>getJSON(url,60*1000)));
+    const candidates=results.filter(x=>x.status==="fulfilled")
+      .map(x=>x.value).filter(x=>x?.status==="POINT_NUMERIC_READY"&&x?.points);
+    if(!candidates.length)throw new Error("No valid nowcast");
+    candidates.sort((a,b)=>Date.parse(b.sampled_time||0)-Date.parse(a.sampled_time||0));
+    if(!fullNowcast||Date.parse(candidates[0].sampled_time||0)>=Date.parse(fullNowcast.sampled_time||0))
+      fullNowcast=candidates[0];
     renderHero();renderTodayDecision();renderMapConvective();renderCurrent();renderCloudMotionTable();renderStatus();renderQuickAlert();refreshActiveMap();
   }catch(e){console.warn("[Weather V2] compact nowcast",e)}
 }

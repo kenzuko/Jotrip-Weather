@@ -1322,7 +1322,8 @@ function renderForecastDayRibbon(rows){
     if(!groups.has(day.key))groups.set(day.key,{day,rows:[]});
     groups.get(day.key).rows.push(r);
   });
-  const days=[...groups.values()].slice(0,10);
+  const todayKey=phuQuocDateKey(new Date().toISOString());
+  const days=[...groups.values()].filter(x=>x.day.key>todayKey).slice(0,10);
   root.innerHTML=days.map(({day,rows},index)=>{
     const temps=rows.map(r=>num(r.temperature_c)).filter(v=>v!==null);
     const winds=rows.map(r=>num(r.wind_kmh)).filter(v=>v!==null);
@@ -1344,7 +1345,7 @@ function renderForecastDayRibbon(rows){
       rainMax===null?null:"Mưa ~"+fmt(rainMax,1)+" mm",
       windMax===null?null:"Gió "+fmt(windMax,0)+" km/h"
     ].filter(Boolean).join(" · ");
-    const dayLabel=index===0?"Hôm nay":index===1?"Ngày mai":day.label;
+    const dayLabel=index===0?"Ngày mai":day.label;
     const selected=selectedForecastDayKey===day.key;
     return '<article class="forecast-day '+state.cls+(selected?' selected':'')+'" role="button" tabindex="0" data-forecast-day="'+esc(day.key)+'" aria-expanded="'+(selected?'true':'false')+'">'+
       '<header><b>'+esc(day.date)+'</b><span>'+esc(dayLabel)+'</span></header>'+
@@ -1566,6 +1567,7 @@ function engineDayStepHours(rows){
 }
 function renderForecastDayDetail(){
   const box=$("forecastDayDetail"),slots=$("forecastDayDetailSlots"),title=$("forecastDayDetailTitle"),note=$("forecastDayDetailNote");
+  if(selectedForecastDayKey&&selectedForecastDayKey<=phuQuocDateKey(new Date().toISOString()))selectedForecastDayKey=null;
   if(!box||!slots)return;
   if(!selectedForecastDayKey){box.hidden=true;return}
   box.hidden=false;
@@ -2574,6 +2576,21 @@ function events(){
     document.querySelectorAll("#intradayChart [data-key]").forEach(node=>node.classList.toggle("selected",Boolean(key)&&node.dataset.key===key));
     setIntradayFocus(el.dataset.tip||"");
   });
+  const scrollForecastDays=dir=>{
+    const ribbon=$("forecastDayRibbon");if(!ribbon)return;
+    const card=ribbon.querySelector(".forecast-day");
+    const step=(card?.getBoundingClientRect().width||150)+10;
+    ribbon.scrollBy({left:dir*step*2,behavior:"smooth"});
+  };
+  $("forecastDayPrev")?.addEventListener("click",()=>scrollForecastDays(-1));
+  $("forecastDayNext")?.addEventListener("click",()=>scrollForecastDays(1));
+  $("forecastDayRibbon")?.addEventListener("wheel",e=>{
+    if(Math.abs(e.deltaY)<=Math.abs(e.deltaX))return;
+    const ribbon=e.currentTarget;
+    if(ribbon.scrollWidth<=ribbon.clientWidth)return;
+    e.preventDefault();
+    ribbon.scrollLeft+=e.deltaY;
+  },{passive:false});
   $("forecastDayRibbon")?.addEventListener("click",e=>{
     const card=e.target.closest("[data-forecast-day]");if(!card)return;
     toggleForecastDay(card.dataset.forecastDay);

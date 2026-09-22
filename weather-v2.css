@@ -2470,3 +2470,15 @@ footer{font-size:9.5px}
   .forecast-day-detail{margin:9px -3px 0;padding:11px;border-radius:10px}
   .forecast-hour-slot{flex-basis:132px;padding:9px}
 }
+
+
+/* prod76-ui8 - 10-day starts tomorrow; desktop horizontal navigation */
+.forecast-day-ribbon-shell{position:relative;display:grid;grid-template-columns:34px minmax(0,1fr) 34px;align-items:center;gap:6px}
+.forecast-day-ribbon-shell .forecast-day-ribbon{min-width:0;margin:10px 0 12px}
+.forecast-day-nav{width:32px;height:44px;border:1px solid #dce6eb;background:#fff;border-radius:8px;font:inherit;font-size:25px;line-height:1;color:#31576b;cursor:pointer;display:grid;place-items:center}
+.forecast-day-nav:hover{background:#f2f7f9}
+@media(max-width:720px){
+  .forecast-day-ribbon-shell{display:block}
+  .forecast-day-nav{display:none}
+  .forecast-day-ribbon-shell .forecast-day-ribbon{margin-right:-8px!important}
+}

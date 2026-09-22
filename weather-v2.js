@@ -176,6 +176,8 @@ function overlayFreshGroundTruth(base,ground){
     actual.vvpq={
       status:v.status,
       observed_at:v.observed_at,
+      lat:num(v.lat),
+      lon:num(v.lon),
       temperature_c:num(v.temperature_c),
       wind_kmh:num(v.wind_speed_kmh),
       wind_direction_deg:num(v.wind_direction_deg),
@@ -636,6 +638,20 @@ function weatherCondition(rain,conv,wind,forecast=false){
   if(conv>=25)return {label:"Nhiều mây",icon:"⛅",mood:"calm"};
   return {label:"Thời tiết tương đối ổn",icon:"🌤️",mood:"calm"};
 }
+function nearbyVvpqActual(maxKm=12,maxMinutes=35){
+  const p=point(),l=p.local||{},v=critical?.actual?.vvpq||{};
+  if(!freshEnough(v.observed_at,maxMinutes))return null;
+  const dist=kmBetween(l.reference_lat,l.reference_lon,v.lat,v.lon);
+  if(dist===null||dist>maxKm)return null;
+  const wx=String(v.weather||"").toUpperCase();
+  return {
+    ...v,
+    distance_km:dist,
+    thunder:/TS/.test(wx)||Boolean(v.convective_cloud),
+    rain:/RA|SHRA|TS/.test(wx)
+  };
+}
+
 function renderHero(){
   const p=point(),l=p.local||{},m=p.model||{},n=effectiveNowcast();
   $("placeName").textContent=p.name||current;
@@ -649,8 +665,13 @@ function renderHero(){
   const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
   const wave=localFresh?(num(l.wave_hs_m)??num(m.wave_hs_m)):num(m.wave_hs_m);
 
+  const nearbyActual=nearbyVvpqActual();
   let condition;
-  if(!localFresh&&nowcastFresh&&conv!==null&&conv>=75){
+  if(nearbyActual?.thunder&&nearbyActual?.rain){
+    condition={label:"Đang có mưa dông gần khu vực",icon:"⛈️",mood:"storm"};
+  }else if(nearbyActual?.rain){
+    condition={label:"Đang có mưa gần khu vực",icon:"🌧️",mood:"storm"};
+  }else if(!localFresh&&nowcastFresh&&conv!==null&&conv>=75){
     condition={label:"Mây đối lưu mạnh - có thể mưa dông cục bộ",icon:"⛈️",mood:"storm"};
   }else if(!localFresh&&nowcastFresh&&conv!==null&&conv>=50){
     condition={label:"Có mây đối lưu đáng chú ý",icon:"☁️",mood:"watch"};
@@ -668,7 +689,9 @@ function renderHero(){
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   let heroSummary=summary(p);
-  if(!localFresh&&!nowcastFresh)heroSummary="Dữ liệu tại điểm và ảnh mây đều đang trễ - không nên dùng số cũ để kết luận trời đang ổn.";
+  if(nearbyActual?.thunder&&nearbyActual?.rain)heroSummary="Quan trắc VVPQ đang ghi nhận mưa dông cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km. Ưu tiên tình trạng đang xảy ra hơn dự báo mô hình.";
+  else if(nearbyActual?.rain)heroSummary="Quan trắc VVPQ đang ghi nhận mưa cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km.";
+  else if(!localFresh&&!nowcastFresh)heroSummary="Dữ liệu tại điểm và ảnh mây đều đang trễ - không nên dùng số cũ để kết luận trời đang ổn.";
   else if(!localFresh&&nowcastFresh&&conv!==null&&conv>=50)heroSummary="Tín hiệu vệ tinh đang đáng chú ý. Số mưa tại điểm chưa có cập nhật mới - xem bản đồ nếu chuẩn bị ra ngoài.";
   $("heroSummary").textContent=heroSummary;
   $("updatedAt").textContent=(localFresh?"Cập nhật ":"Dữ liệu tại điểm gần nhất ")+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
@@ -692,6 +715,9 @@ function phuQuocClock(iso){
 }
 function todayLiveOverride(){
   const p=point(),l=p.local||{},n=effectiveNowcast();
+  const actual=nearbyVvpqActual();
+  if(actual?.thunder&&actual?.rain)return {cls:"avoid",label:"Nên né khung này",reason:"Quan trắc gần khu vực đang ghi nhận mưa dông"};
+  if(actual?.rain)return {cls:"watch",label:"Cần để ý",reason:"Quan trắc gần khu vực đang ghi nhận mưa"};
   const localFresh=localDataFresh();
   const nowcastFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
   const imminence=localFresh?num(l.rain_imminence_score):null;
@@ -1303,6 +1329,29 @@ function buildQuickWatchEvents(){
       });
     }
   });
+
+  // 0b) Fresh airport observation is ACTUAL and can override model language nearby.
+  const vvpq=critical?.actual?.vvpq||{};
+  const vwx=String(vvpq.weather||"").toUpperCase();
+  if(freshEnough(vvpq.observed_at,35)&&(/TS/.test(vwx)||vvpq.convective_cloud)){
+    events.push({
+      key:"vvpq-thunderstorm:"+vvpq.observed_at,
+      severity:"alert",
+      when:"ĐANG XẢY RA",
+      title:"Khu vực gần sân bay Phú Quốc đang có mưa dông",
+      detail:"Quan trắc VVPQ ghi nhận mưa dông và mây đối lưu. Đây là số liệu thực tế, được ưu tiên hơn dự báo mô hình tại thời điểm này.",
+      sort:-1.5
+    });
+  }else if(freshEnough(vvpq.observed_at,35)&&/RA|SHRA/.test(vwx)){
+    events.push({
+      key:"vvpq-rain:"+vvpq.observed_at,
+      severity:"watch",
+      when:"ĐANG XẢY RA",
+      title:"Khu vực gần sân bay Phú Quốc đang có mưa",
+      detail:"Quan trắc VVPQ đang ghi nhận mưa thực tế.",
+      sort:-1.2
+    });
+  }
 
   // 1) Direct rain observations: only fresh gauges with measurable current rain.
   (critical?.actual?.rain_gauges||[]).forEach(g=>{

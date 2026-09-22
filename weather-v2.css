@@ -2400,3 +2400,6 @@ footer{font-size:9.5px}
   .quick-watch-actions a{border-radius:6px!important}
   .badge{border-radius:6px!important}
 }
+
+/* prod76-ui5 - actual weather can visually override stale model language */
+.weather-overview[data-mood="storm"] .weather-now-copy b{color:#9f3f39}

@@ -1199,7 +1199,7 @@ function play(){
   if(state.playing){stop();return}
   state.playing=true;
   $("playBtn").textContent="❚❚";
-  const delay=state.scene==="cloud"?950:1150;
+  const delay=state.scene==="cloud"?950:state.scene==="wave"?1700:1250;
   state.timer=setInterval(()=>{
     state.index=(state.index+1)%Math.max(1,state.frames.length);
     $("slider").value=String(state.index);

@@ -1,10 +1,10 @@
-const VERSION="weather-intelligence-2026.09.22.prod73";
+const VERSION="weather-intelligence-2026.09.22.prod74";
 const CACHE=`${VERSION}-static`;
 const STATIC=[
   "/",
   "/index.html",
   "/weather-v2.css?v=20260922-prod69",
-  "/weather-v2.js?v=20260922-prod73",
+  "/weather-v2.js?v=20260922-prod74",
   "/weather-brand.svg",
   "/weather-app-icon.svg",
   "/favicon-64.png",

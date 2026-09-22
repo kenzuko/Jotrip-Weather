@@ -3,6 +3,12 @@ let windRAF=null,particles=[];
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Number(v);
+const WAVE_ANCHORS=[
+  {id:"west",lat:10.22,lon:103.82},
+  {id:"east",lat:10.22,lon:104.10},
+  {id:"south",lat:9.98,lon:104.03},
+  {id:"north",lat:10.42,lon:103.96}
+];
 
 function ramp(stops,t){
   t=clamp(t,0,1);
@@ -176,6 +182,47 @@ function raster(scene,rows,map,field,motion){
   ctx.putImageData(img,0,0);
   return s;
 }
+function nearestWaveCell(rows,anchor,maxDeg=.22){
+  let best=null,bestD2=Infinity;
+  for(const row of rows||[]){
+    const hs=num(row.wave_hs_m),dir=num(row.wave_direction_deg);
+    if(hs===null||dir===null||num(row.lat)===null||num(row.lon)===null)continue;
+    const dLat=Number(row.lat)-anchor.lat,dLon=Number(row.lon)-anchor.lon;
+    const d2=dLat*dLat+dLon*dLon;
+    if(d2<bestD2){bestD2=d2;best=row}
+  }
+  return best&&Math.sqrt(bestD2)<=maxDeg?best:null;
+}
+function wavePoint(map,s,lat,lon){
+  const p=map.latLngToContainerPoint([lat,lon]);
+  return {x:p.x*s.sx,y:p.y*s.sy};
+}
+function drawWaveArrow(ctx,x,y,hs,fromDeg,strong=false){
+  const t=clamp(hs/1.8,0,1);
+  const toDeg=((fromDeg||0)+180)%360,ang=(toDeg-90)*Math.PI/180;
+  const len=(strong?8:6)+t*(strong?8:7);
+  const x0=x-Math.cos(ang)*len*.4,y0=y-Math.sin(ang)*len*.4;
+  const x1=x+Math.cos(ang)*len*.6,y1=y+Math.sin(ang)*len*.6;
+  ctx.strokeStyle="rgba(18,64,91,"+(strong?.78:(.30+t*.32)).toFixed(3)+")";
+  ctx.fillStyle="rgba(18,64,91,"+(strong?.82:(.36+t*.32)).toFixed(3)+")";
+  ctx.lineWidth=strong?1.35:1;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+  const ah=(strong?4:3)+t*1.5,side=.65;
+  ctx.beginPath();ctx.moveTo(x1,y1);
+  ctx.lineTo(x1-Math.cos(ang-side)*ah,y1-Math.sin(ang-side)*ah);
+  ctx.lineTo(x1-Math.cos(ang+side)*ah,y1-Math.sin(ang+side)*ah);
+  ctx.closePath();ctx.fill();
+}
+function drawWaveLabel(ctx,x,y,hs,mobile=false){
+  const label=hs.toFixed(1)+" m";
+  ctx.font=(mobile?"750 8.5px":"750 9px")+" system-ui,-apple-system,sans-serif";
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.lineWidth=3.2;
+  ctx.strokeStyle="rgba(255,255,255,.94)";
+  ctx.fillStyle="rgba(19,58,75,.92)";
+  ctx.strokeText(label,x,y+14);
+  ctx.fillText(label,x,y+14);
+}
 function wave(rows,map,field,motion){
   const s=raster("wave",rows,map,field,motion);
   if(!s)return;
@@ -184,32 +231,31 @@ function wave(rows,map,field,motion){
   const pts=project(rows,map,field,innerWidth<760?.58:.50)
     .filter(p=>num(p.wave_hs_m)!==null&&num(p.wave_direction_deg)!==null&&gridMask(Number(p.lat),Number(p.lon),waveGrid)>.05)
     .filter(p=>p.x>=0&&p.y>=0&&p.x<=field.width&&p.y<=field.height);
+  const mobile=innerWidth<760;
   ctx.save();
-  pts.forEach((p,i)=>{
-    const every=innerWidth<760?4:2;
-    if(i%every!==0)return;
-    const hs=num(p.wave_hs_m)||0,t=clamp(hs/1.8,0,1);
-    const toDeg=((num(p.wave_direction_deg)||0)+180)%360,ang=(toDeg-90)*Math.PI/180,len=6+t*7;
-    const x0=p.x-Math.cos(ang)*len*.4,y0=p.y-Math.sin(ang)*len*.4;
-    const x1=p.x+Math.cos(ang)*len*.6,y1=p.y+Math.sin(ang)*len*.6;
-    ctx.strokeStyle="rgba(18,64,91,"+(.30+t*.32).toFixed(3)+")";
-    ctx.fillStyle="rgba(18,64,91,"+(.36+t*.32).toFixed(3)+")";
-    ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
-    const ah=3+t*1.5,side=.65;
-    ctx.beginPath();ctx.moveTo(x1,y1);
-    ctx.lineTo(x1-Math.cos(ang-side)*ah,y1-Math.sin(ang-side)*ah);
-    ctx.lineTo(x1-Math.cos(ang+side)*ah,y1-Math.sin(ang+side)*ah);
-    ctx.closePath();ctx.fill();
 
-    if(innerWidth>=760||i%(every*2)===0){
-      ctx.font="600 7px system-ui,-apple-system,sans-serif";
-      ctx.textAlign="center";ctx.textBaseline="middle";
-      ctx.lineWidth=2;ctx.strokeStyle="rgba(255,255,255,.8)";ctx.fillStyle="rgba(20,61,80,.78)";
-      const label=hs.toFixed(1)+" m",ly=p.y+11;
-      ctx.strokeText(label,p.x,ly);ctx.fillText(label,p.x,ly);
-    }
+  // Background field remains sparse. On mobile do not spend labels on far-off grid
+  // cells; reserve readable numbers for stable anchors around Phu Quoc.
+  const farEvery=mobile?6:3;
+  pts.forEach((p,i)=>{
+    if(i%farEvery!==0)return;
+    drawWaveArrow(ctx,p.x,p.y,num(p.wave_hs_m)||0,num(p.wave_direction_deg)||0,false);
+    if(!mobile&&i%(farEvery*2)===0)drawWaveLabel(ctx,p.x,p.y,num(p.wave_hs_m)||0,false);
   });
+
+  let anchorCount=0;
+  for(const anchor of WAVE_ANCHORS){
+    const row=nearestWaveCell(rows,anchor);
+    if(!row)continue;
+    const p=wavePoint(map,s,anchor.lat,anchor.lon);
+    if(p.x<10||p.y<10||p.x>field.width-10||p.y>field.height-24)continue;
+    const hs=num(row.wave_hs_m),dir=num(row.wave_direction_deg);
+    if(hs===null||dir===null)continue;
+    drawWaveArrow(ctx,p.x,p.y,hs,dir,true);
+    drawWaveLabel(ctx,p.x,p.y,hs,mobile);
+    anchorCount++;
+  }
+  document.documentElement.dataset.waveAnchorCount=String(anchorCount);
   ctx.restore();
 }
 function windVectors(rows,map,canvas){
@@ -274,5 +320,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"3.2-wide-domain-marine-near-now",render,stop};
+window.JoTripSceneRenderer={version:"3.3-wave-island-anchors",render,stop};
 })();

@@ -125,7 +125,8 @@ try{
       motionPaint,
       visiblePngBytes:before.length,
       hiddenPngBytes:hidden.length,
-      pngDeltaBytes:Math.abs(before.length-hidden.length)
+      pngDeltaBytes:Math.abs(before.length-hidden.length),
+      waveAnchorCount:scene==='wave'?Number(await page.locator('html').getAttribute('data-wave-anchor-count')||0):null
     };
   }
 
@@ -134,6 +135,7 @@ try{
     return paint.alphaPixels>40 && paint.maxAlpha>8;
   });
   const compositeOk=Object.values(result.scenes).every(s=>s.pngDeltaBytes>500);
+  const waveAnchorOk=Number(result.scenes.wave?.waveAnchorCount||0)>=3;
   const navigationOk=
     Math.abs(result.navigation.centerLat-10.20)<.08 &&
     Math.abs(result.navigation.centerLon-103.98)<.08 &&
@@ -147,6 +149,7 @@ try{
     result.runtime.rendererLoaded===true &&
     String(result.runtime.renderScript||'').includes('weather-scene-render-v2.js') &&
     navigationOk &&
+    waveAnchorOk &&
     scenePaintOk &&
     compositeOk &&
     result.pageErrors.length===0;

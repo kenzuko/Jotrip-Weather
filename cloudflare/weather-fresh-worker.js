@@ -104,15 +104,27 @@ export default {
         }
         // Only restart a writer when its last *pipeline run* is overdue.
         // Satellite observation time can legitimately lag the collection time.
-        const api="https://api.github.com/repos/kenzuko/Jotrip-Lab/actions/workflows/"+workflow+"/dispatches";
+        const root="https://api.github.com/repos/kenzuko/Jotrip-Lab/actions/workflows/"+workflow;
+        const githubHeaders={
+          authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
+          accept:"application/vnd.github+json",
+          "x-github-api-version":"2022-11-28",
+          "user-agent":"jotrip-weather-fresh-cron"
+        };
+        // A slow NOAA ingestion must finish before another run can be queued.
+        // Query actual run state rather than assuming a missing publish means idle.
+        const runsResponse=await fetch(root+"/runs?per_page=12",{headers:githubHeaders});
+        if(!runsResponse.ok)throw Error(workflow+" status HTTP "+runsResponse.status);
+        const runs=await runsResponse.json();
+        const active=(runs.workflow_runs||[]).find(run=>run.status!=="completed");
+        if(active){
+          console.log("Weather cron writer already running",workflow,active.id);
+          return;
+        }
+        const api=root+"/dispatches";
         const r=await fetch(api,{
           method:"POST",
-          headers:{
-            authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
-            accept:"application/vnd.github+json",
-            "x-github-api-version":"2022-11-28",
-            "user-agent":"jotrip-weather-fresh-cron"
-          },
+          headers:githubHeaders,
           body:JSON.stringify({ref:"main"})
         });
         if(r.status!==204)throw Error(workflow+" HTTP "+r.status);

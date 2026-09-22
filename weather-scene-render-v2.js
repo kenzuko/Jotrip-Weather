@@ -3,7 +3,6 @@ let windRAF=null,particles=[];
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Number(v);
-const FIELD_BOUNDS={south:9.72,north:10.57,west:103.62,east:104.38,fade:.07};
 
 function ramp(stops,t){
   t=clamp(t,0,1);
@@ -31,7 +30,7 @@ function fit(canvas,scale,map){
 function project(rows,map,canvas,scale){
   const s=fit(canvas,scale,map);
   return (rows||[]).map(r=>{
-    const p=map.latLngToLayerPoint([Number(r.lat),Number(r.lon)]);
+    const p=map.latLngToContainerPoint([Number(r.lat),Number(r.lon)]);
     return {...r,x:p.x*s.sx,y:p.y*s.sy};
   }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
 }
@@ -65,11 +64,18 @@ function sampleGrid(g,lat,lon){
   for(const [v,w] of q){if(Number.isFinite(v)){sw+=w;sv+=v*w}}
   return sw?sv/sw:null;
 }
-function edgeMask(lat,lon){
-  const b=FIELD_BOUNDS,f=b.fade;
-  if(lat<b.south||lat>b.north||lon<b.west||lon>b.east)return 0;
-  const ds=Math.min(lat-b.south,b.north-lat,lon-b.west,b.east-lon);
-  return clamp(ds/f,0,1);
+function gridMask(lat,lon,g){
+  if(!g||lat<g.lat0||lat>g.lat1||lon<g.lon0||lon>g.lon1)return 0;
+  // Fade only at the real source-grid edge. Never clip against a hand-made island bbox.
+  const fadeLat=Math.max(Math.abs(g.dLat)*.85,.012);
+  const fadeLon=Math.max(Math.abs(g.dLon)*.85,.012);
+  const latEdge=Math.min(lat-g.lat0,g.lat1-lat);
+  const lonEdge=Math.min(lon-g.lon0,g.lon1-lon);
+  return clamp(Math.min(latEdge/fadeLat,lonEdge/fadeLon),0,1);
+}
+function sceneMask(scene,lat,lon,body,core,scalar){
+  if(scene==="cloud")return Math.max(gridMask(lat,lon,body),gridMask(lat,lon,core));
+  return gridMask(lat,lon,scalar);
 }
 function withAlpha(col,a){
   if(!col||!col[3]||a<=0)return [0,0,0,0];
@@ -145,14 +151,14 @@ function raster(scene,rows,map,field,motion){
   if(scene!=="cloud"&&!scalar)return s;
 
   const lons=new Float64Array(s.w),lats=new Float64Array(s.h);
-  for(let x=0;x<s.w;x++)lons[x]=map.layerPointToLatLng([x/s.sx,0]).lng;
-  for(let y=0;y<s.h;y++)lats[y]=map.layerPointToLatLng([0,y/s.sy]).lat;
+  for(let x=0;x<s.w;x++)lons[x]=map.containerPointToLatLng([x/s.sx,0]).lng;
+  for(let y=0;y<s.h;y++)lats[y]=map.containerPointToLatLng([0,y/s.sy]).lat;
 
   const img=ctx.createImageData(s.w,s.h);
   for(let y=0;y<s.h;y++){
     const lat=lats[y];
     for(let x=0;x<s.w;x++){
-      const lon=lons[x],mask=edgeMask(lat,lon);
+      const lon=lons[x],mask=sceneMask(scene,lat,lon,body,core,scalar);
       let col=[0,0,0,0];
       if(mask>0){
         if(scene==="cloud"){
@@ -174,8 +180,9 @@ function wave(rows,map,field,motion){
   const s=raster("wave",rows,map,field,motion);
   if(!s)return;
   const ctx=field.getContext("2d");
+  const waveGrid=grid(rows,"wave_hs_m");
   const pts=project(rows,map,field,innerWidth<760?.58:.50)
-    .filter(p=>num(p.wave_hs_m)!==null&&num(p.wave_direction_deg)!==null&&edgeMask(Number(p.lat),Number(p.lon))>.35)
+    .filter(p=>num(p.wave_hs_m)!==null&&num(p.wave_direction_deg)!==null&&gridMask(Number(p.lat),Number(p.lon),waveGrid)>.05)
     .filter(p=>p.x>=0&&p.y>=0&&p.x<=field.width&&p.y<=field.height);
   ctx.save();
   pts.forEach((p,i)=>{
@@ -206,10 +213,11 @@ function wave(rows,map,field,motion){
   ctx.restore();
 }
 function windVectors(rows,map,canvas){
+  const ug=grid(rows,"u10_ms"),vg=grid(rows,"v10_ms");
   return project(rows,map,canvas,innerWidth<760?.58:.50).map(p=>({
     x:p.x,y:p.y,u:num(p.u10_ms),v:num(p.v10_ms),mag:Math.hypot(num(p.u10_ms)||0,num(p.v10_ms)||0),
     lat:num(p.lat),lon:num(p.lon)
-  })).filter(p=>p.u!==null&&p.v!==null&&edgeMask(p.lat,p.lon)>.25);
+  })).filter(p=>p.u!==null&&p.v!==null&&Math.max(gridMask(p.lat,p.lon,ug),gridMask(p.lat,p.lon,vg))>.05);
 }
 function vectorAt(x,y,pv){
   const nearest=[];
@@ -266,5 +274,5 @@ function render({scene,rows,map,fieldCanvas,motionCanvas}){
   else if(scene==="wind")wind(rows,map,fieldCanvas,motionCanvas);
 }
 
-window.JoTripSceneRenderer={version:"3.0-continuous-field-island-first",render,stop};
+window.JoTripSceneRenderer={version:"3.1-grid-projected-field",render,stop};
 })();

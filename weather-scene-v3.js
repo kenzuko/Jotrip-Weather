@@ -23,8 +23,8 @@ const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Numbe
 
 const EMBED=new URLSearchParams(location.search).get("embed")==="1";
 const HOME_VIEW={lat:10.20,lon:103.98,mobileZoom:9.65,desktopZoom:10.25};
-const NAV_BOUNDS=[[8.90,102.60],[11.10,105.65]];
-const PROBE_BOUNDS={south:9.15,north:10.90,west:102.95,east:105.35};
+const PROCESSING_BOUNDS=[[9.00,102.75],[11.00,105.50]];
+const PROBE_BOUNDS={south:9.00,north:11.00,west:102.75,east:105.50};
 function probeAllowed(lat,lon){
   return lat>=PROBE_BOUNDS.south&&lat<=PROBE_BOUNDS.north&&lon>=PROBE_BOUNDS.west&&lon<=PROBE_BOUNDS.east;
 }
@@ -122,11 +122,23 @@ function freshnessText(iso,kind){
 function initMap(){
   state.map=L.map("map",{
     zoomControl:false,attributionControl:true,
-    minZoom:EMBED?9.05:8.7,maxZoom:12.2,zoomSnap:.25,zoomDelta:.5,preferCanvas:true,
-    maxBounds:NAV_BOUNDS,maxBoundsViscosity:.82
+    minZoom:0,maxZoom:12.2,zoomSnap:.25,zoomDelta:.5,preferCanvas:true,
+    maxBounds:PROCESSING_BOUNDS,maxBoundsViscosity:1
   });
   const initialZoom=innerWidth<760?HOME_VIEW.mobileZoom:HOME_VIEW.desktopZoom;
   state.map.setView([HOME_VIEW.lat,HOME_VIEW.lon],initialZoom,{animate:false});
+
+  const enforceNavigationContract=()=>{
+    const bounds=L.latLngBounds(PROCESSING_BOUNDS);
+    const minZoom=state.map.getBoundsZoom(bounds,true,L.point(12,12));
+    state.map.setMinZoom(minZoom);
+    state.map.setMaxBounds(bounds);
+    if(state.map.getZoom()<minZoom)state.map.setZoom(minZoom,{animate:false});
+    state.map.panInsideBounds(bounds,{animate:false});
+    document.documentElement.dataset.sceneMinZoom=Number(minZoom).toFixed(2);
+    document.documentElement.dataset.sceneProcessingBounds="9.00,102.75,11.00,105.50";
+  };
+  enforceNavigationContract();
 
   state.map.createPane("sceneLabels");
   const labelPane=state.map.getPane("sceneLabels");
@@ -146,11 +158,13 @@ function initMap(){
 
   state.map.createPane("sceneAnchor");
   const anchorPane=state.map.getPane("sceneAnchor");
+  anchorPane.classList.add("scene-anchor-pane");
   anchorPane.style.zIndex="500";
   anchorPane.style.pointerEvents="none";
+  anchorPane.style.filter="grayscale(1) contrast(1.35)";
   state.anchorLayer=L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/rastertiles/light_nolabels/{z}/{x}/{y}{r}.png?key="+CARTO_KEY,
-    {subdomains:"abcd",maxZoom:19,pane:"sceneAnchor",opacity:.18}
+    {subdomains:"abcd",maxZoom:19,pane:"sceneAnchor",opacity:.30,className:"scene-anchor-tiles"}
   ).addTo(state.map);
 
   state.map.createPane("weatherCanvas");
@@ -169,13 +183,21 @@ function initMap(){
   state.actualLayer=L.layerGroup().addTo(state.map);
 
   const publishViewContract=()=>{
-    const b=state.map.getBounds();
+    const b=state.map.getBounds(),c=state.map.getCenter();
     document.documentElement.dataset.sceneLatSpan=(b.getNorth()-b.getSouth()).toFixed(3);
     document.documentElement.dataset.sceneLonSpan=(b.getEast()-b.getWest()).toFixed(3);
+    document.documentElement.dataset.sceneCenterLat=Number(c.lat).toFixed(5);
+    document.documentElement.dataset.sceneCenterLon=Number(c.lng).toFixed(5);
+    document.documentElement.dataset.sceneSouth=Number(b.getSouth()).toFixed(5);
+    document.documentElement.dataset.sceneNorth=Number(b.getNorth()).toFixed(5);
+    document.documentElement.dataset.sceneWest=Number(b.getWest()).toFixed(5);
+    document.documentElement.dataset.sceneEast=Number(b.getEast()).toFixed(5);
+    document.documentElement.dataset.sceneZoom=Number(state.map.getZoom()).toFixed(2);
   };
   state.map.on("move zoom resize",queueRender);
-  state.map.on("moveend zoomend resize",publishViewContract);
-  setTimeout(publishViewContract,80);
+  state.map.on("moveend zoomend",publishViewContract);
+  state.map.on("resize",()=>{enforceNavigationContract();publishViewContract()});
+  setTimeout(()=>{enforceNavigationContract();publishViewContract()},80);
   state.map.on("click",e=>{
     if(!probeAllowed(e.latlng.lat,e.latlng.lng)){
       if(state.selectedMarker){
@@ -255,7 +277,7 @@ function setScene(scene){
   if(!sceneAvailable(scene)) return;
   state.scene=scene;
   document.querySelector(".map-shell").dataset.scene=scene;
-  if(state.anchorLayer) state.anchorLayer.setOpacity(scene==="cloud"?.22:scene==="rain"?.12:scene==="wave"?.10:.06);
+  if(state.anchorLayer) state.anchorLayer.setOpacity(.30);
   stop();
   stopSceneParticles();
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.scene===scene));

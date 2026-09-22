@@ -282,3 +282,18 @@ body.embed-mode .legend{bottom:75px}
   }
   .status-card .facts span:nth-child(n+3){display:none}
 }
+
+/* V3.5 navigation + island readability lock */
+.scene-anchor-pane{
+  pointer-events:none;
+  opacity:1;
+}
+.scene-anchor-pane .leaflet-tile{
+  image-rendering:auto;
+}
+.map-shell[data-scene="cloud"] .scene-anchor-pane,
+.map-shell[data-scene="rain"] .scene-anchor-pane,
+.map-shell[data-scene="wind"] .scene-anchor-pane,
+.map-shell[data-scene="wave"] .scene-anchor-pane{
+  opacity:1;
+}

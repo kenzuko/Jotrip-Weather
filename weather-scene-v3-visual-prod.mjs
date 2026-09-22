@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const target='https://weather.openphuquoc.com/weather-scene-v3.html?visualqa='+Date.now();
-const result={target,ok:false,scenes:{},runtime:{},pageErrors:[],consoleErrors:[],failure:null};
+const result={target,ok:false,scenes:{},runtime:{},navigation:null,pageErrors:[],consoleErrors:[],failure:null};
 
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
@@ -77,6 +77,20 @@ try{
     appScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-v3.js'))||null,
     renderScript:[...document.scripts].map(s=>s.src).find(x=>x.includes('weather-scene-render-v2.js'))||null
   }));
+  result.navigation=await page.evaluate(()=>({
+    centerLat:Number(document.documentElement.dataset.sceneCenterLat||NaN),
+    centerLon:Number(document.documentElement.dataset.sceneCenterLon||NaN),
+    south:Number(document.documentElement.dataset.sceneSouth||NaN),
+    north:Number(document.documentElement.dataset.sceneNorth||NaN),
+    west:Number(document.documentElement.dataset.sceneWest||NaN),
+    east:Number(document.documentElement.dataset.sceneEast||NaN),
+    minZoom:Number(document.documentElement.dataset.sceneMinZoom||NaN),
+    zoom:Number(document.documentElement.dataset.sceneZoom||NaN),
+    processingBounds:document.documentElement.dataset.sceneProcessingBounds||"",
+    anchorZ:Number(getComputedStyle(document.querySelector('.leaflet-pane.scene-anchor-pane')).zIndex||0),
+    weatherZ:Number(getComputedStyle(document.querySelector('.leaflet-pane.weather-canvas-pane')).zIndex||0),
+    anchorOpacity:Number(document.querySelector('.scene-anchor-tiles')?.parentElement?.style?.opacity||0)
+  }));
 
   for(const scene of ['cloud','rain','wind','wave']){
     await page.locator('.tabs button[data-scene="'+scene+'"]').click();
@@ -120,9 +134,19 @@ try{
     return paint.alphaPixels>40 && paint.maxAlpha>8;
   });
   const compositeOk=Object.values(result.scenes).every(s=>s.pngDeltaBytes>500);
+  const navigationOk=
+    Math.abs(result.navigation.centerLat-10.20)<.08 &&
+    Math.abs(result.navigation.centerLon-103.98)<.08 &&
+    result.navigation.processingBounds==="9.00,102.75,11.00,105.50" &&
+    result.navigation.south>=9.00-.02 &&
+    result.navigation.north<=11.00+.02 &&
+    result.navigation.west>=102.75-.02 &&
+    result.navigation.east<=105.50+.02 &&
+    result.navigation.anchorZ>result.navigation.weatherZ;
   result.ok=
     result.runtime.rendererLoaded===true &&
     String(result.runtime.renderScript||'').includes('weather-scene-render-v2.js') &&
+    navigationOk &&
     scenePaintOk &&
     compositeOk &&
     result.pageErrors.length===0;

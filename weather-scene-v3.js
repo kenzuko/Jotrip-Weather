@@ -90,28 +90,33 @@ function modelName(scene){
   if(scene==="wave") return "ECMWF Wave";
   return "Himawari-9";
 }
-function modelCycleBadge(scene){
-  const run=modelRunIso(scene);
-  if(!run) return {text:"run --",stale:true};
-  const a=ageMinutes(run);
-  const hours=Math.round((a||0)/60);
-  const stale=(a||Infinity)>12*60;
-  return {
-    text:"run "+utcCycleLabel(run)+" · "+hours+" giờ"+(stale?" · đang chờ chu kỳ mới":""),
-    stale
-  };
-}
 function ageMinutes(iso){
   const t=Date.parse(iso||"");
   return Number.isFinite(t)?Math.max(0,(Date.now()-t)/60000):null;
 }
+function agePhraseFromMinutes(a){
+  if(a===null||!Number.isFinite(a))return "không rõ thời gian";
+  if(a<2)return "vừa cập nhật";
+  if(a<60)return Math.round(a)+" phút trước";
+  const h=Math.floor(a/60),m=Math.round(a-h*60);
+  if(m<8)return h+" giờ trước";
+  return h+" giờ "+m+" phút trước";
+}
+function modelCycleBadge(scene){
+  const run=modelRunIso(scene);
+  if(!run)return {text:"đang chờ dữ liệu dự báo",stale:true};
+  const a=ageMinutes(run),stale=(a||Infinity)>12*60;
+  return {
+    text:stale?"đang chờ dự báo mới · "+agePhraseFromMinutes(a):agePhraseFromMinutes(a),
+    stale
+  };
+}
 function freshnessText(iso,kind){
   const a=ageMinutes(iso);
-  if(a===null) return {text:"không rõ thời gian",stale:true};
+  if(a===null)return {text:"không rõ thời gian",stale:true};
   const staleLimit=kind==="satellite"?75:kind==="actual"?90:kind==="marine"?360:420;
-  if(a>staleLimit) return {text:"dữ liệu trễ · "+Math.round(a)+"p",stale:true};
-  if(a<2) return {text:"vừa cập nhật",stale:false};
-  return {text:Math.round(a)+"p trước",stale:false};
+  const prefix=kind==="satellite"?"ảnh vệ tinh ":kind==="marine"?"biển ":"";
+  return {text:prefix+agePhraseFromMinutes(a),stale:a>staleLimit};
 }
 
 function initMap(){

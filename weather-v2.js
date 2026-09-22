@@ -84,7 +84,9 @@ function ageText(iso){
   if(!Number.isFinite(m))return "không rõ";
   if(m<2)return "vừa cập nhật";
   if(m<60)return Math.round(m)+" phút trước";
-  return (m/60).toFixed(1)+" giờ trước";
+  const h=Math.floor(m/60),rest=Math.round(m-h*60);
+  if(rest<8)return h+" giờ trước";
+  return h+" giờ "+rest+" phút trước";
 }
 function localTime(iso){
   const d=new Date(iso);

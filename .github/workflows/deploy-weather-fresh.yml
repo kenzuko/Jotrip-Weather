@@ -56,13 +56,28 @@ jobs:
         run: |
           node - <<'JS'
           const origin='https://jotrip-weather-fresh.kenzuko.workers.dev';
-          for (const route of ['/health','/local-now.json','/groundtruth.json']) {
-            const res=await fetch(origin+route,{headers:{accept:'application/json'}});
-            if(!res.ok)throw new Error(route+' HTTP '+res.status);
-            const body=await res.json();
-            if(route==='/health'&&!body.cron_configured)throw new Error('cron token not bound');
-            if(route==='/local-now.json'&&body.engine!=='PQ_LOCAL_NOW_V2')throw new Error('wrong engine');
-            console.log(route+' OK');
+          // Binding the secret issues a fresh Worker deployment. Allow edge propagation.
+          const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+          for(let attempt=1;attempt<=15;attempt++){
+            try{
+              const health=await fetch(origin+'/health?verify='+Date.now(),{cache:'no-store'});
+              const status=await health.json();
+              if(!health.ok||!status.cron_configured)throw Error('cron secret not yet active');
+              for(const route of ['/local-now.json','/groundtruth.json']){
+                const res=await fetch(origin+route+'?verify='+Date.now(),{cache:'no-store'});
+                if(!res.ok)throw Error(route+' HTTP '+res.status);
+                const body=await res.json();
+                if(route==='/local-now.json'&&body.engine!=='PQ_LOCAL_NOW_V2')throw Error('wrong engine');
+                if(route==='/groundtruth.json'&&!body.actual_policy)throw Error('ground truth missing safety policy');
+                console.log(route+' OK '+body.generated_at);
+              }
+              console.log('/health OK; scheduled dispatch secret active');
+              process.exit(0);
+            }catch(e){
+              console.log('Smoke check '+attempt+'/15: '+e.message);
+              if(attempt===15)throw e;
+              await pause(4000);
+            }
           }
           JS
 

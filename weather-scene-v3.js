@@ -22,6 +22,12 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const num=v=>v===null||v===undefined||v===""||Number.isNaN(Number(v))?null:Number(v);
 
 const EMBED=new URLSearchParams(location.search).get("embed")==="1";
+const HOME_VIEW={lat:10.20,lon:103.98,mobileZoom:9.65,desktopZoom:10.25};
+const NAV_BOUNDS=[[9.68,103.52],[10.66,104.46]];
+const PROBE_BOUNDS={south:9.82,north:10.50,west:103.70,east:104.26};
+function probeAllowed(lat,lon){
+  return lat>=PROBE_BOUNDS.south&&lat<=PROBE_BOUNDS.north&&lon>=PROBE_BOUNDS.west&&lon<=PROBE_BOUNDS.east;
+}
 
 const state={
   map:null,
@@ -111,16 +117,11 @@ function freshnessText(iso,kind){
 function initMap(){
   state.map=L.map("map",{
     zoomControl:false,attributionControl:true,
-    minZoom:8.1,maxZoom:12.2,zoomSnap:.25,zoomDelta:.5,preferCanvas:true
+    minZoom:EMBED?9.05:8.7,maxZoom:12.2,zoomSnap:.25,zoomDelta:.5,preferCanvas:true,
+    maxBounds:NAV_BOUNDS,maxBoundsViscosity:.82
   });
-  if(EMBED&&innerWidth>=760){
-    // The Weather card is extremely wide. fitBounds preserves the full island
-    // vertically but exposes several degrees of mainland horizontally.
-    // Use a deliberate island-first desktop view instead.
-    state.map.setView([10.205,103.985],10.25,{animate:false});
-  }else{
-    state.map.setView([10.18,103.98],innerWidth<760?8.65:9);
-  }
+  const initialZoom=innerWidth<760?HOME_VIEW.mobileZoom:HOME_VIEW.desktopZoom;
+  state.map.setView([HOME_VIEW.lat,HOME_VIEW.lon],initialZoom,{animate:false});
 
   state.map.createPane("sceneLabels");
   const labelPane=state.map.getPane("sceneLabels");
@@ -138,7 +139,6 @@ function initMap(){
     {subdomains:"abcd",maxZoom:19,pane:"sceneLabels"}
   ).addTo(state.map);
 
-  // A very light map copy above weather preserves island/coast orientation.
   state.map.createPane("sceneAnchor");
   const anchorPane=state.map.getPane("sceneAnchor");
   anchorPane.style.zIndex="500";
@@ -148,7 +148,6 @@ function initMap(){
     {subdomains:"abcd",maxZoom:19,pane:"sceneAnchor",opacity:.18}
   ).addTo(state.map);
 
-  // Dedicated Leaflet pane keeps weather above base tiles and below labels/markers.
   state.map.createPane("weatherCanvas");
   const weatherPane=state.map.getPane("weatherCanvas");
   weatherPane.classList.add("weather-canvas-pane");
@@ -173,6 +172,15 @@ function initMap(){
   state.map.on("moveend zoomend resize",publishViewContract);
   setTimeout(publishViewContract,80);
   state.map.on("click",e=>{
+    if(!probeAllowed(e.latlng.lat,e.latlng.lng)){
+      if(state.selectedMarker){
+        state.map.removeLayer(state.selectedMarker);
+        state.selectedMarker=null;
+      }
+      state.probe=null;
+      document.querySelector(".map-shell")?.classList.remove("has-selection");
+      return;
+    }
     state.probe={lat:e.latlng.lat,lon:e.latlng.lng};
     placeSelectionFlag(e.latlng.lat,e.latlng.lng);
     updateSourcePanel();
@@ -761,7 +769,7 @@ function nearestLocalPoint(lat,lon){
     const d=(Number(p.lat)-lat)**2+(Number(p.lon)-lon)**2;
     if(d<dist){dist=d;best=p}
   }
-  return best;
+  return best&&dist<=0.14**2?best:null;
 }
 function localCurrentState(){
   const iso=state.current?.local_now?.generated_at||state.current?.generated_at||null;
@@ -818,6 +826,7 @@ function selectionHtml(lat,lon){
   return rows.join('<br>');
 }
 function placeSelectionFlag(lat,lon){
+  if(!probeAllowed(lat,lon))return;
   if(state.selectedMarker){
     state.map.removeLayer(state.selectedMarker);
     state.selectedMarker=null;

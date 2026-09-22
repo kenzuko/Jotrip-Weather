@@ -232,3 +232,41 @@ body.embed-mode .status-open-btn{top:50px}
 @media(max-width:760px){
   body.embed-mode .status-open-btn{top:48px}
 }
+
+/* 22/09 mobile map clarity - island first, less overlay chrome */
+@media(max-width:760px){
+  .tabs{top:7px;padding:3px;gap:2px}
+  .tabs button{padding:7px 10px;font-size:9.5px}
+  .status-open-btn{left:8px;top:48px;padding:8px 10px;font-size:9px}
+  .info-btn{right:8px;top:48px;width:32px;height:32px}
+  .legend{left:8px;bottom:75px;padding:6px 8px}
+  .legend .bar{width:116px;height:5px}
+  .legend .scale{font-size:7px}
+  .timeline{
+    bottom:7px;
+    width:calc(100% - 14px);
+    grid-template-columns:30px minmax(0,1fr) auto;
+    grid-template-rows:auto auto;
+    gap:4px 7px;
+    padding:7px 8px 6px;
+    border-radius:14px
+  }
+  .timeline button{grid-row:1/3;width:30px;height:30px;align-self:center}
+  .timecopy{grid-column:2;min-width:0}
+  .timecopy b{font-size:10px;line-height:1.1}
+  .timecopy small,.timecopy em{display:none}
+  .time-class{
+    grid-column:3;grid-row:1;
+    justify-self:end;min-width:auto;
+    font-size:6.8px;padding:3px 6px
+  }
+  .timeline input{grid-column:2/4;grid-row:2;margin:0;height:17px}
+  .leaflet-popup.selection-popup .leaflet-popup-content-wrapper{max-width:220px}
+  .leaflet-popup.selection-popup .leaflet-popup-content{font-size:9px;line-height:1.35}
+  .selection-coord{display:none}
+}
+body.embed-mode .legend{bottom:75px}
+@media(max-width:760px){
+  body.embed-mode .legend{bottom:73px}
+  body.embed-mode .status-open-btn{top:48px}
+}

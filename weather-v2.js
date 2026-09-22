@@ -499,10 +499,14 @@ function islandAssessment(){
 function renderPointTabs(){
   const nav=$("pointTabs");if(!nav||!critical)return;
   const ids=[...islandIds()];
-  nav.innerHTML=ids.map(id=>
-    '<button class="'+(id===current?'active':'')+'" data-point="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+'</button>'
-  ).join("")+
-  '<button class="off-island" data-compare="ha_tien" title="Đối chiếu hành lang mây Himawari tại Hà Tiên">Hà Tiên · đối chiếu</button>';
+  if(critical.points?.rach_gia&&!ids.includes("rach_gia"))ids.push("rach_gia");
+  nav.innerHTML=ids.map(id=>{
+    const comparison=id==="rach_gia";
+    const label=esc(critical.points[id]?.name||id)+(comparison?" · đối chiếu":"");
+    const title=comparison?' title="Điểm đối chiếu Rạch Giá - không tính vào tổng quan 7 điểm đảo"':"";
+    return '<button class="'+(id===current?'active ':'')+(comparison?'off-island':'')+'" data-point="'+esc(id)+'"'+title+'>'+label+'</button>';
+  }).join("")+
+  '<button class="off-island" data-compare="ha_tien" title="Đối chiếu hành lang mây Himawari tại Hà Tiên">Hà Tiên · hành lang mây</button>';
 }
 
 function renderStatus(){

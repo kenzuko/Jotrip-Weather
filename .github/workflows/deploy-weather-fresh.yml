@@ -26,6 +26,25 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN missing"; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
           test -n "$WEATHER_DISPATCH_TOKEN" || { echo "::error::WEATHER_GITHUB_DISPATCH_TOKEN missing"; exit 1; }
+      - name: Diagnose token and account match without exposing secrets
+        run: |
+          # The account associated with this token was confirmed in the previous Wrangler log.
+          if [ "$CLOUDFLARE_ACCOUNT_ID" != "1a64a0a081ea758f72be8254030bdf11" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID secret does not match the account shown by Wrangler for this token."
+            exit 1
+          fi
+          node - <<'JS'
+          const account=process.env.CLOUDFLARE_ACCOUNT_ID;
+          const url='https://api.cloudflare.com/client/v4/accounts/'+account+'/workers/services/jotrip-weather-fresh';
+          const r=await fetch(url,{headers:{
+            Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN,
+            Accept:'application/json'
+          }});
+          const j=await r.json();
+          const errors=(j.errors||[]).map(e=>({code:e.code,message:e.message}));
+          console.log(JSON.stringify({account_matches:true,worker_http:r.status,errors}));
+          if(!r.ok)process.exitCode=1;
+          JS
       - name: Deploy isolated Worker and 10-minute cron
         working-directory: cloudflare
         run: npx --yes wrangler@4 deploy --config wrangler-fresh.toml

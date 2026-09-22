@@ -93,12 +93,13 @@ try{
   const windySrc=await windy.getAttribute('src');
   result.comparisons.windyWind=Boolean(windySrc&&windySrc.includes('embed.windy.com')&&windySrc.includes('overlay=wind'));
 
-  await page.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:30000});
+  await page.locator('.jotrip-forecast-panel .forecast-day').first().waitFor({state:'visible',timeout:30000});
   await page.locator('.jotrip-forecast-panel').scrollIntoViewIfNeeded();
   await page.waitForTimeout(250);
   await page.locator('.jotrip-forecast-panel').screenshot({path:'/tmp/prod-weather-forecast-mobile.png'});
   result.forecast={
     regions:await page.locator('#forecastRegionTabs button[data-region]').allTextContents(),
+    regionSelectorHidden:await page.locator('#forecastRegionTabs').isHidden().catch(()=>false),
     pointTabs:await page.locator('#pointTabs button').allTextContents(),
     state:(await page.locator('#ensembleState').innerText()).trim(),
     detailOpen:await page.locator('.forecast-detail-toggle').evaluate(el=>el.open),
@@ -110,7 +111,7 @@ try{
   const desktopOverview=desktop.locator('.weather-overview');
   await desktopOverview.waitFor({state:'visible',timeout:30000});
   await desktopOverview.screenshot({path:'/tmp/prod-weather-overview-desktop.png'});
-  await desktop.locator('#forecastRegionTabs button[data-region]').first().waitFor({state:'visible',timeout:60000});
+  await desktop.locator('.jotrip-forecast-panel .forecast-day').first().waitFor({state:'visible',timeout:60000});
   await desktop.locator('.jotrip-forecast-panel').scrollIntoViewIfNeeded();
   await desktop.waitForTimeout(250);
   await desktop.locator('.jotrip-forecast-panel').screenshot({path:'/tmp/prod-weather-forecast-desktop.png'});
@@ -142,7 +143,7 @@ try{
     result.overview?.temp!=='--' &&
     result.embed?.embedMode===true &&
     result.embed?.topbarDisplay==='none' &&
-    String(result.embed?.renderer||'').includes('wide-domain-marine-near-now') &&
+    String(result.embed?.renderer||'').includes('wave-island-anchors') &&
     sceneOk &&
     result.flag?.visible===true &&
     result.flag?.changed===true &&
@@ -151,6 +152,7 @@ try{
     result.comparisons.windyWind===true &&
     result.forecast?.regions?.includes('Gành Dầu - Cửa Cạn') &&
     result.forecast?.regions?.includes('Dương Đông') &&
+    result.forecast?.regionSelectorHidden===true &&
     !result.forecast?.regions?.some(x=>/Bắc|Đông Bắc|Tây Bắc/.test(x)) &&
     !result.forecast?.pointTabs?.some(x=>x.includes('Rạch Giá')) &&
     result.forecast?.detailOpen===false &&

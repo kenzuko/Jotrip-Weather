@@ -1,0 +1,47 @@
+name: Deploy Weather Fresh Worker
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cloudflare/weather-fresh-worker.js"
+      - "cloudflare/wrangler-fresh.toml"
+      - ".github/workflows/deploy-weather-fresh.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WEATHER_DISPATCH_TOKEN: ${{ secrets.WEATHER_GITHUB_DISPATCH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate deployment credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN missing"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID missing"; exit 1; }
+          test -n "$WEATHER_DISPATCH_TOKEN" || { echo "::error::WEATHER_GITHUB_DISPATCH_TOKEN missing"; exit 1; }
+      - name: Deploy isolated Worker and 10-minute cron
+        working-directory: cloudflare
+        run: npx --yes wrangler@4 deploy --config wrangler-fresh.toml
+      - name: Bind private GitHub Actions dispatch token
+        working-directory: cloudflare
+        run: printf '%s' "$WEATHER_DISPATCH_TOKEN" | npx --yes wrangler@4 secret put GITHUB_WEATHER_DISPATCH_TOKEN --config wrangler-fresh.toml
+      - name: Smoke test Cloudflare gateway
+        run: |
+          node - <<'JS'
+          const origin='https://jotrip-weather-fresh.kenzuko.workers.dev';
+          for (const route of ['/health','/local-now.json','/groundtruth.json']) {
+            const res=await fetch(origin+route,{headers:{accept:'application/json'}});
+            if(!res.ok)throw new Error(route+' HTTP '+res.status);
+            const body=await res.json();
+            if(route==='/health'&&!body.cron_configured)throw new Error('cron token not bound');
+            if(route==='/local-now.json'&&body.engine!=='PQ_LOCAL_NOW_V2')throw new Error('wrong engine');
+            console.log(route+' OK');
+          }
+          JS

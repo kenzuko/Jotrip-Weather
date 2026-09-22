@@ -640,22 +640,37 @@ function renderHero(){
   const p=point(),l=p.local||{},m=p.model||{},n=effectiveNowcast();
   $("placeName").textContent=p.name||current;
   const localFresh=localDataFresh();
+  const nowcastRef=fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time;
+  const nowcastFresh=freshEnough(nowcastRef,75);
+  const conv=nowcastFresh?num(n?.convective_score??l.convection_score):null;
   const t=localFresh?(num(l.temperature_c)??num(m.temperature_c)):num(m.temperature_c);
-  const rain=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
+  // "Mưa tại điểm" must not show an old model rate as if it were current rain.
+  const rain=localFresh&&l.available?num(l.rain_rate_mm_h):null;
   const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
   const wave=localFresh?(num(l.wave_hs_m)??num(m.wave_hs_m)):num(m.wave_hs_m);
-  const nowcastFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
-  const conv=nowcastFresh?num(n?.convective_score??l.convection_score):null;
-  const condition=weatherCondition(rain,conv,wind,!localFresh);
+
+  let condition;
+  if(!localFresh&&nowcastFresh&&conv!==null&&conv>=75){
+    condition={label:"Mây đối lưu mạnh - có thể mưa dông cục bộ",icon:"⛈️",mood:"storm"};
+  }else if(!localFresh&&nowcastFresh&&conv!==null&&conv>=50){
+    condition={label:"Có mây đối lưu đáng chú ý",icon:"☁️",mood:"watch"};
+  }else if(!localFresh&&!nowcastFresh){
+    condition={label:"Chưa đủ dữ liệu mới để kết luận lúc này",icon:"⚠️",mood:"watch"};
+  }else{
+    condition=weatherCondition(rain,conv,wind,!localFresh);
+  }
 
   $("heroTemp").textContent=t===null?"--":fmt(t,1)+"°";
-  $("heroTempClass").textContent=localFresh&&l.available?"LÚC NÀY":"DỰ BÁO GẦN NHẤT";
+  $("heroTempClass").textContent=localFresh&&l.available?"LÚC NÀY":"DỮ LIỆU GẦN NHẤT";
   $("heroCondition").textContent=condition.label;
   $("heroWeatherIcon").textContent=condition.icon;
   $("heroRain").textContent=rain===null?"--":fmt(rain,1);
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
-  $("heroSummary").textContent=summary(p);
+  let heroSummary=summary(p);
+  if(!localFresh&&!nowcastFresh)heroSummary="Dữ liệu tại điểm và ảnh mây đều đang trễ - không nên dùng số cũ để kết luận trời đang ổn.";
+  else if(!localFresh&&nowcastFresh&&conv!==null&&conv>=50)heroSummary="Tín hiệu vệ tinh đang đáng chú ý. Số mưa tại điểm chưa có cập nhật mới - xem bản đồ nếu chuẩn bị ra ngoài.";
+  $("heroSummary").textContent=heroSummary;
   $("updatedAt").textContent=(localFresh?"Cập nhật ":"Dữ liệu tại điểm gần nhất ")+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
   $("updatedAt").classList.toggle("stale",!localFresh);
   if($("scenePoint"))$("scenePoint").textContent=p.name||current;
@@ -675,9 +690,23 @@ function phuQuocClock(iso){
   const d=new Date(iso);
   return Number.isFinite(d.getTime())?d.toLocaleTimeString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",minute:"2-digit",hour12:false}):"-";
 }
-function todayUiState(row){
-  // JoTrip Engine land_tour gates v1:
-  // rain_3h watch/avoid = 20/50 mm; gust watch/avoid = 50/62 km/h.
+function todayLiveOverride(){
+  const p=point(),l=p.local||{},n=effectiveNowcast();
+  const localFresh=localDataFresh();
+  const nowcastFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
+  const imminence=localFresh?num(l.rain_imminence_score):null;
+  const conv=nowcastFresh?num(n?.convective_score??l.convection_score):null;
+  if((imminence!==null&&imminence>=80)||(conv!==null&&conv>=85))return {cls:"avoid",label:"Nên né khung này",reason:"Tín hiệu đối lưu ngắn hạn đang mạnh"};
+  if((imminence!==null&&imminence>=60)||(conv!==null&&conv>=65))return {cls:"watch",label:"Cần để ý",reason:"Có tín hiệu mưa/đối lưu ngắn hạn"};
+  if(!localFresh&&!nowcastFresh)return {cls:"watch",label:"Cần để ý",reason:"Dữ liệu live đang trễ - kiểm tra bản đồ"};
+  return null;
+}
+function todayUiState(row,index=0){
+  if(index===0){
+    const live=todayLiveOverride();
+    if(live)return live;
+  }
+  // Future slots keep JoTrip Engine land-tour gates; this is not a new forecast model.
   const rain=num(row?.rain),gust=num(row?.gust);
   if((rain!==null&&rain>=50)||(gust!==null&&gust>=62))return {cls:"avoid",label:"Nên né khung này"};
   if((rain!==null&&rain>=20)||(gust!==null&&gust>=50))return {cls:"watch",label:"Cần để ý"};
@@ -722,8 +751,8 @@ function renderTodayDecision(){
   }
   const rank={good:0,watch:1,avoid:2};
   let worst=null,goodCount=0;
-  root.innerHTML=rows.map(r=>{
-    const state=todayUiState(r),icon=todayWeatherIcon(r);
+  root.innerHTML=rows.map((r,index)=>{
+    const state=todayUiState(r,index),icon=todayWeatherIcon(r);
     if(state.cls==="good")goodCount++;
     if(!worst||rank[state.cls]>rank[worst.state.cls])worst={row:r,state};
     const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),temp=num(r.temperature);
@@ -732,6 +761,7 @@ function renderTodayDecision(){
       '<div class="today-weather-icon" aria-hidden="true">'+icon+'</div>'+
       '<strong>'+(temp===null?'-':fmt(temp,0)+'°')+'</strong>'+
       '<b>'+state.label+'</b>'+
+      (state.reason?'<small class="today-reason">'+esc(state.reason)+'</small>':'')+
       '<div class="today-mini">'+
         '<span>Mưa '+(rain===null?'-':fmt(rain,1)+' mm/3h')+'</span>'+
         '<span>Gió '+(wind===null?'-':fmt(wind,0)+' km/h')+'</span>'+
@@ -1880,7 +1910,7 @@ function renderIntradayChart(){
 
 function renderAll(){
   if(!critical)return;
-  renderPointTabs();renderStatus();renderHero();renderCurrent();renderTodayDecision();renderActual();renderFeedbackPoint();renderAQI();renderTide();renderMapConvective();renderCloudMotionTable();renderQuickAlert();
+  renderPointTabs();renderStatus();renderHero();renderCurrent();renderTodayDecision();renderActual();renderFeedbackPoint();renderAQI();renderTide();renderMapConvective();renderQuickAlert();
   renderIntradayChart();renderJoTripForecast();renderHealth();
 }
 
@@ -1894,7 +1924,10 @@ async function loadTide(){
   }
 }
 async function loadNowcast(){
-  try{fullNowcast=await getFirst(NOWCAST,5*60*1000);renderMapConvective();renderCurrent();renderCloudMotionTable();renderStatus();renderQuickAlert();refreshActiveMap()}catch(e){console.warn("[Weather V2] compact nowcast",e)}
+  try{
+    fullNowcast=await getFirst(NOWCAST,5*60*1000);
+    renderHero();renderTodayDecision();renderMapConvective();renderCurrent();renderCloudMotionTable();renderStatus();renderQuickAlert();refreshActiveMap();
+  }catch(e){console.warn("[Weather V2] compact nowcast",e)}
 }
 async function loadRegionalForecast(){
   try{

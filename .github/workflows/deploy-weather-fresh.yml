@@ -14,7 +14,8 @@ jobs:
     timeout-minutes: 5
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Verified against Wrangler's account identity; this ID is not a credential.
+      CLOUDFLARE_ACCOUNT_ID: 1a64a0a081ea758f72be8254030bdf11
       WEATHER_DISPATCH_TOKEN: ${{ secrets.WEATHER_GITHUB_DISPATCH_TOKEN }}
     steps:
       - uses: actions/checkout@v4

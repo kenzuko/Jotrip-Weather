@@ -92,7 +92,15 @@ try{
     anchorOpacity:Number(document.querySelector('.scene-anchor-tiles')?.parentElement?.style?.opacity||0)
   }));
 
+  const manifest=await page.evaluate(async()=>{const r=await fetch('/data/weather-runtime/manifest.json',{cache:'no-store'});return r.json()});
+  const cloudTime=manifest.source_times?.cloud_sampled_time;
+  const cloudAgeMin=cloudTime?(Date.now()-Date.parse(cloudTime))/60000:null;
+  const cloudStale=Number.isFinite(cloudAgeMin)&&cloudAgeMin>35;
   for(const scene of ['cloud','rain','wind','wave']){
+    if(scene==='cloud'&&await page.locator('.tabs button[data-scene="cloud"]').isDisabled()){
+      result.scenes.cloud={disabled:true,time:cloudTime,ageMin:cloudAgeMin};
+      continue;
+    }
     await page.locator('.tabs button[data-scene="'+scene+'"]').click();
     await page.waitForTimeout(scene==='wind'?1200:700);
     const paintSeek=await seekPaint(scene);
@@ -130,11 +138,13 @@ try{
     };
   }
 
+  const cloudPolicyOk=result.scenes.cloud?.disabled===true?cloudStale:!cloudStale;
   const scenePaintOk=Object.entries(result.scenes).every(([scene,s])=>{
+    if(s.disabled)return scene==='cloud'&&cloudPolicyOk;
     const paint=scene==='wind'?s.motionPaint:s.fieldPaint;
     return paint.alphaPixels>40 && paint.maxAlpha>8;
   });
-  const compositeOk=Object.values(result.scenes).every(s=>s.pngDeltaBytes>500);
+  const compositeOk=Object.values(result.scenes).every(s=>s.disabled===true?cloudPolicyOk:s.pngDeltaBytes>500);
   const waveAnchorOk=Number(result.scenes.wave?.waveAnchorCount||0)>=3;
   const navigationOk=
     Math.abs(result.navigation.centerLat-10.20)<.08 &&
@@ -150,6 +160,7 @@ try{
     String(result.runtime.renderScript||'').includes('weather-scene-render-v2.js') &&
     navigationOk &&
     waveAnchorOk &&
+    cloudPolicyOk &&
     scenePaintOk &&
     compositeOk &&
     result.pageErrors.length===0;

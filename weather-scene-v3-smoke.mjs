@@ -38,7 +38,14 @@ try{
   await page.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),{timeout:120000});
   await page.waitForTimeout(1200);
 
+  const manifest=await page.evaluate(async()=>{const r=await fetch('/data/weather-runtime/manifest.json',{cache:'no-store'});return r.json()});
+  const cloudTime=manifest.source_times?.cloud_sampled_time;
+  result.runtime={cloudTime,cloudAgeMin:cloudTime?(Date.now()-Date.parse(cloudTime))/60000:null};
   for(const scene of ['cloud','rain','wind','wave']){
+    if(scene==='cloud'&&await page.locator('.tabs button[data-scene="cloud"]').isDisabled()){
+      result.scenes.cloud={disabled:true,time:cloudTime};
+      continue;
+    }
     await page.locator('.tabs button[data-scene="'+scene+'"]').click();
     await page.waitForTimeout(scene==='wind'?1800:900);
     const field=await stats('#fieldCanvas');

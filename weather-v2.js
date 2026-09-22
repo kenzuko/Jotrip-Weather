@@ -567,9 +567,10 @@ function islandAssessment(){
   return {label,attention,rows};
 }
 function renderTechnicalPointTabs(){
-  const nav=$("technicalPointTabs");if(!nav||!critical)return;
-  const ids=[...islandIds()];
-  nav.innerHTML=ids.map(id=>'<button type="button" class="'+(id===current?'active':'')+'" data-technical-point="'+esc(id)+'">'+esc(critical.points[id]?.name||id)+'</button>').join("");
+  if(!critical)return;
+  const nav=$("technicalPointTabs");
+  // The primary point selector controls all sections, including deep analysis.
+  if(nav)nav.innerHTML="";
   const title=$("technicalPointTitle");if(title)title.textContent=point().name||current;
 }
 function renderTechnicalFreshness(){
@@ -626,11 +627,15 @@ function renderStatus(){
   const localAge=ageMinutes(critical?.local_generated_at);
   const actualAge=ageMinutes(actualTimestamp());
   const nowAge=ageMinutes(nowcastTimestamp());
-  const best=Math.min(localAge,actualAge,nowAge);
-  const stale=best>45,delayed=best>25;
-  $("liveDot").className=stale||delayed?"warn":"ok";
-  const ref=[critical?.local_generated_at,actualTimestamp(),nowcastTimestamp()].filter(Boolean).sort((a,b)=>Date.parse(b)-Date.parse(a))[0]||liveTimestamp();
-  $("liveLabel").textContent=(stale?"DỮ LIỆU LIVE ĐANG TRỄ":delayed?"ĐANG CẬP NHẬT":critical.report_status==="LIVE"?"ĐANG HOẠT ĐỘNG":"SUY GIẢM")+" · "+ageText(ref);
+  // The newest unrelated source must never make all sources look fresh.
+  // For the customer-facing header, Local Now is the primary current-time source.
+  const localDelayed=localAge===null||localAge>20;
+  const localStale=localAge===null||localAge>35;
+  const cloudDelayed=nowAge===null||nowAge>35;
+  $("liveDot").className=localDelayed||cloudDelayed?"warn":"ok";
+  const localLabel=critical?.local_generated_at?"Tại điểm "+ageText(critical.local_generated_at):"Tại điểm chưa có dữ liệu";
+  const cloudLabel=nowcastTimestamp()?" · mây "+ageText(nowcastTimestamp()):" · mây chưa cập nhật";
+  $("liveLabel").textContent=(localStale?"DỮ LIỆU TẠI ĐIỂM ĐANG TRỄ":localDelayed?"ĐANG CHỜ BẢN LÚC NÀY":"LÚC NÀY ĐÃ CẬP NHẬT")+" · "+localLabel+cloudLabel;
 
   const assessment=islandAssessment();
   const coverage=coverageScore();
@@ -757,7 +762,7 @@ function nearbyVvpqActual(maxKm=12,maxMinutes=35){
 }
 
 function renderHero(){
-  const p=point(),l=p.local||{},m=p.model||{},n=effectiveNowcast();
+  const p=point(),l=p.local||{},m=modelPoint(),n=effectiveNowcast();
   $("placeName").textContent=p.name||current;
   const localFresh=localDataFresh();
   const nowcastRef=fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time;
@@ -767,7 +772,10 @@ function renderHero(){
   // "Mưa tại điểm" must not show an old model rate as if it were current rain.
   const rain=localFresh&&l.available?num(l.rain_rate_mm_h):null;
   const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
-  const wave=localFresh?(num(l.wave_hs_m)??num(m.wave_hs_m)):num(m.wave_hs_m);
+  const marineTimestamp=engineDashboard?.points?.[current]?.marine_sampled_time||m.marine_sampled_time||null;
+  const marineFresh=marineTimestamp&&freshEnough(marineTimestamp,210);
+  const wave=marineFresh?(num(m.wave_hs_m)??num(l.wave_hs_m)):null;
+  const gust=num(m.gust_kmh);
 
   const nearbyActual=nearbyVvpqActual();
   let condition;
@@ -792,6 +800,12 @@ function renderHero(){
   $("heroRain").textContent=rain===null?"--":fmt(rain,1);
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
+  if($("heroGust"))$("heroGust").textContent=gust===null?"--":fmt(gust,0);
+  if($("heroRainMeta"))$("heroRainMeta").textContent=rain===null?"mm/h · chưa đủ số mới":"mm/h · JoTrip ước tính";
+  if($("heroWindMeta"))$("heroWindMeta").textContent=localFresh?"km/h · JoTrip ước tính":"km/h · mô hình gần nhất";
+  if($("heroWaveMeta"))$("heroWaveMeta").textContent=marineTimestamp
+    ?("m Hs · sóng nền mô hình lúc "+phuQuocClock(marineTimestamp)+(marineFresh?"":" · đã trễ"))
+    :"m Hs · chưa có mốc biển";
   let heroSummary=summary(p);
   if(nearbyActual?.thunder&&nearbyActual?.rain)heroSummary="Quan trắc VVPQ đang ghi nhận mưa dông cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km. Ưu tiên tình trạng đang xảy ra hơn dự báo mô hình.";
   else if(nearbyActual?.rain)heroSummary="Quan trắc VVPQ đang ghi nhận mưa cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km.";
@@ -832,7 +846,7 @@ function todayLiveOverride(){
   return null;
 }
 function todayUiState(row,index=0){
-  if(index===0){
+  if(index===0&&Math.abs(Date.parse(row?.time_iso||"")-Date.now())<=60*60*1000){
     const live=todayLiveOverride();
     if(live)return live;
   }
@@ -848,7 +862,7 @@ function todayWeatherIcon(row){
   const hour=Number.isFinite(d.getTime())?Number(d.toLocaleString("en-US",{timeZone:"Asia/Ho_Chi_Minh",hour:"numeric",hour12:false})):12;
   if(rain>=20||gust>=50)return "⛈️";
   if(rain>=3)return "🌧️";
-  if(rain>=.5)return "🌦️";
+  if(rain>=.5)return hour>=18||hour<6?"☁️":"🌦️";
   if(hour>=18||hour<6)return "🌙";
   return "🌤️";
 }
@@ -874,6 +888,15 @@ function renderTodayDecision(){
   if(badge)badge.textContent=(enginePoint.name||point().name||"Phú Quốc")+" · JoTrip Engine";
   const cycle=engineDashboard.source_cycles?.ECMWF;
   if(meta)meta.textContent="JoTrip Engine · ECMWF · mốc thật 3 giờ"+(cycle?" · chu kỳ "+localTime(cycle):"");
+  const marineLabel=$("todayMarineReference");
+  if(marineLabel){
+    const mt=enginePoint.marine_sampled_time;
+    const hs=num(enginePoint.wave);
+    const old=ageMinutes(mt);
+    marineLabel.textContent=hs!==null&&mt
+      ?("Sóng nền tại vùng biển tham chiếu: "+fmt(hs,2)+" m Hs lúc "+phuQuocClock(mt)+(old!==null&&old>210?" (dữ liệu đã trễ)":"")+". Không gán số này cho các mốc 19h, 22h khi chưa có dự báo sóng theo giờ.")
+      :"Chưa có sóng nền đủ thời gian tham chiếu; không thay bằng số sóng tự suy.";
+  }
   if(!rows.length){
     root.innerHTML='<div class="today-decision-empty"><b>Không còn mốc 3 giờ nào trong hôm nay</b><span>Xem 10 ngày bên dưới cho ngày mai và các ngày tiếp theo.</span></div>';
     summaryEl.textContent="Hôm nay đã gần hết. JoTrip không nội suy thêm giờ giả để lấp khoảng trống.";
@@ -896,7 +919,7 @@ function renderTodayDecision(){
         '<span>Mưa '+(rain===null?'-':fmt(rain,1)+' mm/3h')+'</span>'+
         '<span>Gió '+(wind===null?'-':fmt(wind,0)+' km/h')+'</span>'+
         '<span>Giật '+(gust===null?'-':fmt(gust,0)+' km/h')+'</span>'+
-        '<span>Sóng '+(wave===null?'-':fmt(wave,2)+' m')+'</span>'+
+        '<span>Sóng '+(wave===null?'chưa có theo giờ':fmt(wave,2)+' m')+'</span>'+
       '</div>'+
     '</article>';
   }).join("");
@@ -1642,7 +1665,7 @@ function renderForecastDayDetail(){
         '<span><b>Mưa</b><em>'+(rain===null?'-':fmt(rain,2)+' mm/mốc')+'</em></span>'+
         '<span><b>Gió</b><em>'+(wind===null?'-':fmt(wind,0)+' km/h')+'</em></span>'+
         '<span><b>Giật</b><em>'+(gust===null?'-':fmt(gust,0)+' km/h')+'</em></span>'+
-        '<span><b>Sóng</b><em>'+(wave===null?'-':fmt(wave,2)+' m')+'</em></span>'+
+        '<span><b>Sóng</b><em>'+(wave===null?'Chưa có theo giờ':fmt(wave,2)+' m')+'</em></span>'+
       '</div>'+
     '</article>';
   }).join("");

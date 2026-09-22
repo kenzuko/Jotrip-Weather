@@ -776,6 +776,18 @@ function nearbyVvpqActual(maxKm=12,maxMinutes=35){
   };
 }
 
+function phuQuocIsNight(at=Date.now()){
+  // The main hero is a live condition, not a daytime forecast icon.
+  const hour=Number(new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Asia/Ho_Chi_Minh",hour:"2-digit",hourCycle:"h23"
+  }).format(new Date(at)));
+  return Number.isFinite(hour)&&(hour>=18||hour<6);
+}
+function heroIconForLocalTime(icon){
+  if(!phuQuocIsNight())return icon;
+  return {"🌤️":"🌙","⛅":"☁️","🌦️":"🌧️"}[icon]||icon;
+}
+
 function renderHero(){
   const p=point(),l=p.local||{},m=modelPoint(),n=effectiveNowcast();
   $("placeName").textContent=p.name||current;
@@ -811,7 +823,7 @@ function renderHero(){
   $("heroTemp").textContent=t===null?"--":fmt(t,1)+"°";
   $("heroTempClass").textContent=localFresh&&l.available?"LÚC NÀY":"DỮ LIỆU GẦN NHẤT";
   $("heroCondition").textContent=condition.label;
-  $("heroWeatherIcon").textContent=condition.icon;
+  $("heroWeatherIcon").textContent=heroIconForLocalTime(condition.icon);
   $("heroRain").textContent=rain===null?"--":fmt(rain,1);
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);

@@ -226,7 +226,7 @@ function forecastFrames(){
     const t=Date.parse(f.valid_time||"");
     return Number.isFinite(t)&&t>=now-4*3600e3&&t<=max;
   });
-  return sliced.length?sliced:all.slice(0,25);
+  return sliced; // No old forecast frames disguised as near-now when a cycle has expired.
 }
 function forecastFramesFor(scene){
   const key=scene==="rain"?"rain_mm":scene==="wind"?"u10_ms":scene==="wave"?"wave_hs_m":null;
@@ -1273,12 +1273,40 @@ function bind(){
   addEventListener("resize",queueRender,{passive:true});
 }
 
+function enforceSceneFreshness(){
+  // A static browser tab must never keep painting old near-now fields after they expire.
+  const active=frame();
+  const cloudExpired=state.scene==="cloud"&&!sceneAvailable("cloud");
+  const waveExpired=state.scene==="wave"&&active?.data_class==="OBSERVED_MARINE"&&!marineWaveFrame();
+  if(!cloudExpired&&!waveExpired){setTabAvailability();return}
+  setTabAvailability();
+  const next=cloudExpired
+    ?(["rain","wind","wave"].find(s=>sceneAvailable(s))||null)
+    :(sceneAvailable("wave")?"wave":(["rain","wind"].find(s=>sceneAvailable(s))||null));
+  if(next){
+    setScene(next);
+    const reason=cloudExpired?"Ảnh Himawari đã quá hạn - tạm chuyển sang dự báo, không dùng mây cũ.":"Mốc sóng quan trắc đã quá hạn - chuyển sang dự báo ECMWF Wave.";
+    $("freshness").textContent=reason;
+    $("freshness").classList.add("stale");
+  }else{
+    stop();stopSceneParticles();state.frames=[];state.index=0;
+    for(const id of ["fieldCanvas","motionCanvas"]){const canvas=$(id);if(canvas)canvas.getContext("2d")?.clearRect(0,0,canvas.width,canvas.height)}
+    $("freshness").textContent="Dữ liệu bản đồ quá hạn - đang chờ nguồn mới.";
+    $("freshness").classList.add("stale");
+    $("headline").textContent="Chưa có bản đồ đủ mới";
+    $("summary").textContent="JoTrip tạm ẩn lớp đã quá hạn thay vì hiển thị như thời tiết hiện tại.";
+  }
+}
+
 async function refreshCanonicalRuntime(){
   try{
     const manifest=await fetchCanonical(URLS.manifest);
     const before=JSON.stringify(state.runtimeManifest?.source_times||{});
     const after=JSON.stringify(manifest?.source_times||{});
-    if(before===after)return;
+    if(before===after){
+      enforceSceneFreshness();
+      return;
+    }
     const [n,c,cur,e,d,m]=await Promise.allSettled([
       fetchCanonical(URLS.nowcast),fetchCanonical(URLS.compact),fetchCanonical(URLS.current),
       fetchCanonical(URLS.ecmwf),fetchCanonical(URLS.dashboard),fetchCanonical(URLS.marine)
@@ -1294,6 +1322,7 @@ async function refreshCanonicalRuntime(){
     let next=state.scene;
     if(!sceneAvailable(next))next=sceneAvailable("cloud")?"cloud":sceneAvailable("rain")?"rain":sceneAvailable("wind")?"wind":"wave";
     if(sceneAvailable(next))setScene(next);
+    enforceSceneFreshness();
   }catch(e){
     console.warn("[Weather Scene] runtime refresh",e);
   }
@@ -1342,7 +1371,8 @@ async function boot(){
   }else{
     $("loading").textContent="Chưa có nguồn dữ liệu nào đủ mới để dựng Weather Scene.";
   }
-  setInterval(()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()},5*60*1000);
+  setInterval(()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()},2*60*1000);
+  setInterval(()=>{if(document.visibilityState==="visible")enforceSceneFreshness()},60*1000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()});
 }
 

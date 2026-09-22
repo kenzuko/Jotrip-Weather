@@ -2513,3 +2513,7 @@ footer{font-size:9.5px}
   .field-feedback-head{align-items:flex-start}
   .feedback-point-label{margin-top:2px!important}
 }
+
+/* UI10: technical workspace order - choose point, freshness, 72h, point forecast, current marine, regional forecast, AQI/tide, data health */
+.technical-current-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 7px}.technical-current-head small{font-size:9px;color:#788c98;text-align:right}.deep-weather-body>.now-advanced{margin-top:2px}.technical-current-head+.now-advanced{margin-top:0}
+@media(max-width:720px){.technical-current-head{display:block}.technical-current-head small{display:block;margin-top:4px;text-align:left}}

@@ -600,8 +600,17 @@ function rainActualContext(){
   }
   return "Trạm mưa gần nhất: "+name+" · cách "+dist+" km.";
 }
-function weatherCondition(rain,conv,wind){
+function weatherCondition(rain,conv,wind,forecast=false){
   rain=num(rain)||0;conv=num(conv)||0;wind=num(wind)||0;
+  if(forecast){
+    if(conv>=75&&rain>=1)return {label:"Có khả năng mưa dông cục bộ",icon:"⛈️",mood:"storm"};
+    if(rain>=3)return {label:"Dự báo có mưa",icon:"🌧️",mood:"storm"};
+    if(rain>=.2)return {label:"Có thể có mưa nhẹ hoặc rải rác",icon:"🌦️",mood:"watch"};
+    if(conv>=60)return {label:"Mây đối lưu cần theo dõi",icon:"☁️",mood:"watch"};
+    if(wind>=28)return {label:"Dự báo gió khá mạnh",icon:"💨",mood:"watch"};
+    if(conv>=25)return {label:"Có thể nhiều mây",icon:"⛅",mood:"calm"};
+    return {label:"Dự báo tương đối ổn",icon:"🌤️",mood:"calm"};
+  }
   if(conv>=75&&rain>=1)return {label:"Mưa dông cục bộ",icon:"⛈️",mood:"storm"};
   if(rain>=3)return {label:"Đang có mưa",icon:"🌧️",mood:"storm"};
   if(rain>=.2)return {label:"Có mưa nhẹ hoặc rải rác",icon:"🌦️",mood:"watch"};
@@ -618,8 +627,9 @@ function renderHero(){
   const rain=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
   const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
   const wave=localFresh?(num(l.wave_hs_m)??num(m.wave_hs_m)):num(m.wave_hs_m);
-  const conv=num(n?.convective_score??l.convection_score);
-  const condition=weatherCondition(rain,conv,wind);
+  const nowcastFresh=freshEnough(fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time,75);
+  const conv=nowcastFresh?num(n?.convective_score??l.convection_score):null;
+  const condition=weatherCondition(rain,conv,wind,!localFresh);
 
   $("heroTemp").textContent=t===null?"--":fmt(t,1)+"°";
   $("heroTempClass").textContent=localFresh&&l.available?"LÚC NÀY":"DỰ BÁO GẦN NHẤT";
@@ -629,7 +639,7 @@ function renderHero(){
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   $("heroSummary").textContent=summary(p);
-  $("updatedAt").textContent="Cập nhật "+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
+  $("updatedAt").textContent=(localFresh?"Cập nhật ":"Dữ liệu tại điểm gần nhất ")+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
   $("updatedAt").classList.toggle("stale",!localFresh);
   if($("scenePoint"))$("scenePoint").textContent=p.name||current;
   if($("sceneTemp"))$("sceneTemp").textContent=t===null?"--":fmt(t,1)+"°";
@@ -651,7 +661,7 @@ function renderCurrent(){
   const rainImm=num(l.rain_imminence_score),rainImmLevel=String(l.rain_imminence_level||"").toUpperCase();
   if(rainMeta)rainMeta.innerHTML=localFresh&&l.available
     ?'mm/h · <span id="rainConfidence">'+(rainConf===null?"-":Math.round(rainConf*100))+'</span>% tin cậy'
-    :'mm/h · quy đổi từ mưa mô hình 3h · local '+ageText(liveTimestamp());
+    :'mm/h · quy đổi từ mưa mô hình 3h · số đo tại điểm '+ageText(liveTimestamp());
   if(rainCtx){
     const actualCtx=rainActualContext();
     const nowCtx=rainImm!==null&&rainImm>=55?nowcastPlainText(n,rainImm):"";

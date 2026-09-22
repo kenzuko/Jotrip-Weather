@@ -108,7 +108,9 @@ jobs:
           assert marine.get('wave',{}).get('status')=='READY'
 
           # Cloud scene: keep recent observed frames and only renderer fields.
-          frames=cloud.get('spatial',{}).get('frames',[])[-8:]
+          # Six recent scans keep a useful observed animation while the widened
+          # 0.075° Gulf envelope stays close to the former mobile payload size.
+          frames=cloud.get('spatial',{}).get('frames',[])[-6:]
           cloud_out={
             'status':cloud.get('status'),
             'generated_at':cloud.get('generated_at'),
@@ -158,6 +160,8 @@ jobs:
             'spatial':{
               'status':'READY' if fc_frames else 'UNAVAILABLE',
               'requested_grid_deg':ecmwf.get('spatial',{}).get('requested_grid_deg'),
+              'short_bounds':ecmwf.get('spatial',{}).get('short_bounds'),
+              'medium_bounds':ecmwf.get('spatial',{}).get('medium_bounds'),
               'display_interpolation':ecmwf.get('spatial',{}).get('display_interpolation'),
               'short_run_time':ecmwf.get('spatial',{}).get('short_run_time'),
               'frames':fc_frames

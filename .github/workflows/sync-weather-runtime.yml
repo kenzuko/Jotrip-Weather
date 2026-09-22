@@ -5,7 +5,10 @@ name: Weather runtime mirror
 
 on:
   schedule:
-    - cron: '2,12,22,32,42,52 * * * *'
+    # Ground Truth + Himawari refresh at :03/:13/:23/... in Jotrip-Lab.
+    # Mirror after those writers so production does not consistently publish
+    # the previous 10-minute observation set.
+    - cron: '6,16,26,36,46,56 * * * *'
   workflow_dispatch:
   push:
     paths:
@@ -27,15 +30,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout canonical Weather engine
+        uses: actions/checkout@v4
+        with:
+          repository: kenzuko/Jotrip-Lab
+          ref: feat/weather-lab-data-engine-v1
+          path: lab-source
+          fetch-depth: 1
+
+      - name: Checkout canonical live Weather data
+        uses: actions/checkout@v4
+        with:
+          repository: kenzuko/Jotrip-Lab
+          ref: data-weather
+          path: lab-data
+          fetch-depth: 1
+
       - name: Mirror validated live data
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p data /tmp/weather-mirror
-          DATA_BASE='https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather'
+
+          cp lab-source/weather/dashboard-data.json /tmp/weather-mirror/dashboard-data.json
+          cp lab-data/data/weather-nowcast/latest.json /tmp/weather-mirror/nowcast.json
+          cp lab-data/data/weather-aqi/latest.json /tmp/weather-mirror/air-quality.json
+          cp lab-source/weather/tide.json /tmp/weather-mirror/tide.json
 
           for file in dashboard-data.json nowcast.json air-quality.json tide.json; do
-            curl -fsSL --retry 3 --retry-delay 2 "${DATA_BASE}/${file}?t=$(date +%s)" -o "/tmp/weather-mirror/${file}"
             python -m json.tool "/tmp/weather-mirror/${file}" >/dev/null
           done
 
@@ -66,8 +88,85 @@ jobs:
               + ";\n"
           )
           Path('weather-live-config.js').write_text(js,encoding='utf-8')
-          print('Weather mirror validated')
+          print('Weather mirror validated', dashboard.get('snapshot_id'))
           PY
+
+      - name: Build canonical critical and regional forecast
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cp lab-data/data/weather-groundtruth/local-now.json data/local-now.json
+          cp lab-data/data/weather-groundtruth/latest.json data/groundtruth.json
+          cp lab-data/data/weather-current/latest.json data/current-bundle.json
+          cp lab-data/data/weather-nowcast/compact-latest.json data/nowcast-compact.json
+
+          PYTHONPATH=lab-source python -m weather.pipeline.build_critical_payload \
+            --dashboard lab-source/weather/dashboard-data.json \
+            --local-now lab-data/data/weather-groundtruth/local-now.json \
+            --groundtruth lab-data/data/weather-groundtruth/latest.json \
+            --aqi lab-data/data/weather-aqi/latest.json \
+            --tide lab-source/weather/tide.json \
+            --nowcast lab-data/data/weather-nowcast/latest.json \
+            --ensemble lab-data/data/weather-ensemble/latest.json \
+            --output data/critical.json
+
+          PYTHONPATH=lab-source python -m weather.pipeline.build_jotrip_forecast \
+            --ensemble lab-data/data/weather-ensemble/latest.json \
+            --nowcast lab-data/data/weather-nowcast/compact-latest.json \
+            --output data/jotrip-forecast.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          def load(p):
+              return json.loads(Path(p).read_text(encoding='utf-8'))
+
+          dashboard=load('data/dashboard-data.json')
+          critical=load('data/critical.json')
+          forecast=load('data/jotrip-forecast.json')
+          ensemble=load('lab-data/data/weather-ensemble/latest.json')
+          local=load('data/local-now.json')
+          ground=load('data/groundtruth.json')
+          current=load('data/current-bundle.json')
+
+          assert critical.get('snapshot_id') == dashboard.get('snapshot_id'), (
+              'critical/dashboard snapshot mismatch',
+              critical.get('snapshot_id'),
+              dashboard.get('snapshot_id'),
+          )
+          assert critical.get('source_cycles') == dashboard.get('source_cycles'), 'critical/dashboard cycles mismatch'
+          assert forecast.get('run_time') == ensemble.get('run_time'), (
+              'regional forecast/ensemble cycle mismatch',
+              forecast.get('run_time'),
+              ensemble.get('run_time'),
+          )
+
+          authority={
+              'schema_version':'weather-runtime-authority-v1',
+              'dashboard_snapshot_id':dashboard.get('snapshot_id'),
+              'dashboard_generated_at':dashboard.get('generated_at'),
+              'critical_snapshot_id':critical.get('snapshot_id'),
+              'critical_generated_at':critical.get('generated_at'),
+              'regional_forecast_run_time':forecast.get('run_time'),
+              'regional_forecast_generated_at':forecast.get('generated_at'),
+              'ensemble_run_time':ensemble.get('run_time'),
+              'local_now_generated_at':local.get('generated_at'),
+              'groundtruth_generated_at':ground.get('generated_at'),
+              'current_bundle_generated_at':current.get('generated_at'),
+              'policy':'FORECAST_BASELINE_ONE_SNAPSHOT_WITH_FRESH_OBSERVATION_OVERLAYS',
+          }
+          Path('data/runtime-authority.json').write_text(
+              json.dumps(authority,ensure_ascii=False,separators=(',',':'))+'\n',
+              encoding='utf-8'
+          )
+          print('runtime authority OK', authority)
+          PY
+
+          for file in data/critical.json data/jotrip-forecast.json data/local-now.json data/groundtruth.json data/current-bundle.json data/nowcast-compact.json data/runtime-authority.json; do
+            python -m json.tool "$file" >/dev/null
+          done
 
       - name: Build Weather Scene runtime
         shell: bash

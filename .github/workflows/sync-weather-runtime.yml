@@ -142,6 +142,11 @@ jobs:
               forecast.get('run_time'),
               ensemble.get('run_time'),
           )
+          assert forecast.get('run_time') == (dashboard.get('source_cycles') or {}).get('GEFS'), (
+              'regional forecast/dashboard GEFS cycle mismatch',
+              forecast.get('run_time'),
+              (dashboard.get('source_cycles') or {}).get('GEFS'),
+          )
 
           authority={
               'schema_version':'weather-runtime-authority-v1',

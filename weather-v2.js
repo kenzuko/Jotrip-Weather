@@ -1694,7 +1694,7 @@ function renderIntradayChart(){
   }
 
   const firstMidnight=localMidnightMs(data.start);
-  for(let t=firstMidnight;t<=data.end+12*H1;t+=12*H1){
+  for(let t=firstMidnight;t<=data.end;t+=12*H1){
     if(t<data.start-30*60*1000)continue;
     const xx=xMs(t),lab=localTickLabel(t);
     out+='<line x1="'+xx.toFixed(1)+'" y1="'+T+'" x2="'+xx.toFixed(1)+'" y2="'+(H-B)+'" class="chart-time-grid"/>';

@@ -133,9 +133,49 @@ export default {
         console.error("Weather cron check failed",file,String(error));
       }
     };
+    const refreshStaticMirror=async()=>{
+      try{
+        const fresh=await (await origin("local-now.json")).json();
+        const siteResp=await fetch(
+          "https://raw.githubusercontent.com/kenzuko/Jotrip-Weather/main/data/local-now.json?t="+Date.now(),
+          {headers:{accept:"application/json"},cf:{cacheTtl:0,cacheEverything:false}}
+        );
+        if(!siteResp.ok)throw Error("mirror source HTTP "+siteResp.status);
+        const mirrored=await siteResp.json();
+        const sourceAt=stamp(fresh.generated_at),mirrorAt=stamp(mirrored.generated_at);
+        if(!sourceAt||!mirrorAt)throw Error("mirror source timestamp unavailable");
+        if(sourceAt-mirrorAt<=12*60_000)return;
+        const root="https://api.github.com/repos/kenzuko/Jotrip-Weather/actions/workflows/sync-weather-runtime.yml";
+        const githubHeaders={
+          authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
+          accept:"application/vnd.github+json",
+          "x-github-api-version":"2022-11-28",
+          "user-agent":"jotrip-weather-fresh-cron"
+        };
+        const activeResponse=await fetch(root+"/runs?per_page=12",{
+          headers:{accept:"application/vnd.github+json","user-agent":"jotrip-weather-fresh-cron"}
+        });
+        if(!activeResponse.ok)throw Error("mirror runs HTTP "+activeResponse.status);
+        const runData=await activeResponse.json();
+        if((runData.workflow_runs||[]).some(r=>r.status!=="completed")){
+          console.log("Weather mirror is already running");
+          return;
+        }
+        const response=await fetch(root+"/dispatches",{
+          method:"POST",headers:githubHeaders,body:JSON.stringify({ref:"main"})
+        });
+        if(response.status===403||response.status===404){
+          console.warn("MIRROR_DISPATCH_SCOPE_REQUIRED: Jotrip-Weather Actions write permission");
+          return;
+        }
+        if(response.status!==204)throw Error("mirror dispatch HTTP "+response.status);
+        console.log("Weather static mirror dispatched",Math.round((sourceAt-mirrorAt)/60000)+"m behind");
+      }catch(error){console.error("Weather mirror cron failed",String(error));}
+    };
     await Promise.all([
       dispatch("local-now.json","weather-live-groundtruth-schedule.yml",8),
-      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",19)
+      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",19),
+      refreshStaticMirror()
     ]);
   }
 };

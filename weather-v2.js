@@ -10,8 +10,9 @@ const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest
 const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"];
 const JOTRIP_FORECAST="https://kenzuko.github.io/Jotrip-Lab/weather/jotrip-forecast.json";
 const LIVE_REFRESH_MS=2*60*1000;
-const FEEDBACK_ENDPOINT="/feedback";
-const RECENT_FEEDBACK_ENDPOINT="/feedback/recent?minutes=90&limit=30";
+const WEATHER_LIVE_API="https://jotrip-weather-live.kenzuko.workers.dev";
+const FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback";
+const RECENT_FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback/recent?minutes=90&limit=30";
 const FEEDBACK_QUEUE_KEY="pq_weather_feedback_queue_v1";
 const FEEDBACK_HISTORY_KEY="pq_weather_field_feedback_v1";
 const WINDY={

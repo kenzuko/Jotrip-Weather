@@ -158,7 +158,8 @@ try{
     Number.isFinite(result.desktop?.lonSpan) &&
     result.desktop.lonSpan<2 &&
     result.desktop.latSpan<1 &&
-    result.pageErrors.length===0;
+    result.pageErrors.length===0 &&
+    result.consoleErrors.length===0;
 }catch(e){result.failure=String(e?.stack||e)}
 
 await writeFile('/tmp/spatial-production-result.json',JSON.stringify(result,null,2)+'\n');

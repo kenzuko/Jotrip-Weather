@@ -1,17 +1,18 @@
 (()=>{
 "use strict";
 
-const CRITICAL="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json";
-const LOCAL_NOW="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/local-now.json";
-const GROUND_TRUTH="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-groundtruth/latest.json";
-const CURRENT_BUNDLE="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-current/latest.json";
-const TIDE=["https://kenzuko.github.io/Jotrip-Lab/weather/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
-const AQI=["https://kenzuko.github.io/Jotrip-Lab/weather/data/weather-aqi/latest.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
-const NOWCAST=["https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-nowcast/compact-latest.json"];
-const JOTRIP_FORECAST="https://kenzuko.github.io/Jotrip-Lab/weather/jotrip-forecast.json";
+const CRITICAL="/data/critical.json";
+const LOCAL_NOW="/data/local-now.json";
+const GROUND_TRUTH="/data/groundtruth.json";
+const CURRENT_BUNDLE="/data/current-bundle.json";
+const TIDE=["/data/tide.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/tide.json"];
+const AQI=["/data/air-quality.json","https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/data-weather/data/weather-aqi/latest.json"];
+const NOWCAST=["/data/nowcast-compact.json"];
+const JOTRIP_FORECAST="/data/jotrip-forecast.json";
 const ENGINE_DASHBOARD="/data/dashboard-data.json";
+const RUNTIME_AUTHORITY="/data/runtime-authority.json";
 const LIVE_REFRESH_MS=2*60*1000;
-const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,...NOWCAST];
+const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,JOTRIP_FORECAST,ENGINE_DASHBOARD,RUNTIME_AUTHORITY,...NOWCAST];
 const WEATHER_LIVE_API="https://jotrip-weather-live.kenzuko.workers.dev";
 const FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback";
 const RECENT_FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback/recent?minutes=90&limit=30";
@@ -141,7 +142,53 @@ function setBadge(id,k,label){
 function setMetric(id,v,d){const el=$(id);if(el)el.textContent=num(v)===null?"-":fmt(v,d)}
 function point(){return critical?.points?.[current]||{}}
 function localPoint(){return point().local||{}}
-function modelPoint(){return point().model||{}}
+function dashboardModelPoint(id=current){
+  const p=engineDashboard?.points?.[id]||{};
+  if(!p||!Object.keys(p).length)return null;
+  return {
+    temperature_c:num(p.temperature),
+    wind_kmh:num(p.wind),
+    gust_kmh:num(p.gust),
+    rain_3h_mm:num(p.rain),
+    wave_hs_m:num(p.wave),
+    wave_hmax_m:num(p.wave_max),
+    period_s:num(p.period),
+    current_kmh:num(p.current),
+    wave_regional_hs_m:num(p.wave_regional_hs),
+    marine_sampled_time:p.marine_sampled_time||null,
+    wave_max_method:p.wave_max_method||null,
+    long_range_status:p.long_range_status||null
+  };
+}
+function modelPoint(){
+  const compact=point().model||{};
+  if(!critical?._forecast_baseline_stale)return compact;
+  return dashboardModelPoint()||compact;
+}
+function forecastCycleCompatible(forecast,dashboard){
+  const ft=Date.parse(forecast?.run_time||"");
+  const dt=Date.parse(dashboard?.source_cycles?.GEFS||"");
+  if(!Number.isFinite(ft)||!Number.isFinite(dt))return true;
+  return ft+5*60*1000>=dt;
+}
+function refreshSnapshotAuthority(){
+  if(!critical||!engineDashboard)return true;
+  const cs=critical.snapshot_id||null,ds=engineDashboard.snapshot_id||null;
+  const mismatch=Boolean(cs&&ds&&cs!==ds);
+  critical._forecast_baseline_stale=mismatch;
+  if(mismatch){
+    console.warn("[Weather V2] snapshot mismatch; using dashboard as model authority",{critical:cs,dashboard:ds});
+  }
+  if(regionalForecast&&!forecastCycleCompatible(regionalForecast,engineDashboard)){
+    console.warn("[Weather V2] stale regional forecast rejected",{
+      forecast:regionalForecast.run_time,
+      engine:engineDashboard.source_cycles?.GEFS
+    });
+    regionalForecast=null;
+    return false;
+  }
+  return !mismatch;
+}
 function overlayFreshLocalNow(base,localNow){
   if(!base||!localNow?.points)return base;
   const localTs=Date.parse(localNow.generated_at||"");
@@ -864,7 +911,9 @@ function renderTodayDecision(){
 async function loadEngineDashboard(){
   try{
     engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
+    refreshSnapshotAuthority();
     renderTodayDecision();
+    renderJoTripForecast();
     renderForecastDayDetail();
     if($("deepWeatherDetails")?.open){renderTechnicalPointForecast();renderTechnicalFreshness()}
   }catch(e){
@@ -2093,8 +2142,13 @@ async function loadNowcast(){
 }
 async function loadRegionalForecast(){
   try{
-    regionalForecast=await getJSON(JOTRIP_FORECAST,10*60*1000);
-    const ids=Object.keys(regionalForecast.regions||{});
+    const candidate=await getJSON(JOTRIP_FORECAST,10*60*1000);
+    if(engineDashboard&&!forecastCycleCompatible(candidate,engineDashboard)){
+      throw new Error("STALE_REGIONAL_FORECAST_CYCLE");
+    }
+    regionalForecast=candidate;
+    refreshSnapshotAuthority();
+    const ids=Object.keys(regionalForecast?.regions||{});
     if(!ids.includes(currentRegion))currentRegion=ids[0]||currentRegion;
     renderJoTripForecast();renderStatus();renderQuickAlert();
   }catch(e){

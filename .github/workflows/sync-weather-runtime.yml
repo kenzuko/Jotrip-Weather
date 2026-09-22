@@ -338,14 +338,47 @@ jobs:
           set -euo pipefail
           git config user.name 'jotrip-weather-mirror'
           git config user.email 'jotrip-weather-mirror@users.noreply.github.com'
-          git add data weather-live-config.js
-          if git diff --cached --quiet; then
-            echo 'Mirror unchanged'
-            exit 0
-          fi
-          git commit -m 'chore: refresh Weather runtime mirror [skip ci]'
-          git pull --rebase origin main
-          git push origin HEAD:main
+          # The site may receive UI or another mirror commit while this
+          # multi-minute pipeline builds. Rebase of generated JSON conflicts
+          # routinely; anchor a fresh commit on the latest remote instead.
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --mixed origin/main
+            # Never overwrite a newer published Local Now snapshot.
+            if ! python - <<'PY'
+          import json,subprocess
+          from datetime import datetime
+          local=json.load(open('data/local-now.json'))
+          try:
+              remote=json.loads(subprocess.check_output(['git','show','origin/main:data/local-now.json']))
+          except (subprocess.CalledProcessError,ValueError):
+              remote={}
+          def dt(v):
+              try:return datetime.fromisoformat(str(v).replace('Z','+00:00'))
+              except (ValueError,TypeError):return None
+          lt=dt(local.get('generated_at'))
+          rt=dt(remote.get('generated_at'))
+          if lt and rt and lt<rt:
+              print('Site already has a newer Local Now. Skip stale mirror.')
+              raise SystemExit(1)
+          PY
+            then
+              exit 0
+            fi
+            git add data weather-live-config.js
+            if git diff --cached --quiet; then
+              echo 'Mirror unchanged'
+              exit 0
+            fi
+            git commit -m 'chore: refresh Weather runtime mirror [skip ci]'
+            if git push origin HEAD:main; then
+              echo "Mirror committed on attempt $attempt"
+              exit 0
+            fi
+            echo "Concurrent site push; rebuilding commit on latest main ($attempt/4)"
+          done
+          echo 'Mirror push failed after four safe retries'
+          exit 1
 
 # refresh-after-local-nowcast-audit-20260921
 

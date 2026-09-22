@@ -89,25 +89,41 @@ export default {
     }
   },
   async scheduled(event,env,ctx){
-    if(!env.GITHUB_WEATHER_DISPATCH_TOKEN){console.error("Weather cron: dispatch token missing");return;}
-    try {
-      const response=await origin("local-now.json");
-      const source=stamp(response.headers.get("x-jotrip-source-at"));
-      // Existing GitHub schedules may still succeed. Only wake them if overdue.
-      if(source&&Date.now()-source<8*60_000)return;
-      const api="https://api.github.com/repos/kenzuko/Jotrip-Lab/actions/workflows/weather-live-groundtruth-schedule.yml/dispatches";
-      const dispatched=await fetch(api,{
-        method:"POST",
-        headers:{
-          authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
-          accept:"application/vnd.github+json",
-          "x-github-api-version":"2022-11-28",
-          "user-agent":"jotrip-weather-fresh-cron"
-        },
-        body:JSON.stringify({ref:"main"})
-      });
-      if(dispatched.status!==204)throw Error("groundtruth-dispatch-"+dispatched.status);
-      console.log("Wake-up dispatched for stale Ground Truth");
-    }catch(err){console.error("Weather scheduled refresh failed",String(err));}
+    if(!env.GITHUB_WEATHER_DISPATCH_TOKEN){
+      console.error("Weather cron: dispatch token missing");
+      return;
+    }
+    const dispatch=async (file,workflow,thresholdMinutes)=>{
+      try {
+        const payload=await (await origin(file)).json();
+        const generated=stamp(payload.generated_at);
+        const ageMinutes=generated?(Date.now()-generated)/60000:Infinity;
+        if(ageMinutes<thresholdMinutes){
+          console.log("Weather cron healthy",file,Math.round(ageMinutes)+"m");
+          return;
+        }
+        // Only restart a writer when its last *pipeline run* is overdue.
+        // Satellite observation time can legitimately lag the collection time.
+        const api="https://api.github.com/repos/kenzuko/Jotrip-Lab/actions/workflows/"+workflow+"/dispatches";
+        const r=await fetch(api,{
+          method:"POST",
+          headers:{
+            authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
+            accept:"application/vnd.github+json",
+            "x-github-api-version":"2022-11-28",
+            "user-agent":"jotrip-weather-fresh-cron"
+          },
+          body:JSON.stringify({ref:"main"})
+        });
+        if(r.status!==204)throw Error(workflow+" HTTP "+r.status);
+        console.log("Weather cron dispatched",workflow,Math.round(ageMinutes)+"m old");
+      }catch(error){
+        console.error("Weather cron check failed",file,String(error));
+      }
+    };
+    await Promise.all([
+      dispatch("local-now.json","weather-live-groundtruth-schedule.yml",8),
+      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",19)
+    ]);
   }
 };

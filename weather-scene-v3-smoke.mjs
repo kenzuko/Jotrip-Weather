@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
-const result={ok:false,scenes:{},pageErrors:[],consoleErrors:[],flag:false,failure:null};
+const result={ok:false,scenes:{},runtime:null,pageErrors:[],consoleErrors:[],flag:false,failure:null};
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
 page.on('pageerror',e=>result.pageErrors.push(String(e)));
@@ -61,12 +61,15 @@ try{
   }
 
   const cloud=result.scenes.cloud?.field?.visible||0;
+  const cloudDisabled=result.scenes.cloud?.disabled===true;
+  const cloudStale=Number.isFinite(result.runtime?.cloudAgeMin)&&result.runtime.cloudAgeMin>35;
+  const cloudOk=(cloudDisabled&&cloudStale)||(!cloudDisabled&&cloud>20);
   const rain=result.scenes.rain?.field?.visible||0;
   const windField=result.scenes.wind?.field?.visible||0;
   const windMotion=result.scenes.wind?.windMotion?.maxVisible||0;
   const wave=result.scenes.wave?.field?.visible||0;
   result.ok=
-    cloud>20 &&
+    cloudOk &&
     rain>20 &&
     windField<=4 &&
     windMotion>8 &&

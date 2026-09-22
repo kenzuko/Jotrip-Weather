@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const base='https://weather.openphuquoc.com';
-const result={ok:false,overview:null,embed:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
+const result={ok:false,overview:null,embed:null,runtime:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
 page.on('pageerror',e=>result.pageErrors.push(String(e)));
@@ -54,18 +54,36 @@ try{
     topbarDisplay:getComputedStyle(document.querySelector('.topbar')).display,
     renderer:window.JoTripSceneRenderer?.version||null
   }));
+  result.runtime=await frame.locator('html').evaluate(async()=>{
+    const r=await fetch('/data/weather-runtime/manifest.json?t='+Date.now(),{cache:'no-store'});
+    const m=await r.json();
+    const t=Date.parse(m?.source_times?.cloud_sampled_time||'');
+    return {
+      cloudSampled:m?.source_times?.cloud_sampled_time||null,
+      cloudAgeMin:Number.isFinite(t)?Math.max(0,(Date.now()-t)/60000):null
+    };
+  });
 
   for(const scene of ['cloud','rain','wind','wave']){
-    await frame.locator('.tabs button[data-scene="'+scene+'"]').click();
+    const btn=frame.locator('.tabs button[data-scene="'+scene+'"]');
+    const enabled=await btn.isEnabled();
+    if(!enabled){
+      result.scenes[scene]={disabled:true};
+      continue;
+    }
+    await btn.click();
     await page.waitForTimeout(scene==='wind'?1300:800);
     result.scenes[scene]={
+      disabled:false,
       field:await stats(frame,'#fieldCanvas'),
       motion:scene==='wind'?await maxMotion(frame):await stats(frame,'#motionCanvas'),
       time:(await frame.locator('#timeLabel').innerText()).trim()
     };
   }
 
-  await frame.locator('.tabs button[data-scene="wave"]').click();
+  const waveBtn=frame.locator('.tabs button[data-scene="wave"]');
+  if(!(await waveBtn.isEnabled()))throw new Error('Wave scene unexpectedly unavailable');
+  await waveBtn.click();
   const mapBox=await frame.locator('#map').boundingBox();
   if(!mapBox)throw new Error('Scene map box missing');
   await frame.locator('#map').click({position:{x:mapBox.width*.48,y:mapBox.height*.50}});
@@ -130,8 +148,11 @@ try{
   await desktop.locator('#mapBox').screenshot({path:'/tmp/prod-jotrip-scene-desktop.png'});
   await desktop.close();
 
+  const cloudDisabled=result.scenes.cloud?.disabled===true;
+  const cloudStale=Number.isFinite(result.runtime?.cloudAgeMin)&&result.runtime.cloudAgeMin>35;
+  const cloudOk=(cloudDisabled&&cloudStale)||(!cloudDisabled&&(result.scenes.cloud?.field?.visible||0)>20);
   const sceneOk=
-    result.scenes.cloud.field.visible>20 &&
+    cloudOk &&
     result.scenes.rain.field.visible>20 &&
     result.scenes.wind.motion.visible>4 &&
     result.scenes.wave.field.visible>20;

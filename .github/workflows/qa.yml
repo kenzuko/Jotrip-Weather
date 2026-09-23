@@ -131,7 +131,9 @@ jobs:
           done
 
       - name: Check production endpoint on scheduled/manual runs
-        if: github.event_name != 'push'
+        # Pushes are usually mirror/UI builds. Explicitly opt into a real
+        # production audit by tagging a commit [production-audit].
+        if: github.event_name != 'push' || contains(github.event.head_commit.message, '[production-audit]')
         shell: bash
         run: |
           set -euo pipefail
@@ -148,6 +150,22 @@ jobs:
           PY
           curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/weather-history.html -o /tmp/weather-production-history.html
           grep -q 'Lịch sử' /tmp/weather-production-history.html
+          # The live Worker has its own dispatch token, independent from
+          # the public GitHub Pages runtime and its mirror schedule.
+          curl -fsSL --retry 4 --retry-delay 5 https://jotrip-weather-fresh.kenzuko.workers.dev/health -o /tmp/weather-worker-health.json
+          curl -fsSL --retry 4 --retry-delay 5 https://jotrip-weather-fresh.kenzuko.workers.dev/local-now.json -o /tmp/weather-worker-local.json
+          python - <<'PY'
+          import json
+          from datetime import datetime,timezone
+          health=json.load(open('/tmp/weather-worker-health.json'))
+          local=json.load(open('/tmp/weather-worker-local.json'))
+          assert health.get('ok') and health.get('cron_configured'), 'Cloudflare dispatch secret missing'
+          assert local.get('engine')=='PQ_LOCAL_NOW_V2' and local.get('points'), 'live ground truth not available'
+          at=datetime.fromisoformat(local['generated_at'].replace('Z','+00:00'))
+          age=(datetime.now(timezone.utc)-at).total_seconds()/60
+          assert -10 <= age <= 35, f'Ground truth {age:.1f}m old at Cloudflare gateway'
+          print('Cloudflare gateway OK; Ground Truth age',round(age,1),'min')
+          PY
           # Verify that the same-origin canonical runtime is actually published.
           curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/data/weather-runtime/manifest.json -o /tmp/weather-production-manifest.json
           python - <<'PY'

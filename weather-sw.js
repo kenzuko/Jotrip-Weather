@@ -1,10 +1,10 @@
-const VERSION="weather-intelligence-2026.09.23.fourfields1";
+const VERSION="weather-intelligence-2026.09.24.hide-unpaired-gust1";
 const CACHE=`${VERSION}-static`;
 const STATIC=[
   "/",
   "/index.html",
   "/weather-v2.css?v=20260922-ui10",
-  "/weather-v2.js?v=20260923-fourfields1",
+  "/weather-v2.js?v=20260924-hide-hero-gust1",
   "/weather-brand.svg",
   "/weather-app-icon.svg",
   "/favicon-64.png",

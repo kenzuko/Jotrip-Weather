@@ -533,13 +533,12 @@ function renderHazardBoard(){
 
   // Gió & biển hiện tại: số hiện tại, không dùng xác suất.
   const useLocal=localDataFresh();
-  const windNow=points.map(x=>({name:x.p.name,wind:num(useLocal?(x.p.local?.wind_kmh??x.p.model?.wind_kmh):x.p.model?.wind_kmh)||0,gust:num(x.p.model?.gust_kmh)}))
+  const windNow=points.map(x=>({name:x.p.name,wind:num(useLocal?(x.p.local?.wind_kmh??x.p.model?.wind_kmh):x.p.model?.wind_kmh)||0}))
     .sort((a,b)=>b.wind-a.wind)[0];
   const waveNow=points.map(x=>({name:x.p.name,hs:num(useLocal?(x.p.local?.wave_hs_m??x.p.model?.wave_hs_m):x.p.model?.wave_hs_m)||0}))
     .sort((a,b)=>b.hs-a.hs)[0];
   const windLabel=windNow?("Gió mạnh nhất "+windNow.name+" ~"+fmt(windNow.wind,0)+" km/h"):"Chưa đủ số gió";
-  const windMeta=(waveNow?("Sóng Hs cao nhất ~"+fmt(waveNow.hs,1)+" m tại "+waveNow.name):"")+
-    (windNow&&windNow.gust!==null?(" · gió giật mô hình ~"+fmt(windNow.gust,0)+" km/h"):"");
+  const windMeta=waveNow?("Sóng Hs cao nhất ~"+fmt(waveNow.hs,1)+" m tại "+waveNow.name):"";
   setHazard("hazardWind",windLabel,windMeta||"Đang tổng hợp điều kiện biển",windNow?.wind>=40||waveNow?.hs>=2?3:windNow?.wind>=30||waveNow?.hs>=1.5?2:0);
 
   // 12 giờ tới: dùng giá trị JoTrip forecast dễ đọc, không lấy probability làm dòng chính.
@@ -983,7 +982,6 @@ function renderCurrent(){
   const localFresh=localDataFresh();
   setMetric("windNow",localFresh?(l.wind_kmh??m.wind_kmh):m.wind_kmh,1);
   setBadge("windClass",localFresh?(l.wind_class||"ESTIMATED_NOW"):"MODEL_ONLY",localFresh?null:"MÔ HÌNH");
-  setMetric("gustNow",m.gust_kmh,1);
   const rainMeta=$("rainMeta"),rainCtx=$("rainActualContext");
   const rainNowValue=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
   setMetric("rainNow",rainNowValue,2);

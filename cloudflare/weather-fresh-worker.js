@@ -144,7 +144,9 @@ export default {
         const mirrored=await siteResp.json();
         const sourceAt=stamp(fresh.generated_at),mirrorAt=stamp(mirrored.generated_at);
         if(!sourceAt||!mirrorAt)throw Error("mirror source timestamp unavailable");
-        if(sourceAt-mirrorAt<=12*60_000)return;
+        // The canonical map reads this mirrored same-origin runtime.
+        // A >12m tolerance skipped alternate 10m Cloudflare ticks.
+        if(sourceAt-mirrorAt<=8*60_000)return;
         const root="https://api.github.com/repos/kenzuko/Jotrip-Weather/actions/workflows/sync-weather-runtime.yml";
         const githubHeaders={
           authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
@@ -174,7 +176,11 @@ export default {
     };
     await Promise.all([
       dispatch("local-now.json","weather-live-groundtruth-schedule.yml",8),
-      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",19),
+      // Run near every Cloudflare tick (~10m) rather than every 30m.
+      // NOAA/JMA ingestion is commonly ~20m behind the wall clock; using
+      // pipeline generated_at+19m here made the UI's 35m observation
+      // freshness limit expire between otherwise successful runs.
+      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",6),
       refreshStaticMirror()
     ]);
   }

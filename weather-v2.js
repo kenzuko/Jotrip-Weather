@@ -920,9 +920,15 @@ function renderTodayDecision(){
     const mt=enginePoint.marine_sampled_time;
     const hs=num(enginePoint.wave);
     const old=ageMinutes(mt);
-    marineLabel.textContent=hs!==null&&mt
-      ?("Sóng nền tại vùng biển tham chiếu: "+fmt(hs,2)+" m Hs lúc "+phuQuocClock(mt)+(old!==null&&old>210?" (dữ liệu đã trễ)":"")+". Không gán số này cho các mốc 19h, 22h khi chưa có dự báo sóng theo giờ.")
-      :"Chưa có sóng nền đủ thời gian tham chiếu; không thay bằng số sóng tự suy.";
+    const offshore=rows.find(r=>r.wave_reference?.status==="PASS")?.wave_reference;
+    const marineBase=hs!==null&&mt
+      ?(" Sóng nền Copernicus: "+fmt(hs,2)+" m Hs lúc "+phuQuocClock(mt)+(old!==null&&old>210?" (bản đã trễ).":"."))
+      :" Sóng nền Copernicus chưa có số mới.";
+    marineLabel.textContent=offshore
+      ?("Sóng từng mốc giờ: dự báo ECMWF tại ô biển ngoài khơi phía "+(offshore.coast_side==="WEST"?"Tây":"Đông")+", cách điểm tham chiếu "+fmt(offshore.distance_km,1)+" km. Không phải số đo sát bờ."+marineBase)
+      :rows.some(r=>num(r.wave)!==null)
+        ?("Sóng từng mốc giờ: dự báo ECMWF Wave tại ô biển theo cấu hình của điểm."+marineBase)
+        :"Chưa có dự báo sóng cho đúng các mốc giờ. Không lấy sóng nền hiện tại lấp vào giờ thiếu."+marineBase;
   }
   if(!rows.length){
     root.innerHTML='<div class="today-decision-empty"><b>Không còn mốc 3 giờ nào trong hôm nay</b><span>Xem 10 ngày bên dưới cho ngày mai và các ngày tiếp theo.</span></div>';

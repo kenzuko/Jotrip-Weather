@@ -1567,21 +1567,41 @@ function buildQuickWatchEvents(){
     });
   });
 
+  // Today's fresh An Thoi forecast, deliberately separate from current measured wind.
+  const todayKey=phuQuocDateKey(new Date(now).toISOString());
+  const atRows=critical?.points?.an_thoi?.today||[];
+  const at13=atRows.find(r=>phuQuocDateKey(r.t)===todayKey&&/T13:00:00/.test(r.t||""));
+  const at16=atRows.find(r=>phuQuocDateKey(r.t)===todayKey&&/T16:00:00/.test(r.t||""));
+  const valid=r=>num(r?.wind)!==null&&num(r?.gust)!==null&&num(r.wind)>=0&&num(r.gust)>=num(r.wind);
+  if(freshEnough(critical?.generated_at,120)&&at13&&at16&&now<Date.parse(at16.t)&&
+     valid(at13)&&valid(at16)&&
+     (Math.max(at13.wind,at16.wind)>=30||Math.max(at13.gust,at16.gust)>=40)){
+    events.push({
+      key:"an-thoi-forecast-wind:"+todayKey,
+      severity:Math.max(at13.gust,at16.gust)>=50?"alert":"watch",
+      when:"DỰ BÁO 13H-16H",
+      title:"Biển An Thới: dự báo gió mạnh, cần theo dõi trước khi ra biển",
+      detail:"Mốc 13h: gió "+fmt(at13.wind,0)+", giật "+fmt(at13.gust,0)+
+        " km/h. Mốc 16h: gió "+fmt(at16.wind,0)+", giật "+fmt(at16.gust,0)+
+        " km/h. Đây là dự báo JoTrip, không phải quan trắc thực địa; đối chiếu cảnh báo chính thức và thông báo của cảng.",
+      sort:-5
+    });
+  }
+
   // 2) Current strong wind: group places instead of repeating one event per point.
   const windHits=islandIds().map(id=>{
-    const p=critical?.points?.[id]||{},l=p.local||{},m=p.model||{};
-    return {id,name:p.name||id,wind:num(l.wind_kmh),gust:num(m.gust_kmh)};
-  }).filter(x=>(x.wind!==null&&x.wind>=30)||(x.gust!==null&&x.gust>=40));
+    const p=critical?.points?.[id]||{},l=p.local||{};
+    return {id,name:p.name||id,wind:num(l.wind_kmh)};
+  }).filter(x=>x.wind!==null&&x.wind>=30);
   if(windHits.length&&freshEnough(liveTimestamp(),30)){
     const names=windHits.slice(0,4).map(x=>x.name);
     const maxWind=Math.max(...windHits.map(x=>x.wind||0));
-    const maxGust=Math.max(...windHits.map(x=>x.gust||0));
     events.push({
       key:"wind:island",
-      severity:(maxWind>=40||maxGust>=50)?"alert":"watch",
+      severity:maxWind>=40?"alert":"watch",
       when:"HIỆN TẠI",
       title:"Gió đang mạnh tại "+names.join(", ")+(windHits.length>4?" và một số khu vực khác":""),
-      detail:"Gió địa phương cao nhất khoảng "+fmt(maxWind,0)+" km/h"+(maxGust?(" · gió giật mô hình tới khoảng "+fmt(maxGust,0)+" km/h"):"")+".",
+      detail:"Gió địa phương ước tính cao nhất khoảng "+fmt(maxWind,0)+" km/h. Chưa có số gió giật hiện tại đủ tin cậy.",
       sort:1
     });
   }

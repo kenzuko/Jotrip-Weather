@@ -94,7 +94,19 @@ jobs:
           for name in ('nowcast.json','air-quality.json','tide.json'):
               p=json.load(open('data/'+name,encoding='utf-8'))
               assert p.get('status')=='POINT_NUMERIC_READY', (name,p.get('status'))
-          print('local mirror OK')
+          # Four weather fields at one valid time, checked at every
+          # locality; never silently fill in missing waves or gusts with 0.
+          bundle=json.load(open('data/current-bundle.json',encoding='utf-8'))
+          series=(bundle.get('model_72h') or {}).get('points') or {}
+          for point in ('duong_dong','an_thoi','ganh_dau','cua_can','bai_thom','ham_ninh','bai_sao','rach_gia'):
+              rows=series.get(point) or []
+              assert rows, f'{point}: missing hourly marine series'
+              for row in rows:
+                  assert row.get('time'), f'{point}: valid time missing'
+                  for field in ('rain_3h_mm','wind_kmh','gust_kmh','wave_hs_m'):
+                      assert row.get(field) is not None, f'{point}: {field} missing at {row.get("time")}'
+                  assert row.get('data_class')=='MODEL_ONLY', f'{point}: forecast mislabeled as observation'
+          print('local mirror and 8-point four-field forecast contract OK')
           PY
 
       - name: Validate live Weather origin contracts
@@ -123,6 +135,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/ | grep -q 'JoTrip Weather Lab'
-          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/data/dashboard-data.json | python -c 'import json,sys; p=json.load(sys.stdin); assert p["report_status"]=="LIVE" and p["points"]'
-          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/weather-history.html | grep -q 'Lịch sử'
+          # Keep downloaded pages on disk: curl | grep -q under pipefail can
+          # return curl exit 23 (broken pipe) even for a healthy endpoint.
+          # The homepage was renamed to Weather Intelligence in V2.
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/ -o /tmp/weather-production-home.html
+          grep -Eq 'JoTrip Weather (Intelligence|Lab)' /tmp/weather-production-home.html
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/data/dashboard-data.json -o /tmp/weather-production-dashboard.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/weather-production-dashboard.json'))
+          assert p['report_status']=='LIVE' and p['points']
+          PY
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/weather-history.html -o /tmp/weather-production-history.html
+          grep -q 'Lịch sử' /tmp/weather-production-history.html
+          # Verify that the same-origin canonical runtime is actually published.
+          curl -fsSL --retry 4 --retry-delay 5 https://weather.openphuquoc.com/data/weather-runtime/manifest.json -o /tmp/weather-production-manifest.json
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          p=json.load(open('/tmp/weather-production-manifest.json'))
+          assert p['status']=='READY'
+          assert p['policy']['frontend_source']=='SAME_ORIGIN_CANONICAL_ONLY'
+          for name in ('cloud','compact','current','forecast','marine','meta'):
+              assert p['files'][name].startswith('/data/weather-runtime/'), name
+          t=p.get('source_times') or {}
+          for name in ('cloud_sampled_time','marine_sampled_time'):
+              assert t.get(name), name
+          cloud=datetime.fromisoformat(t['cloud_sampled_time'].replace('Z','+00:00'))
+          age=(datetime.now(timezone.utc)-cloud).total_seconds()/60
+          assert -10 <= age <= 60, f'Himawari observation is {age:.1f}m old'
+          print('production canonical runtime OK; Himawari age',round(age,1),'min')
+          PY

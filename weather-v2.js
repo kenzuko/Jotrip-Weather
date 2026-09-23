@@ -802,7 +802,6 @@ function renderHero(){
   const marineTimestamp=engineDashboard?.points?.[current]?.marine_sampled_time||m.marine_sampled_time||null;
   const marineFresh=marineTimestamp&&freshEnough(marineTimestamp,210);
   const wave=marineFresh?(num(m.wave_hs_m)??num(l.wave_hs_m)):null;
-  const gust=num(m.gust_kmh);
 
   const nearbyActual=nearbyVvpqActual();
   let condition;
@@ -827,7 +826,6 @@ function renderHero(){
   $("heroRain").textContent=rain===null?"--":fmt(rain,1);
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
-  if($("heroGust"))$("heroGust").textContent=gust===null?"--":fmt(gust,0);
   if($("heroRainMeta"))$("heroRainMeta").textContent=rain===null?"mm/h · chưa đủ số mới":"mm/h · JoTrip ước tính";
   if($("heroWindMeta"))$("heroWindMeta").textContent=localFresh?"km/h · JoTrip ước tính":"km/h · mô hình gần nhất";
   if($("heroWaveMeta"))$("heroWaveMeta").textContent=marineTimestamp

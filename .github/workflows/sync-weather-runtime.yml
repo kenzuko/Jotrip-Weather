@@ -101,6 +101,10 @@ jobs:
           cp lab-data/data/weather-groundtruth/local-now.json data/local-now.json
           cp lab-data/data/weather-groundtruth/latest.json data/groundtruth.json
           cp lab-data/data/weather-current/latest.json data/current-bundle.json
+          # Preserve every real forecast hour. Flag unavailable gust explicitly
+          # rather than treating a missing value as 0 or deleting the hour.
+          node weather-model-coverage.mjs --test
+          node weather-model-coverage.mjs --apply
           cp lab-data/data/weather-nowcast/compact-latest.json data/nowcast-compact.json
 
           PYTHONPATH=lab-source python -m weather.pipeline.build_critical_payload \
@@ -186,7 +190,9 @@ jobs:
 
           curl -fsSL --retry 3 --retry-delay 2 "${LAB_DATA}/weather-nowcast/latest.json?t=$(date +%s)" -o /tmp/weather-scene/cloud-full.json
           curl -fsSL --retry 3 --retry-delay 2 "${LAB_DATA}/weather-nowcast/compact-latest.json?t=$(date +%s)" -o /tmp/weather-scene/compact.json
-          curl -fsSL --retry 3 --retry-delay 2 "${LAB_DATA}/weather-current/latest.json?t=$(date +%s)" -o /tmp/weather-scene/current.json
+          # Same normalized bundle as the summary/timeline; never mix two
+          # slightly different collector snapshots in one published site.
+          cp data/current-bundle.json /tmp/weather-scene/current.json
           curl -fsSL --retry 3 --retry-delay 2 "${LAB_FEATURE}/spatial-ecmwf.json?t=$(date +%s)" -o /tmp/weather-scene/ecmwf.json
           curl -fsSL --retry 3 --retry-delay 2 "${LAB_FEATURE}/spatial-marine.json?t=$(date +%s)" -o /tmp/weather-scene/marine.json
           curl -fsSL --retry 3 --retry-delay 2 "${LAB_FEATURE}/dashboard-data.json?t=$(date +%s)" -o /tmp/weather-scene/dashboard.json

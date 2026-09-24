@@ -5,9 +5,25 @@ const FILES=Object.freeze({
   "local-now.json":"weather-groundtruth/local-now.json",
   "groundtruth.json":"weather-groundtruth/latest.json",
   "current-bundle.json":"weather-current/latest.json",
-  "nowcast-compact.json":"weather-nowcast/compact-latest.json"
+  "nowcast-compact.json":"weather-nowcast/compact-latest.json",
+  "cloud.json":"weather-nowcast/latest.json"
 });
 const AGE_MS=60_000;
+const CLOUD_CACHE_MS=4*60_000;
+const CLOUD_FIELDS=["lat","lon","cloud_top_cold_c","cloud_top_median_c","cloud_top_high_m","cloud_top_median_m","cooling_c_per_20m_proxy","convective_score","convective_level"];
+function compactCloud(raw){
+  const spatial=raw.spatial||{};
+  return {
+    status:raw.status,generated_at:raw.generated_at,sampled_time:raw.sampled_time,
+    source:raw.source,source_type:raw.source_type,
+    observation_resolution:raw.observation_resolution,
+    spatial:{status:spatial.status,bounds:spatial.bounds,
+      display_grid_deg:spatial.display_grid_deg,sampling_method:spatial.sampling_method,
+      frames:spatial.frames.slice(-6).map(frame=>({sampled_time:frame.sampled_time,
+        cells:(frame.cells||[]).map(cell=>Object.fromEntries(CLOUD_FIELDS.map(k=>[k,cell[k]??null])))
+      }))}
+  };
+}
 const CORS={
   "access-control-allow-origin":"https://weather.openphuquoc.com",
   "access-control-allow-methods":"GET,HEAD,OPTIONS",
@@ -16,7 +32,7 @@ const CORS={
 };
 const stamp=v=>{const n=Date.parse(v||"");return Number.isFinite(n)?n:0;};
 function sourceTime(name,p){
-  if(name==="nowcast-compact.json")return p.sampled_time||p.generated_at||null;
+  if(name==="nowcast-compact.json"||name==="cloud.json")return p.sampled_time||p.generated_at||null;
   return p.generated_at||null;
 }
 function valid(name,p){
@@ -24,6 +40,7 @@ function valid(name,p){
   if(name==="local-now.json")return p.engine==="PQ_LOCAL_NOW_V2"&&p.data_class==="ESTIMATED_NOW"&&p.points&&Object.keys(p.points).length>0;
   if(name==="groundtruth.json")return p.atmosphere&&p.rainfall&&p.actual_policy;
   if(name==="current-bundle.json")return p.local_now&&p.groundtruth;
+  if(name==="cloud.json")return p.status==="POINT_NUMERIC_READY"&&Boolean(p.spatial?.frames?.length)&&Boolean(stamp(p.sampled_time));
   return p.status==="POINT_NUMERIC_READY"&&p.points&&Object.keys(p.points).length>0;
 }
 async function origin(name){
@@ -31,14 +48,15 @@ async function origin(name){
     headers:{accept:"application/json"},cf:{cacheTtl:0,cacheEverything:false}
   });
   if(!res.ok)throw Error("weather-origin-"+res.status);
-  const payload=await res.json();
-  if(!valid(name,payload))throw Error("weather-source-invalid");
-  const at=sourceTime(name,payload);
+  const raw=await res.json();
+  if(!valid(name,raw))throw Error("weather-source-invalid");
+  const at=sourceTime(name,raw);
+  const payload=name==="cloud.json"?compactCloud(raw):raw;
   return new Response(JSON.stringify(payload),{
     headers:{
       ...CORS,
       "content-type":"application/json; charset=utf-8",
-      "cache-control":"public,max-age=15,s-maxage=60",
+      "cache-control":name==="cloud.json"?"public,max-age=15,s-maxage=240":"public,max-age=15,s-maxage=60",
       "x-jotrip-source-at":at||"",
       "x-jotrip-fetched-at":new Date().toISOString()
     }
@@ -70,7 +88,7 @@ export default {
     const key=new Request("https://jotrip-weather-fresh.internal/"+name);
     const cached=await cache.match(key);
     const fetched=stamp(cached?.headers.get("x-jotrip-fetched-at"));
-    if(cached&&Date.now()-fetched<AGE_MS)return result(cached,"HIT",request.method==="HEAD");
+    if(cached&&Date.now()-fetched<(name==="cloud.json"?CLOUD_CACHE_MS:AGE_MS))return result(cached,"HIT",request.method==="HEAD");
     try {
       const fresh=await origin(name);
       ctx.waitUntil(cache.put(key,fresh.clone()));

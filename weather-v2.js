@@ -2579,7 +2579,7 @@ function mapPopup(id,p){
     '<span>'+esc(parts.join(" · ")||"Đang tổng hợp số liệu")+'</span>'+
     '<small>'+esc(cloud.label)+(cloud.detail?" · "+esc(cloud.detail):"")+'</small></div>';
 }
-const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260922-fresh2";
+const JOTRIP_SCENE_URL="/weather-scene-v3.html?embed=1&integrated=1&v=20260924-live-cloud1";
 async function renderJoTripMap(){
   const box=$("mapBox"),note=$("mapNote"),state=$("mapState");
   if(!box)return;

@@ -950,10 +950,28 @@ function todayUiState(row,index=0){
     const live=todayLiveOverride();
     if(live)return live;
   }
-  // Future slots keep JoTrip Engine land-tour gates; this is not a new forecast model.
-  const rain=num(row?.rain),gust=safeModelGust(row);
-  if((rain!==null&&rain>=50)||(gust!==null&&gust>=62))return {cls:"avoid",label:"Nên né khung này"};
-  if((rain!==null&&rain>=20)||(gust!==null&&gust>=50))return {cls:"watch",label:"Cần để ý"};
+  // Conservative multi-hazard LAND weather label, not a marine departure decision.
+  // rain is millimetres per 3-hour forecast frame; wind and gust are km/h.
+  const rain=num(row?.rain),wind=num(row?.wind),gust=safeModelGust(row);
+  const wave=num(row?.wave);
+  const offshoreWave=row?.wave_reference?.status==="PASS"?wave:null;
+  // Missing/incomparable wind+gust must never silently become a green card.
+  if(rain===null||wind===null||gust===null){
+    return {cls:"watch",label:"Chưa đủ dữ liệu",reason:"Thiếu mưa hoặc cặp gió/giật hợp lệ tại mốc này"};
+  }
+  const avoidReasons=[];
+  if(rain>=20)avoidReasons.push("mưa lớn "+fmt(rain,1)+" mm/3 giờ");
+  if(gust>=55)avoidReasons.push("gió giật "+fmt(gust,0)+" km/h");
+  if(wind>=40)avoidReasons.push("gió "+fmt(wind,0)+" km/h");
+  if(avoidReasons.length)return {cls:"avoid",label:"Nên né khung này",reason:avoidReasons.join(" · ")};
+  const watchReasons=[];
+  if(rain>=5)watchReasons.push("mưa "+fmt(rain,1)+" mm/3 giờ");
+  if(gust>=30)watchReasons.push("giật "+fmt(gust,0)+" km/h");
+  if(wind>=25)watchReasons.push("gió "+fmt(wind,0)+" km/h");
+  // An offshore wave grid is a warning cue only, NEVER a nearshore observation.
+  if(offshoreWave!==null&&offshoreWave>=1.5)
+    watchReasons.push("sóng ngoài khơi "+fmt(offshoreWave,2)+" m, không đại diện sát bờ");
+  if(watchReasons.length)return {cls:"watch",label:"Cần để ý",reason:watchReasons.join(" · ")};
   return {cls:"good",label:"Khá thuận lợi"};
 }
 function todayWeatherIcon(row){
@@ -1034,12 +1052,14 @@ function renderTodayDecision(){
       '</div>'+
     '</article>';
   }).join("");
+  const live=todayLiveOverride();
+  const liveLead=live?.reason?("Ngay lúc này: "+live.reason+". "):"";
   if(worst?.state.cls==="avoid"){
-    summaryEl.textContent="Có mốc nên né khoảng "+phuQuocClock(worst.row.time_iso)+". Nếu lịch linh hoạt, ưu tiên các ô xanh.";
+    summaryEl.textContent=liveLead+"Có mốc nên né khoảng "+phuQuocClock(worst.row.time_iso)+". Đây là dự báo tại điểm, không thay thế thông báo vận hành biển.";
   }else if(worst?.state.cls==="watch"){
-    summaryEl.textContent=(goodCount?"Vẫn còn "+goodCount+" mốc khá thuận lợi. ":"")+"Có thời điểm cần để ý thêm mưa hoặc gió giật.";
+    summaryEl.textContent=liveLead+(goodCount?"Có "+goodCount+" mốc tương đối thuận lợi. ":"")+"Các mốc còn lại cần chú ý mưa, gió giật hoặc sóng ngoài khơi. Không dùng nhãn này để quyết định ra biển.";
   }else{
-    summaryEl.textContent="Các mốc còn lại hôm nay hiện đều nằm trong ngưỡng khá thuận lợi của JoTrip Engine.";
+    summaryEl.textContent=liveLead+"Dự báo tại điểm chưa vượt ngưỡng theo dõi thời tiết trên đất liền. Biển cần đánh giá riêng theo tuyến và thông báo chính thức.";
   }
 }
 async function loadEngineDashboard(){

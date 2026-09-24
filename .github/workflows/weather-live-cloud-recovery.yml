@@ -1,0 +1,39 @@
+name: Weather live cloud recovery smoke
+
+on:
+  push:
+    branches:
+      - "fix/weather-*"
+    paths:
+      - "cloudflare/weather-fresh-worker.js"
+      - "weather-scene-v3.js"
+      - "weather-live-cloud-recovery.test.mjs"
+      - "weather-source-lock.mjs"
+      - ".github/workflows/weather-live-cloud-recovery.yml"
+  pull_request:
+    paths:
+      - "cloudflare/weather-fresh-worker.js"
+      - "weather-scene-v3.js"
+      - "weather-live-cloud-recovery.test.mjs"
+      - ".github/workflows/weather-live-cloud-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate isolated cloud gateway and unchanged scene source policy
+        run: |
+          node --input-type=module --check < cloudflare/weather-fresh-worker.js
+          node --check weather-scene-v3.js
+          node --check weather-live-cloud-recovery.test.mjs
+          node weather-live-cloud-recovery.test.mjs
+          node weather-source-lock.mjs

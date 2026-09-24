@@ -40,6 +40,16 @@
       gust>=wind&&wind<=250&&gust<=350&&
       (wave===null||(wave>=0&&wave<=30));
   }
+  function dashboardUsable(dashboard,now=Date.now()){
+    if(!dashboard||!Number.isFinite(now))return false;
+    const snapshotAge=ageHours(dashboard.generated_at,now);
+    if(snapshotAge<-.17||snapshotAge>2.5)return false;
+    const cycles=dashboard.source_cycles||{};
+    return ["ECMWF","ICON"].some(k=>{
+      const age=ageHours(cycles[k],now);
+      return age>=-.5&&age<=30;
+    });
+  }
   function deriveAfternoonWatch(dashboard,now=Date.now(),pointId="an_thoi"){
     const invalid=(status,reason)=>({status,reason,events:[]});
     if(!Number.isFinite(now))return invalid("INVALID","invalid_now");
@@ -47,15 +57,7 @@
     const hour=localParts(now)?.hour;
     if(hour>=16)return invalid("EXPIRED","forecast_window_finished");
     if(!dashboard?.points?.[pointId])return invalid("MISSING","point_missing");
-    const snapshotAge=ageHours(dashboard.generated_at,now);
-    if(snapshotAge<-.17||snapshotAge>2.5)return invalid("STALE","forecast_snapshot_stale");
-    // A recent publisher timestamp alone does not make old forecast runs fresh.
-    const cycles=dashboard.source_cycles||{};
-    const primary=["ECMWF","ICON"].some(k=>{
-      const a=ageHours(cycles[k],now);
-      return a>=-.5&&a<=30;
-    });
-    if(!primary)return invalid("STALE","model_cycles_stale");
+    if(!dashboardUsable(dashboard,now))return invalid("STALE","forecast_snapshot_or_cycle_stale");
     const today=localParts(now)?.date;
     const rows=dashboard.points[pointId].hours||[];
     const atHour=h=>rows.find(r=>{
@@ -136,5 +138,6 @@
       pairs};
   }
   return Object.freeze({version:"2026.09.24.wind-qc-v1",
-    deriveAfternoonWatch,comparableCurrentGust,auditForecastPairs});
+    deriveAfternoonWatch,dashboardUsable,validForecastFrame:validFrame,
+    comparableCurrentGust,auditForecastPairs});
 });

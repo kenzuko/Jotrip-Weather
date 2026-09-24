@@ -2656,3 +2656,61 @@ footer{font-size:9.5px}
 .quick-watch-item p{font-size:11.5px;line-height:1.55}
 .quick-watch-foot{font-size:10.5px;line-height:1.5}
 @media(max-width:640px){.quick-watch-item b{font-size:12.5px}.quick-watch-item p{font-size:11px}.quick-watch-more summary{font-size:11.5px}}
+
+
+/* Restore legible forecast cards on narrow iPhones; stale data is a compact
+   status, not an enormous set of empty-looking columns. */
+.today-decision-panel .today-decision-strip{
+  display:flex;
+  align-items:stretch;
+  gap:10px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  max-width:100%;
+  scroll-snap-type:x proximity;
+}
+.today-decision-panel .today-decision-card{
+  flex:0 0 166px;
+  width:166px;
+  min-width:0;
+  max-width:166px;
+  height:auto!important;
+  min-height:0!important;
+  align-self:stretch;
+  padding:13px;
+  box-sizing:border-box;
+}
+.today-decision-panel .today-decision-card .today-weather-icon{
+  height:43px;
+  min-height:43px;
+  font-size:32px;
+}
+.today-decision-panel .today-decision-card .today-mini{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px 8px;
+}
+.today-decision-panel .today-decision-card .today-mini span{
+  font-size:11px;
+  line-height:1.4;
+  overflow-wrap:break-word;
+}
+.today-decision-panel .today-reference-notice{
+  width:100%;
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:15px;
+  box-sizing:border-box;
+  border:1px dashed #c9d9e2;
+  border-radius:16px;
+  background:#f7fafb;
+}
+.today-decision-panel .today-reference-symbol{font-size:28px;line-height:1.2}
+.today-decision-panel .today-reference-notice b{font-size:14px;line-height:1.45}
+.today-decision-panel .today-reference-notice span{font-size:12px;line-height:1.55}
+@media(max-width:640px){
+  .today-decision-panel .today-decision-card{flex-basis:158px;width:158px;max-width:158px}
+  .today-decision-panel .today-decision-head{align-items:flex-start}
+  .today-decision-panel .today-engine-badge{max-width:100%;overflow-wrap:break-word}
+}

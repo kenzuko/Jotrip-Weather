@@ -73,6 +73,7 @@ jobs:
         run: |
           node --check weather-dashboard.js
           node --check weather-v2.js
+          node weather-today-decision.test.mjs weather-v2.js
           node --check weather-wind-guard.js
           node weather-wind-guard.test.mjs weather-wind-guard.js
           node --check weather-gust-outlook.js

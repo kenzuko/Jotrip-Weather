@@ -632,7 +632,7 @@ function renderTechnicalPointForecast(){
     '<td><b>'+esc(localTime(r.time_iso))+'</b></td>'+
     '<td>'+ (num(r.temperature)===null?'-':fmt(r.temperature,1)+'°C') +'</td>'+
     '<td>'+ (num(r.wind)===null?'-':fmt(r.wind,1)+' km/h') +'</td>'+
-    '<td>'+ (num(r.gust)===null?'-':fmt(r.gust,1)+' km/h') +'</td>'+
+    '<td>'+ (safeModelGust(r)===null?'-':fmt(r.gust,1)+' km/h') +'</td>'+
     '<td>'+ (num(r.rain)===null?'-':fmt(r.rain,2)+' mm/mốc') +'</td>'+
     '<td>'+ (num(r.wave)===null?'-':fmt(r.wave,2)+' m') +'</td>'+
   '</tr>').join("");
@@ -893,19 +893,22 @@ function todayLiveOverride(){
   if(!localFresh&&!nowcastFresh)return {cls:"watch",label:"Cần để ý",reason:"Dữ liệu live đang trễ - kiểm tra bản đồ"};
   return null;
 }
+function safeModelGust(row){
+  return globalThis.JoTripWindGuard?.validForecastFrame(row)?num(row.gust):null;
+}
 function todayUiState(row,index=0){
   if(index===0&&Math.abs(Date.parse(row?.time_iso||"")-Date.now())<=60*60*1000){
     const live=todayLiveOverride();
     if(live)return live;
   }
   // Future slots keep JoTrip Engine land-tour gates; this is not a new forecast model.
-  const rain=num(row?.rain),gust=num(row?.gust);
+  const rain=num(row?.rain),gust=safeModelGust(row);
   if((rain!==null&&rain>=50)||(gust!==null&&gust>=62))return {cls:"avoid",label:"Nên né khung này"};
   if((rain!==null&&rain>=20)||(gust!==null&&gust>=50))return {cls:"watch",label:"Cần để ý"};
   return {cls:"good",label:"Khá thuận lợi"};
 }
 function todayWeatherIcon(row){
-  const rain=num(row?.rain)||0,gust=num(row?.gust)||0;
+  const rain=num(row?.rain)||0,gust=safeModelGust(row)||0;
   const d=new Date(row?.time_iso||"");
   const hour=Number.isFinite(d.getTime())?Number(d.toLocaleString("en-US",{timeZone:"Asia/Ho_Chi_Minh",hour:"numeric",hour12:false})):12;
   if(rain>=20||gust>=50)return "⛈️";
@@ -929,6 +932,11 @@ function renderTodayDecision(){
   if(!engineDashboard){
     root.innerHTML='<span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>';
     summaryEl.textContent="Đang đọc các mốc thời tiết còn lại hôm nay.";
+    return;
+  }
+  if(!globalThis.JoTripWindGuard?.dashboardUsable(engineDashboard)){
+    root.innerHTML='<div class="today-decision-empty"><b>Dự báo theo giờ đang trễ hoặc chu kỳ mô hình đã cũ</b><span>Không dùng số cũ để kết luận biển an toàn. Theo dõi quan trắc và thông báo chính thức.</span></div>';
+    summaryEl.textContent="Chưa có dự báo mới đủ điều kiện công bố các mốc còn lại hôm nay.";
     return;
   }
   const rows=engineTodayRows();
@@ -962,7 +970,7 @@ function renderTodayDecision(){
     const state=todayUiState(r,index),icon=todayWeatherIcon(r);
     if(state.cls==="good")goodCount++;
     if(!worst||rank[state.cls]>rank[worst.state.cls])worst={row:r,state};
-    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),wave=num(r.wave),temp=num(r.temperature);
+    const rain=num(r.rain),wind=num(r.wind),gust=safeModelGust(r),wave=num(r.wave),temp=num(r.temperature);
     return '<article class="today-decision-card '+state.cls+'">'+
       '<time>'+esc(phuQuocClock(r.time_iso))+'</time>'+
       '<div class="today-weather-icon" aria-hidden="true">'+icon+'</div>'+
@@ -1781,7 +1789,7 @@ function renderForecastDayDetail(){
   const step=engineDayStepHours(dayRows);
   if(note)note.textContent="JoTrip Engine · "+(step?("mốc "+fmt(step,0)+" giờ"):"mốc theo chu kỳ nguồn")+" · chạm ngày khác để đổi.";
   slots.innerHTML=dayRows.map(r=>{
-    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),wave=num(r.wave),temp=num(r.temperature);
+    const rain=num(r.rain),wind=num(r.wind),gust=safeModelGust(r),wave=num(r.wave),temp=num(r.temperature);
     return '<article class="forecast-hour-slot">'+
       '<header><time>'+esc(phuQuocClock(r.time_iso))+'</time><span aria-hidden="true">'+todayWeatherIcon(r)+'</span></header>'+
       '<strong>'+(temp===null?'-':fmt(temp,0)+'°')+'</strong>'+
@@ -2431,7 +2439,7 @@ function ensureLeaflet(){
 }
 function pointCoords(id,p){
   const fallback={
-    duong_dong:[10.2172,103.9593],an_thoi:[9.905,104.005],ganh_dau:[10.37077,103.84472],
+    duong_dong:[10.2172,103.9593],an_thoi:[10.0191,104.015],ganh_dau:[10.37077,103.84472],
     rach_gia:[10.00677,105.07845],cua_can:[10.292693,103.914799],bai_thom:[10.411765,104.031055],
     ham_ninh:[10.18062,104.04463],bai_sao:[10.0572576,104.0363948]
   };
@@ -2439,22 +2447,27 @@ function pointCoords(id,p){
   return lat!==null&&lon!==null?[lat,lon]:(fallback[id]||null);
 }
 function pointMapLevel(p){
-  const l=p?.local||{},m=p?.model||{};
-  const rain=num(l.rain_rate_mm_h)||0,wind=num(l.wind_kmh)||0,gust=num(m.gust_kmh)||0;
-  if(rain>=7.5||wind>=40||gust>=50)return 3;
-  if(rain>=2.5||wind>=30||gust>=40)return 2;
-  if(rain>=.5||wind>=22)return 1;
+  const l=p?.local||{};
+  if(!localDataFresh()||!l.available)return -1;
+  const rain=num(l.rain_rate_mm_h),wind=num(l.wind_kmh);
+  if(rain===null&&wind===null)return -1;
+  if((rain!==null&&rain>=7.5)||(wind!==null&&wind>=40))return 3;
+  if((rain!==null&&rain>=2.5)||(wind!==null&&wind>=30))return 2;
+  if((rain!==null&&rain>=.5)||(wind!==null&&wind>=22))return 1;
   return 0;
 }
 function pointMapColor(level){
-  return ["#4c8fae","#d5a62e","#df7e31","#c94e57"][Math.max(0,Math.min(3,level))];
+  return level<0?"#a1adb4":["#4c8fae","#d5a62e","#df7e31","#c94e57"][Math.max(0,Math.min(3,level))];
 }
 function mapPopup(id,p){
   const l=p?.local||{},m=p?.model||{},n=effectiveNowcastFor(id);
   const cloud=cloudStateLabel(n),parts=[];
-  if(num(l.rain_rate_mm_h)!==null)parts.push("Mưa "+fmt(l.rain_rate_mm_h,1)+" mm/h");
-  if(num(l.wind_kmh)!==null)parts.push("Gió "+fmt(l.wind_kmh,0)+" km/h");
-  if(num(l.wave_hs_m??m.wave_hs_m)!==null)parts.push("Sóng Hs "+fmt(l.wave_hs_m??m.wave_hs_m,1)+" m");
+  if(localDataFresh()&&l.available){
+    if(num(l.rain_rate_mm_h)!==null)parts.push("Mưa JoTrip "+fmt(l.rain_rate_mm_h,1)+" mm/h");
+    if(num(l.wind_kmh)!==null)parts.push("Gió JoTrip "+fmt(l.wind_kmh,0)+" km/h");
+  }
+  if(freshEnough(m.marine_sampled_time,210)&&num(m.wave_hs_m)!==null)
+    parts.push("Sóng nền mô hình "+fmt(m.wave_hs_m,1)+" m");
   return '<div class="jotrip-map-popup"><b>'+esc(p?.name||id)+'</b>'+
     '<span>'+esc(parts.join(" · ")||"Đang tổng hợp số liệu")+'</span>'+
     '<small>'+esc(cloud.label)+(cloud.detail?" · "+esc(cloud.detail):"")+'</small></div>';

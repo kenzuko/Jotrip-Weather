@@ -2549,3 +2549,99 @@ footer{font-size:9.5px}
 /* UI10: technical workspace order - choose point, freshness, 72h, point forecast, current marine, regional forecast, AQI/tide, data health */
 .technical-current-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 7px}.technical-current-head small{font-size:9px;color:#788c98;text-align:right}.deep-weather-body>.now-advanced{margin-top:2px}.technical-current-head+.now-advanced{margin-top:0}
 @media(max-width:720px){.technical-current-head{display:block}.technical-current-head small{display:block;margin-top:4px;text-align:left}}
+
+
+/* Gust card layout fix: the older three-column desktop fact row allocated
+   a separate auto column to a long source label. At narrow desktop widths
+   it collapsed "Gió giật tại điểm" into vertically stacked characters.
+   Keep the source/valid time on its own full-width line. */
+.weather-overview .weather-now-facts{
+  display:flex;
+  flex-direction:column;
+  align-self:stretch;
+  min-width:0;
+  gap:0;
+}
+.weather-overview .weather-now-facts>div{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:12px;
+  row-gap:6px;
+  align-items:center;
+  min-width:0;
+}
+.weather-overview .weather-now-facts>div>span{
+  grid-column:1;
+  grid-row:1;
+  min-width:0;
+  font-size:12px;
+  line-height:1.35;
+  word-break:normal;
+  overflow-wrap:normal;
+  white-space:normal;
+}
+.weather-overview .weather-now-facts>div>b{
+  grid-column:2;
+  grid-row:1;
+  justify-self:end;
+  font-size:23px;
+  line-height:1.15;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.weather-overview .weather-now-facts>div>small{
+  grid-column:1/-1;
+  grid-row:2;
+  display:block;
+  min-width:0;
+  max-width:100%;
+  font-size:11px;
+  line-height:1.45;
+  word-break:normal;
+  overflow-wrap:break-word;
+}
+@media(max-width:980px){
+  .weather-overview .weather-overview-main{
+    grid-template-columns:minmax(0,1fr);
+  }
+  .weather-overview .weather-now-facts{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px;
+    padding-left:0;
+    border-left:0;
+  }
+  .weather-overview .weather-now-facts>div{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:flex-start;
+    gap:7px;
+    min-width:0;
+    padding:12px;
+    border:1px solid rgba(31,72,88,.10);
+    border-radius:14px;
+    background:#f8fbfb;
+  }
+  .weather-overview .weather-now-facts>div>span{
+    font-size:12px;
+    line-height:1.4;
+  }
+  .weather-overview .weather-now-facts>div>b{
+    align-self:flex-start;
+    font-size:25px;
+  }
+  .weather-overview .weather-now-facts>div>small{
+    font-size:11px;
+    line-height:1.45;
+  }
+  .weather-overview .weather-now-facts>div.weather-gust-fact{
+    background:#fffaf0!important;
+  }
+}
+@media(max-width:380px){
+  .weather-overview .weather-now-facts{gap:7px}
+  .weather-overview .weather-now-facts>div{padding:10px}
+  .weather-overview .weather-now-facts>div>span{font-size:11.5px}
+  .weather-overview .weather-now-facts>div>small{font-size:10.5px}
+}

@@ -1685,6 +1685,32 @@ function buildQuickWatchEvents(){
     });
   }
 
+  // 1b) Wave risk at individual points. Model Hs is forecast, never a
+  // measurement of breaking waves at a beach or a vessel departure ban.
+  if(globalThis.JoTripWindGuard?.dashboardUsable(engineDashboard,now)){
+    islandIds().forEach(id=>{
+      const pt=engineDashboard?.points?.[id],name=pointDisplayName(id);
+      const rows=(pt?.hours||[]).filter(r=>{
+        const t=Date.parse(r.time_iso||"");
+        return Number.isFinite(t)&&t>=now&&t<=now+6*3600000&&
+          globalThis.JoTripWindGuard.validForecastFrame(r)&&
+          num(r.wave)!==null&&r.wave>=1.5;
+      }).sort((a,b)=>Date.parse(a.time_iso)-Date.parse(b.time_iso));
+      if(!rows.length)return;
+      const peak=Math.max(...rows.map(r=>r.wave));
+      events.push({
+        key:"wave-model:"+id+":"+rows.map(r=>r.time_iso).join("|"),
+        severity:peak>=2.0?"alert":"watch",
+        when:"SÓNG DỰ BÁO · "+rows.map(r=>phuQuocClock(r.time_iso)).join(" · "),
+        title:name+": mô hình dự báo sóng đáng chú ý",
+        detail:"Hs cao nhất "+fmt(peak,2)+" m tại các mốc "+
+          rows.map(r=>phuQuocClock(r.time_iso)).join(", ")+
+          ". Đây là sóng có nghĩa tại điểm mô hình, không phải sóng đo sát bờ hay quyết định cấm tàu.",
+        sort:-2
+      });
+    });
+  }
+
   // 2) Current strong wind: group places instead of repeating one event per point.
   const windHits=islandIds().map(id=>{
     const p=critical?.points?.[id]||{},l=p.local||{};
@@ -1790,7 +1816,9 @@ function buildQuickWatchEvents(){
     });
   }
 
-  return events.sort((a,b)=>(watchSeverityRank(b.severity)-watchSeverityRank(a.severity))||(a.sort-b.sort)).slice(0,6);
+  // Preserve the complete list for audit. The UI initially shows six and
+  // exposes the remaining active notices on demand rather than hiding them.
+  return events.sort((a,b)=>(watchSeverityRank(b.severity)-watchSeverityRank(a.severity))||(a.sort-b.sort)).slice(0,30);
 }
 function renderQuickAlert(){
   const root=$("quickAlert"),list=$("quickAlertList"),count=$("quickWatchCount");
@@ -1799,12 +1827,20 @@ function renderQuickAlert(){
   root.hidden=events.length===0;
   if(count)count.textContent=String(events.length);
   if(!events.length){list.innerHTML="";return}
-  list.innerHTML=events.map(e=>
+  const makeItem=e=>
     '<article class="quick-watch-item '+esc(e.severity)+'">'+
       '<div class="quick-watch-dot"></div>'+
       '<div><small>'+esc(e.when)+'</small><b>'+esc(e.title)+'</b><p>'+esc(e.detail)+'</p></div>'+
-    '</article>'
-  ).join("");
+    '</article>';
+  const first=events.slice(0,6).map(makeItem).join("");
+  const rest=events.slice(6);
+  // Preserve the open state across automatic refreshes every minute.
+  const wasOpen=Boolean($("quickWatchMore")?.open);
+  list.innerHTML=first+(rest.length?
+    '<details id="quickWatchMore" class="quick-watch-more" '+(wasOpen?'open':'')+'>'+
+      '<summary>Xem thêm '+rest.length+' cảnh báo và quan trắc</summary>'+
+      '<div class="quick-watch-list">'+rest.map(makeItem).join("")+'</div>'+
+    '</details>':'');
 }
 
 function engineRowsForDay(dayKey){

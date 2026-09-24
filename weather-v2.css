@@ -2645,3 +2645,14 @@ footer{font-size:9.5px}
   .weather-overview .weather-now-facts>div>span{font-size:11.5px}
   .weather-overview .weather-now-facts>div>small{font-size:10.5px}
 }
+
+/* Detailed alerts: retain all active notices without overwhelming the hero. */
+.quick-watch-more{margin-top:10px;border:1px solid #d7e4e8;border-radius:12px;background:#f7fafb;padding:10px}
+.quick-watch-more summary{cursor:pointer;font-size:12px;font-weight:750;color:#275269;line-height:1.5;list-style:revert}
+.quick-watch-more[open] summary{margin-bottom:10px}
+.quick-watch-more .quick-watch-list{display:grid;gap:8px}
+.quick-watch-item small{font-size:10px;line-height:1.45;letter-spacing:.03em}
+.quick-watch-item b{font-size:13px;line-height:1.45}
+.quick-watch-item p{font-size:11.5px;line-height:1.55}
+.quick-watch-foot{font-size:10.5px;line-height:1.5}
+@media(max-width:640px){.quick-watch-item b{font-size:12.5px}.quick-watch-item p{font-size:11px}.quick-watch-more summary{font-size:11.5px}}

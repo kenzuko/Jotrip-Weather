@@ -1304,10 +1304,15 @@ function enforceSceneFreshness(){
 }
 
 async function recoverLiveCloudWhenDelayed(){
+  // The Worker deliberately permits only the production Weather origin.
+  // Local/preview browsers use the canonical snapshot; offline gateway tests
+  // exercise recovery without browser CORS failures.
+  if(location.hostname!=="weather.openphuquoc.com")return false;
   const currentTime=Date.parse(state.nowcast?.sampled_time||"");
   const age=ageMinutes(state.nowcast?.sampled_time);
-  // NOAA/JMA imagery naturally trails wall time; only probe after 30 minutes.
-  if(age!==null&&age<30)return false;
+  // Refresh before the 35-minute observed-image limit instead of waiting
+  // until the map has already hidden the older frame.
+  if(age!==null&&age<25)return false;
   try{
     const response=await fetch(LIVE_CLOUD_URL+"?t="+Date.now(),{
       cache:"no-store",signal:AbortSignal.timeout(9000)
@@ -1321,7 +1326,7 @@ async function recoverLiveCloudWhenDelayed(){
        !candidate.spatial.frames.length||
        candidate.source!=="JMA_HIMAWARI9_VIA_NOAA_OPEN_DATA"||
        !Number.isFinite(t)||
-       Date.now()-t>40*60000||
+       Date.now()-t>35*60000||
        (Number.isFinite(currentTime)&&t<=currentTime))return false;
     state.nowcast=candidate;
     state.sources.nowcast=true;

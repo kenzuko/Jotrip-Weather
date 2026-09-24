@@ -77,6 +77,7 @@
     const peakWind=Math.max(...strong.map(r=>r.wind));
     const peakGust=Math.max(...strong.map(r=>r.gust));
     const severity=peakWind>=40||peakGust>=50?"alert":"watch";
+    const cycles=dashboard.source_cycles||{};
     const sourceCycles=Object.fromEntries(Object.entries(cycles)
       .filter(([,v])=>timestamp(v)!==null));
     return {status:"VALID",reason:null,pointId,severity,

@@ -73,6 +73,8 @@ jobs:
         run: |
           node --check weather-dashboard.js
           node --check weather-v2.js
+          node --check weather-model-coverage.mjs
+          node weather-model-coverage.mjs --test
           node weather-today-decision.test.mjs weather-v2.js
           node --check weather-wind-guard.js
           node weather-wind-guard.test.mjs weather-wind-guard.js
@@ -113,15 +115,31 @@ jobs:
           # locality; never silently fill in missing waves or gusts with 0.
           bundle=json.load(open('data/current-bundle.json',encoding='utf-8'))
           series=(bundle.get('model_72h') or {}).get('points') or {}
+          # Some previously mirrored ECMWF hours legitimately have no gust.
+          # Older snapshots predate explicit gap metadata. New mirrors must
+          # declare missing gusts, and all mirrors retain the valid hours.
+          from datetime import datetime, timezone
+          issued=datetime.fromisoformat(str(bundle.get('generated_at','')).replace('Z','+00:00'))
+          legacy=issued<datetime(2026,9,24,13,10,tzinfo=timezone.utc)
           for point in ('duong_dong','an_thoi','ganh_dau','cua_can','bai_thom','ham_ninh','bai_sao','rach_gia'):
               rows=series.get(point) or []
               assert rows, f'{point}: missing hourly marine series'
+              available=0
               for row in rows:
                   assert row.get('time'), f'{point}: valid time missing'
-                  for field in ('rain_3h_mm','wind_kmh','gust_kmh','wave_hs_m'):
+                  for field in ('rain_3h_mm','wind_kmh','wave_hs_m'):
                       assert row.get(field) is not None, f'{point}: {field} missing at {row.get("time")}'
+                  if row.get('gust_kmh') is not None:
+                      available+=1
+                  elif legacy:
+                      print(f'legacy unflagged gust gap: {point} at {row["time"]}')
+                  else:
+                      assert 'gust_kmh' in (row.get('missing_fields') or []), (
+                          f'{point}: missing gust must be explicitly declared at {row["time"]}')
+                      assert row.get('data_quality')=='PARTIAL_MODEL', f'{point}: missing gust quality flag'
                   assert row.get('data_class')=='MODEL_ONLY', f'{point}: forecast mislabeled as observation'
-          print('local mirror and 8-point four-field forecast contract OK')
+              assert available/len(rows)>=0.8, f'{point}: gust coverage below 80%'
+          print('local mirror, 8-point marine provenance and gust completeness OK')
           PY
 
       - name: Validate live Weather origin contracts

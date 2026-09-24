@@ -2,6 +2,9 @@
 
 const RUNTIME=window.JOTRIP_WEATHER_RUNTIME;
 if(!RUNTIME) throw new Error("JoTrip Weather canonical runtime registry missing");
+// Static same-origin runtime remains authoritative; this read-only gateway
+// recovers newer satellite observations only when GitHub Pages is delayed.
+const LIVE_CLOUD_URL="https://jotrip-weather-fresh.kenzuko.workers.dev/cloud.json";
 const URLS={
   manifest:RUNTIME.manifest,
   nowcast:RUNTIME.cloud,
@@ -50,6 +53,7 @@ const state={
   selectedMarker:null,
   probe:null,
   runtimeManifest:null,
+  cloudRecovery:false,
   sources:{manifest:false,nowcast:false,compact:false,current:false,ecmwf:false,dashboard:false,marine:false}
 };
 
@@ -494,7 +498,7 @@ function updateSourcePanel(){
     title="JoTrip Weather · Himawari cloud";
     text="Observed satellite qua JoTrip Weather. Thân mây dùng median cloud-top để giữ hình khối; lõi lạnh dùng cold cloud-top để nhấn phần phát triển mạnh. Không có icon sét vì lightning feed trực tiếp chưa được nối.";
     meta=[
-      "Pipeline: JoTrip Weather",
+      "Pipeline: JoTrip Weather"+(state.cloudRecovery?" · bản mây mới qua gateway dự phòng":""),
       "Nguồn gốc: "+(state.nowcast?.source||"JMA Himawari-9 via NOAA Open Data"),
       "Native source: "+(state.nowcast?.observation_resolution||"~2 km ở nadir"),
       "Render grid hiện tại: "+(state.nowcast?.spatial?.display_grid_deg||0.05)+"°",
@@ -1299,12 +1303,47 @@ function enforceSceneFreshness(){
   }
 }
 
+async function recoverLiveCloudWhenDelayed(){
+  const currentTime=Date.parse(state.nowcast?.sampled_time||"");
+  const age=ageMinutes(state.nowcast?.sampled_time);
+  // NOAA/JMA imagery naturally trails wall time; only probe after 30 minutes.
+  if(age!==null&&age<30)return false;
+  try{
+    const response=await fetch(LIVE_CLOUD_URL+"?t="+Date.now(),{
+      cache:"no-store",signal:AbortSignal.timeout(9000)
+    });
+    if(!response.ok)throw new Error("live cloud HTTP "+response.status);
+    if(response.headers.get("x-jotrip-source-stale")==="true")return false;
+    const candidate=await response.json();
+    const t=Date.parse(candidate.sampled_time||"");
+    if(candidate.status!=="POINT_NUMERIC_READY"||
+       !Array.isArray(candidate.spatial?.frames)||
+       !candidate.spatial.frames.length||
+       candidate.source!=="JMA_HIMAWARI9_VIA_NOAA_OPEN_DATA"||
+       !Number.isFinite(t)||
+       Date.now()-t>40*60000||
+       (Number.isFinite(currentTime)&&t<=currentTime))return false;
+    state.nowcast=candidate;
+    state.sources.nowcast=true;
+    state.cloudRecovery=true;
+    console.info("[Weather Scene] newer Himawari observations recovered",candidate.sampled_time);
+    return true;
+  }catch(error){
+    console.warn("[Weather Scene] live Himawari recovery",error.message);
+    return false;
+  }
+}
+
 async function refreshCanonicalRuntime(){
   try{
     const manifest=await fetchCanonical(URLS.manifest);
     const before=JSON.stringify(state.runtimeManifest?.source_times||{});
     const after=JSON.stringify(manifest?.source_times||{});
     if(before===after){
+      if(await recoverLiveCloudWhenDelayed()){
+        setTabAvailability();
+        if(state.scene==="cloud")setScene("cloud");
+      }
       enforceSceneFreshness();
       return;
     }
@@ -1313,12 +1352,16 @@ async function refreshCanonicalRuntime(){
       fetchCanonical(URLS.ecmwf),fetchCanonical(URLS.dashboard),fetchCanonical(URLS.marine)
     ]);
     state.runtimeManifest=manifest;
-    if(n.status==="fulfilled")state.nowcast=n.value;
+    if(n.status==="fulfilled"&&Date.parse(n.value.sampled_time||"")>Date.parse(state.nowcast?.sampled_time||0)){
+      state.nowcast=n.value;
+      state.cloudRecovery=false;
+    }
     if(c.status==="fulfilled")state.compact=c.value;
     if(cur.status==="fulfilled")state.current=cur.value;
     if(e.status==="fulfilled")state.ecmwf=e.value;
     if(d.status==="fulfilled")state.dashboard=d.value;
     if(m.status==="fulfilled")state.marine=m.value;
+    await recoverLiveCloudWhenDelayed();
     setTabAvailability();
     let next=state.scene;
     if(!sceneAvailable(next))next=sceneAvailable("cloud")?"cloud":sceneAvailable("rain")?"rain":sceneAvailable("wind")?"wind":"wave";
@@ -1372,6 +1415,14 @@ async function boot(){
   }else{
     $("loading").textContent="Chưa có nguồn dữ liệu nào đủ mới để dựng Weather Scene.";
   }
+  // Never block map startup on a remote gateway. Recovery is additive.
+  recoverLiveCloudWhenDelayed().then(updated=>{
+    if(!updated)return;
+    setTabAvailability();
+    if(state.scene==="cloud"||!sceneAvailable(state.scene))setScene("cloud");
+    $("loading").classList.add("hidden");
+    enforceSceneFreshness();
+  });
   setInterval(()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()},2*60*1000);
   setInterval(()=>{if(document.visibilityState==="visible")enforceSceneFreshness()},60*1000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshCanonicalRuntime()});

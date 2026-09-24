@@ -28,6 +28,8 @@ jobs:
           test -f weather-sw.js
           test -f weather-wind-guard.js
           test -f weather-gust-outlook.js
+          test -f weather-alert-ledger.js
+          test -f weather-alert-mirror.mjs
           grep -q "weather-gust-outlook.js" index.html
           grep -q "weather-wind-guard.js" index.html
           test -f weather-feedback.js
@@ -75,6 +77,10 @@ jobs:
           node weather-wind-guard.test.mjs weather-wind-guard.js
           node --check weather-gust-outlook.js
           node weather-gust-outlook.test.mjs weather-gust-outlook.js
+          node --check weather-alert-ledger.js
+          node --check weather-alert-mirror.mjs
+          node weather-alert-ledger.test.mjs weather-alert-ledger.js
+          node weather-alert-mirror.mjs --dry-run
           node --check weather-scene-v3.js
           node --check weather-scene-render-v2.js
           node --check spatial-lab.js

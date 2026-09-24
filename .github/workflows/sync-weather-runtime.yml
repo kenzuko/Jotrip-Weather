@@ -12,6 +12,7 @@ on:
     - cron: '6,16,26,36,46,56 * * * *'
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/sync-weather-runtime.yml'
 

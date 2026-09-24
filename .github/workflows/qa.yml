@@ -2,7 +2,7 @@ name: Weather Lab QA
 
 on:
   push:
-    branches: [main]
+    branches: [main, "fix/weather-*"]
   workflow_dispatch:
   schedule:
     - cron: '17 */6 * * *'
@@ -26,6 +26,8 @@ jobs:
           test -f weather-standalone-data.js
           test -f weather-live-config.js
           test -f weather-sw.js
+          test -f weather-wind-guard.js
+          grep -q "weather-wind-guard.js" index.html
           test -f weather-feedback.js
           test -f weather-feedback.css
           test -f weather-history.html
@@ -67,6 +69,8 @@ jobs:
         run: |
           node --check weather-dashboard.js
           node --check weather-v2.js
+          node --check weather-wind-guard.js
+          node weather-wind-guard.test.mjs weather-wind-guard.js
           node --check weather-scene-v3.js
           node --check weather-scene-render-v2.js
           node --check spatial-lab.js

@@ -1,10 +1,11 @@
-const VERSION="weather-intelligence-2026.09.24.anthoi-wind-alert1";
+const VERSION="weather-intelligence-2026.09.24.wind-qc1";
 const CACHE=`${VERSION}-static`;
 const STATIC=[
   "/",
   "/index.html",
   "/weather-v2.css?v=20260922-ui10",
-  "/weather-v2.js?v=20260924-anthoi-wind-alert1",
+  "/weather-wind-guard.js?v=20260924-qc1",
+  "/weather-v2.js?v=20260924-wind-qc1",
   "/weather-brand.svg",
   "/weather-app-icon.svg",
   "/favicon-64.png",
@@ -47,6 +48,7 @@ self.addEventListener("fetch",event=>{
     url.pathname==="/weather.html"||
     url.pathname==="/weather-v2.css"||
     url.pathname==="/weather-v2.js"||
+    url.pathname==="/weather-wind-guard.js"||
     url.pathname==="/weather-brand.svg"||
     url.pathname==="/weather-app-icon.svg"||
     url.pathname==="/weather-manifest.webmanifest"||

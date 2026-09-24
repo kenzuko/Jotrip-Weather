@@ -486,6 +486,11 @@ function updateCopy(){
     : (state.scene==="cloud"?freshnessText(sourceTime,kind):modelCycleBadge(state.scene));
   $("freshness").textContent=fresh.text;
   $("freshness").classList.toggle("stale",fresh.stale);
+  // Expose the exact observation behind the painted frame. The build manifest
+  // can lag the live Cloudflare rescue feed; visual QA must inspect what users
+  // actually see instead of judging it against a stale static manifest.
+  document.documentElement.dataset.sceneSourceTime=sourceTime||"";
+  document.documentElement.dataset.sceneDataClass=state.scene==="cloud"?"OBSERVED_HIMAWARI":(f?.data_class||"MODEL_ONLY");
   $("slider").value=String(state.index);
   updateSourcePanel();
 }

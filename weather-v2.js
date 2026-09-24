@@ -229,6 +229,7 @@ function overlayFreshLocalNow(base,localNow){
 }
 function overlayFreshGroundTruth(base,ground){
   if(!base||!ground)return base;
+  base._groundtruth=ground;
   const actual=base.actual={...(base.actual||{})};
   const v=ground.atmosphere?.vvpq||{};
   if(v.status){
@@ -811,6 +812,53 @@ function heroIconForLocalTime(icon){
   return {"🌤️":"🌙","⛅":"☁️","🌦️":"🌧️"}[icon]||icon;
 }
 
+function pointGustOutlook(id=current){
+  return globalThis.JoTripGustOutlook?.pointOutlook({
+    pointId:id,critical,nowcast:fullNowcast,dashboard:engineDashboard,
+    groundtruth:currentBundle?.groundtruth||critical?._groundtruth||null,
+    now:Date.now()
+  })||null;
+}
+function renderPointGust(){
+  const o=pointGustOutlook(),value=$("heroGust"),meta=$("heroGustMeta");
+  const banner=$("gustShortOutlook"),head=$("gustShortTitle"),detail=$("gustShortDetail");
+  if(!value||!meta||!banner||!head||!detail)return;
+  // Only a physically colocated, verified METAR (or future sensor) is an
+  // observed point gust. Model values always carry their forecast valid time.
+  if(o?.observed){
+    value.textContent=fmt(o.observed.gust_kmh,0);
+    meta.textContent="km/h · ĐO THỰC "+phuQuocClock(o.observed.observed_at);
+  }else if(o?.forecast){
+    value.textContent=fmt(o.forecast.model_gust_kmh,0);
+    meta.textContent="km/h · DỰ BÁO mốc "+phuQuocClock(o.forecast.valid_time)+
+      " · không phải số đo lúc này";
+  }else{
+    value.textContent="--";
+    meta.textContent="Chưa có số giật tại điểm đủ nguồn và thời gian";
+  }
+  const label=point().name||current;
+  banner.className="gust-short-outlook "+
+    (o?.status==="ALERT"?"alert":o?.status==="WATCH"?"watch":"unknown");
+  const risk=o?.status==="ALERT"?"Cảnh giác cao":
+    o?.status==="WATCH"?"Cần đề phòng":
+    o?.status==="NO_VERIFIED_SIGNAL"?"Chưa thấy tín hiệu rõ":"Chưa đủ dữ liệu";
+  head.textContent="Gió giật 0-30 phút · "+label+": "+risk;
+  if(o?.status==="ALERT"||o?.status==="WATCH"){
+    const lead=o.window?("Khung theo dõi "+o.window+". "):
+      "Gió nền đáng chú ý nhưng chưa có ETA đáng tin cậy. ";
+    const signs=o.evidence?.length?o.evidence.slice(0,3).join(" · ")+". ":"";
+    detail.textContent=lead+signs+
+      "Đây là tín hiệu rủi ro, không phải đo được gió giật hoặc xác suất đã kiểm chứng.";
+  }else if(o?.status==="NO_VERIFIED_SIGNAL"){
+    detail.textContent="Quan trắc và vệ tinh mới chưa cho tín hiệu đủ mạnh; không có nghĩa là sẽ không xuất hiện giật cục bộ.";
+  }else{
+    detail.textContent="Thiếu dữ liệu mới hoặc chưa theo dõi được hướng di chuyển của mây. Xem thông báo chính thức nếu chuẩn bị ra biển.";
+  }
+  if(o?.forecast&&!o.observed)
+    detail.textContent+=" Mốc mô hình gần nhất: "+fmt(o.forecast.model_gust_kmh,0)+
+      " km/h lúc "+phuQuocClock(o.forecast.valid_time)+".";
+}
+
 function renderHero(){
   const p=point(),l=p.local||{},m=modelPoint(),n=effectiveNowcast();
   $("placeName").textContent=p.name||current;
@@ -849,6 +897,7 @@ function renderHero(){
   $("heroRain").textContent=rain===null?"--":fmt(rain,1);
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
+  renderPointGust();
   if($("heroRainMeta"))$("heroRainMeta").textContent=rain===null?"mm/h · chưa đủ số mới":"mm/h · JoTrip ước tính";
   if($("heroWindMeta"))$("heroWindMeta").textContent=wind===null?"km/h · chưa có số gió mới":"km/h · JoTrip ước tính";
   if($("heroWaveMeta"))$("heroWaveMeta").textContent=marineTimestamp
@@ -998,6 +1047,7 @@ async function loadEngineDashboard(){
     engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
     refreshSnapshotAuthority();
     renderStatus();
+    renderHero();
     renderTodayDecision();
     renderJoTripForecast();
     renderForecastDayDetail();
@@ -1049,7 +1099,11 @@ function renderActual(){
     $("actualState").textContent="Chưa có nguồn đo trực tiếp đang hoạt động";
     return;
   }
-  cards.push('<article class="actual-card"><header><b>VVPQ</b><em class="badge actual">ĐO THỰC</em></header><strong>'+fmt(v.temperature_c,1)+'°C</strong><small>Gió '+fmt(v.wind_kmh,1)+' km/h · '+(v.weather?esc(v.weather)+' · ':'')+ageText(v.observed_at)+'</small></article>');
+  const verifiedGust=globalThis.JoTripGustOutlook?.metarGust(
+    currentBundle?.groundtruth||critical?._groundtruth||null,Date.now());
+  const airportGust=verifiedGust?" · giật "+fmt(verifiedGust.gust_kmh,0)+" km/h (METAR)":
+    (freshEnough(v.observed_at,35)?" · METAR không có số giật được công bố":"");
+  cards.push('<article class="actual-card"><header><b>VVPQ</b><em class="badge actual">ĐO THỰC</em></header><strong>'+fmt(v.temperature_c,1)+'°C</strong><small>Gió '+fmt(v.wind_kmh,1)+' km/h'+airportGust+' · '+(v.weather?esc(v.weather)+' · ':'')+ageText(v.observed_at)+'</small></article>');
   g.forEach(x=>{
     const win=num(x.increment_min),inc=num(x.increment_mm),rate=num(x.rain_intensity_mm_h),acc=num(x.accum_mm);
     let observed="CHƯA CÓ DỮ LIỆU HIỆN TẠI";
@@ -1601,36 +1655,33 @@ function buildQuickWatchEvents(){
     });
   });
 
-  // One forecast frame = one wind/gust pair. Do not interpolate 3-hour
-  // samples into a claim of continuous strong wind, or trust publisher time
-  // when underlying ECMWF / ICON cycles have expired.
-  const marineWatch=globalThis.JoTripWindGuard?.deriveAfternoonWatch(
-    engineDashboard,now,"an_thoi"
-  );
-  if(marineWatch?.status==="VALID"){
-    const clock=iso=>phuQuocClock(iso);
-    const slots=marineWatch.events.map(r=>
-      "Mốc "+clock(r.time)+": gió "+fmt(r.wind_kmh,0)+
-      ", giật dự báo "+fmt(r.gust_kmh,0)+" km/h"
-    );
+  // Universal point forecasts and genuinely short-range convective wind
+  // indicators. The engine makes no 5-minute gust-speed estimate from 3h NWP.
+  const aggregate=globalThis.JoTripGustOutlook?.islandAlerts({
+    critical,nowcast:fullNowcast,dashboard:engineDashboard,
+    groundtruth:currentBundle?.groundtruth||critical?._groundtruth||null,now
+  });
+  for(const alert of (aggregate?.alerts||[])){
+    const short=alert.type==="GUST_0_30",times=(alert.valid_times||[])
+      .filter(t=>t!=="0-30_MIN_CONDITIONAL").map(t=>phuQuocClock(t));
     events.push({
-      key:"an-thoi-forecast-wind:"+phuQuocDateKey(marineWatch.first_risk_time),
-      severity:marineWatch.severity,
-      when:"DỰ BÁO "+marineWatch.events.map(r=>clock(r.time)).join(" · "),
-      title:"Biển An Thới: dự báo gió mạnh tại các mốc chiều nay",
-      detail:slots.join(". ")+". Đây là các mốc dự báo mô hình, KHÔNG phải quan trắc gió giật ngoài biển hoặc khẳng định gió mạnh liên tục. Dữ liệu cập nhật "+
-        phuQuocClock(marineWatch.generated_at)+
-        ". Đối chiếu VISHIPEL và thông báo cảng trước khi hoạt động.",
-      sort:-5
+      key:alert.alert_id,
+      severity:alert.severity,
+      when:short?"GIÓ GIẬT NGẮN HẠN":"DỰ BÁO MỐC "+times.join(" · "),
+      title:alert.point_name+": "+(short?"cần đề phòng gió giật":"dự báo gió mạnh tại những mốc tới"),
+      detail:short?(alert.evidence.join(" · ")+". Đây là tín hiệu rủi ro 0-30 phút, KHÔNG phải số đo giật."):
+        ("Gió giật mô hình cao nhất "+fmt(alert.forecast_gust_kmh,0)+" km/h tại các mốc "+
+          times.join(", ")+". Không suy diễn mạnh liên tục giữa hai mốc."),
+      sort:short?-7:-4
     });
-  }else if(["STALE","MISSING","INVALID"].includes(marineWatch?.status)){
+  }
+  if(aggregate&&!aggregate.model_valid){
     events.push({
-      key:"an-thoi-forecast-unavailable",
-      severity:"watch",
-      when:"DỰ BÁO BIỂN AN THỚI",
-      title:"Chưa đủ dữ liệu mới để đánh giá gió chiều nay",
-      detail:"Một mốc dự báo hoặc chu kỳ mô hình đang thiếu, trễ hay không nhất quán. Không hiểu việc thiếu cảnh báo là điều kiện biển an toàn; kiểm tra nguồn chính thức và thông tin tại cảng.",
-      sort:-4
+      key:"wind-model-unavailable",
+      severity:"watch",when:"CHU KỲ MÔ HÌNH",
+      title:"Chưa có dữ liệu mới đủ tin cậy cho cảnh báo gió theo giờ",
+      detail:"Không coi thiếu cảnh báo là điều kiện biển an toàn. Đối chiếu quan trắc và VISHIPEL.",
+      sort:-3
     });
   }
 
@@ -2877,7 +2928,7 @@ async function boot(){
     if(!fullNowcast)defer(loadNowcast,450);
     defer(loadRegionalForecast,620);
     defer(loadRecentFeedback,850);
-    setInterval(()=>{renderStatus();renderHero();renderTodayDecision()},60000);
+    setInterval(()=>{renderStatus();renderHero();renderTodayDecision();renderQuickAlert()},60000);
     setInterval(refreshLive,LIVE_REFRESH_MS);
     setInterval(()=>{if(mapLayer==="himawari"&&document.visibilityState==="visible")refreshActiveMap()},10*60*1000);
     document.addEventListener("visibilitychange",()=>{

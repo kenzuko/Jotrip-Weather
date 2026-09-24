@@ -1399,7 +1399,7 @@ footer{font-size:9.5px}
 }
 .weather-now-facts{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:8px;
   align-self:stretch;
 }
@@ -1429,6 +1429,38 @@ footer{font-size:9.5px}
   margin-top:4px;
   color:#8a9ba3;
   font-size:8px;
+}
+
+.weather-gust-fact{border-color:rgba(204,143,38,.26)!important;background:#fffdf8!important}
+.weather-gust-fact b{font-variant-numeric:tabular-nums}
+.weather-gust-fact small{color:#9b7637!important;line-height:1.4}
+.gust-short-outlook{
+  grid-column:1/-1;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:7px 15px;
+  margin-top:-8px;
+  padding:11px 14px;
+  border:1px solid #d6e4ea;
+  border-radius:14px;
+  background:#f6fafc;
+}
+.gust-short-outlook b{font-size:13px;color:#23445b}
+.gust-short-outlook span{font-size:11px;color:#5e7685;line-height:1.45}
+.gust-short-outlook.watch{background:#fff9eb;border-color:#f2db9c}
+.gust-short-outlook.watch b{color:#92600c}
+.gust-short-outlook.alert{background:#fff1ed;border-color:#ecada2}
+.gust-short-outlook.alert b{color:#a62d23}
+@media(max-width:640px){
+  .weather-now-facts{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px}
+  .weather-now-facts>div{padding:12px 10px}
+  .weather-now-facts b{font-size:23px}
+  .weather-now-facts small{font-size:10px;line-height:1.35}
+  .gust-short-outlook{margin-top:0;padding:12px}
+  .gust-short-outlook b{font-size:13px}
+  .gust-short-outlook span{font-size:11px}
 }
 
 /* Selection should feel like choosing a place, not operating a dashboard. */

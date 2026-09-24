@@ -128,6 +128,8 @@ try{
       motion:await measureCanvas('#motionCanvas'),
       time:(await page.locator('#timeLabel').innerText()).trim(),
       meta:(await page.locator('#timeMeta').innerText()).trim(),
+      sourceTime:await page.locator('html').getAttribute('data-scene-source-time'),
+      sourceClass:await page.locator('html').getAttribute('data-scene-data-class'),
       selectedFrame:paintSeek?.index??null,
       fieldPaint,
       motionPaint,
@@ -138,7 +140,18 @@ try{
     };
   }
 
-  const cloudPolicyOk=result.scenes.cloud?.disabled===true?cloudStale:!cloudStale;
+  const actualCloudTime=result.scenes.cloud?.sourceTime||null;
+  const observedCloudAgeMin=actualCloudTime?(Date.now()-Date.parse(actualCloudTime))/60000:null;
+  // The live Cloudflare recovery is newer than the static mirror by design.
+  // Validate the source timestamp of the *painted frame*, not the manifest's
+  // older sampled time. A genuinely expired frame must still fail.
+  const cloudPolicyOk=result.scenes.cloud?.disabled===true?cloudStale:
+    result.scenes.cloud?.sourceClass==="OBSERVED_HIMAWARI"&&
+    Number.isFinite(observedCloudAgeMin)&&
+    observedCloudAgeMin>=-2&&observedCloudAgeMin<=35;
+  result.cloudCheck={manifestTime:cloudTime,manifestAgeMin:cloudAgeMin,
+    paintedTime:actualCloudTime,paintedAgeMin:observedCloudAgeMin,
+    disabled:result.scenes.cloud?.disabled===true,policyOk:cloudPolicyOk};
   const scenePaintOk=Object.entries(result.scenes).every(([scene,s])=>{
     if(s.disabled)return scene==='cloud'&&cloudPolicyOk;
     const paint=scene==='wind'?s.motionPaint:s.fieldPaint;
@@ -155,6 +168,11 @@ try{
     result.navigation.west>=102.75-.02 &&
     result.navigation.east<=105.50+.02 &&
     result.navigation.anchorZ>result.navigation.weatherZ;
+  result.checks={renderer:result.runtime.rendererLoaded===true,
+    renderScript:String(result.runtime.renderScript||'').includes('weather-scene-render-v2.js'),
+    navigation:navigationOk,waveAnchors:waveAnchorOk,
+    displayedCloudFreshness:cloudPolicyOk,paint:scenePaintOk,
+    composite:compositeOk,scriptErrors:result.pageErrors.length===0};
   result.ok=
     result.runtime.rendererLoaded===true &&
     String(result.runtime.renderScript||'').includes('weather-scene-render-v2.js') &&

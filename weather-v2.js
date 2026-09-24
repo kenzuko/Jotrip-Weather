@@ -683,7 +683,7 @@ function summary(p){
   const rain=localFresh?num(l.rain_rate_mm_h):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
   const conv=nowFresh?num(effectiveNowcast()?.convective_score??l.convection_score):null;
-  const wind=localFresh?num(l.wind_kmh??m.wind_kmh):num(m.wind_kmh);
+  const wind=localFresh&&l.available?num(l.wind_kmh):null;
   const wave=localFresh?num(l.wave_hs_m??m.wave_hs_m):num(m.wave_hs_m);
   if(rain!==null)bits.push(rain>=3?"Đang có mưa đáng chú ý":rain>.2?"Có mưa nhẹ hoặc rải rác":"Mưa hiện tại ít");
   if(imminence!==null&&imminence>=75)bits.push("mưa cục bộ có thể tăng nhanh trong 0-60 phút");
@@ -797,7 +797,7 @@ function renderHero(){
   const t=localFresh?(num(l.temperature_c)??num(m.temperature_c)):num(m.temperature_c);
   // "Mưa tại điểm" must not show an old model rate as if it were current rain.
   const rain=localFresh&&l.available?num(l.rain_rate_mm_h):null;
-  const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
+  const wind=localFresh&&l.available?num(l.wind_kmh):null;
   const marineTimestamp=engineDashboard?.points?.[current]?.marine_sampled_time||m.marine_sampled_time||null;
   const marineFresh=marineTimestamp&&freshEnough(marineTimestamp,210);
   const wave=marineFresh?(num(m.wave_hs_m)??num(l.wave_hs_m)):null;
@@ -826,7 +826,7 @@ function renderHero(){
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   if($("heroRainMeta"))$("heroRainMeta").textContent=rain===null?"mm/h · chưa đủ số mới":"mm/h · JoTrip ước tính";
-  if($("heroWindMeta"))$("heroWindMeta").textContent=localFresh?"km/h · JoTrip ước tính":"km/h · mô hình gần nhất";
+  if($("heroWindMeta"))$("heroWindMeta").textContent=wind===null?"km/h · chưa có số gió mới":"km/h · JoTrip ước tính";
   if($("heroWaveMeta"))$("heroWaveMeta").textContent=marineTimestamp
     ?("m Hs · sóng nền mô hình lúc "+phuQuocClock(marineTimestamp)+(marineFresh?"":" · đã trễ"))
     :"m Hs · chưa có mốc biển";
@@ -968,6 +968,7 @@ async function loadEngineDashboard(){
     renderTodayDecision();
     renderJoTripForecast();
     renderForecastDayDetail();
+    renderQuickAlert();
     if($("deepWeatherDetails")?.open){renderTechnicalPointForecast();renderTechnicalFreshness()}
   }catch(e){
     console.warn("[Weather V2] JoTrip Engine today",e);
@@ -980,8 +981,8 @@ async function loadEngineDashboard(){
 function renderCurrent(){
   const l=localPoint(),m=modelPoint(),n=effectiveNowcast();
   const localFresh=localDataFresh();
-  setMetric("windNow",localFresh?(l.wind_kmh??m.wind_kmh):m.wind_kmh,1);
-  setBadge("windClass",localFresh?(l.wind_class||"ESTIMATED_NOW"):"MODEL_ONLY",localFresh?null:"MÔ HÌNH");
+  setMetric("windNow",localFresh&&l.available?l.wind_kmh:null,1);
+  setBadge("windClass",localFresh&&l.available?(l.wind_class||"ESTIMATED_NOW"):"UNAVAILABLE",localFresh&&l.available?null:"CHƯA CÓ SỐ MỚI");
   const rainMeta=$("rainMeta"),rainCtx=$("rainActualContext");
   const rainNowValue=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
   setMetric("rainNow",rainNowValue,2);
@@ -1567,24 +1568,36 @@ function buildQuickWatchEvents(){
     });
   });
 
-  // Today's fresh An Thoi forecast, deliberately separate from current measured wind.
-  const todayKey=phuQuocDateKey(new Date(now).toISOString());
-  const atRows=critical?.points?.an_thoi?.today||[];
-  const at13=atRows.find(r=>phuQuocDateKey(r.t)===todayKey&&/T13:00:00/.test(r.t||""));
-  const at16=atRows.find(r=>phuQuocDateKey(r.t)===todayKey&&/T16:00:00/.test(r.t||""));
-  const valid=r=>num(r?.wind)!==null&&num(r?.gust)!==null&&num(r.wind)>=0&&num(r.gust)>=num(r.wind);
-  if(freshEnough(critical?.generated_at,120)&&at13&&at16&&now<Date.parse(at16.t)&&
-     valid(at13)&&valid(at16)&&
-     (Math.max(at13.wind,at16.wind)>=30||Math.max(at13.gust,at16.gust)>=40)){
+  // One forecast frame = one wind/gust pair. Do not interpolate 3-hour
+  // samples into a claim of continuous strong wind, or trust publisher time
+  // when underlying ECMWF / ICON cycles have expired.
+  const marineWatch=globalThis.JoTripWindGuard?.deriveAfternoonWatch(
+    engineDashboard,now,"an_thoi"
+  );
+  if(marineWatch?.status==="VALID"){
+    const clock=iso=>phuQuocClock(iso);
+    const slots=marineWatch.events.map(r=>
+      "Mốc "+clock(r.time)+": gió "+fmt(r.wind_kmh,0)+
+      ", giật dự báo "+fmt(r.gust_kmh,0)+" km/h"
+    );
     events.push({
-      key:"an-thoi-forecast-wind:"+todayKey,
-      severity:Math.max(at13.gust,at16.gust)>=50?"alert":"watch",
-      when:"DỰ BÁO 13H-16H",
-      title:"Biển An Thới: dự báo gió mạnh, cần theo dõi trước khi ra biển",
-      detail:"Mốc 13h: gió "+fmt(at13.wind,0)+", giật "+fmt(at13.gust,0)+
-        " km/h. Mốc 16h: gió "+fmt(at16.wind,0)+", giật "+fmt(at16.gust,0)+
-        " km/h. Đây là dự báo JoTrip, không phải quan trắc thực địa; đối chiếu cảnh báo chính thức và thông báo của cảng.",
+      key:"an-thoi-forecast-wind:"+phuQuocDateKey(marineWatch.first_risk_time),
+      severity:marineWatch.severity,
+      when:"DỰ BÁO "+marineWatch.events.map(r=>clock(r.time)).join(" · "),
+      title:"Biển An Thới: dự báo gió mạnh tại các mốc chiều nay",
+      detail:slots.join(". ")+". Đây là các mốc dự báo mô hình, KHÔNG phải quan trắc gió giật ngoài biển hoặc khẳng định gió mạnh liên tục. Dữ liệu cập nhật "+
+        phuQuocClock(marineWatch.generated_at)+
+        ". Đối chiếu VISHIPEL và thông báo cảng trước khi hoạt động.",
       sort:-5
+    });
+  }else if(["STALE","MISSING","INVALID"].includes(marineWatch?.status)){
+    events.push({
+      key:"an-thoi-forecast-unavailable",
+      severity:"watch",
+      when:"DỰ BÁO BIỂN AN THỚI",
+      title:"Chưa đủ dữ liệu mới để đánh giá gió chiều nay",
+      detail:"Một mốc dự báo hoặc chu kỳ mô hình đang thiếu, trễ hay không nhất quán. Không hiểu việc thiếu cảnh báo là điều kiện biển an toàn; kiểm tra nguồn chính thức và thông tin tại cảng.",
+      sort:-4
     });
   }
 

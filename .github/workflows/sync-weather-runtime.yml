@@ -332,6 +332,14 @@ jobs:
             python -m json.tool "$file" >/dev/null
           done
 
+      - name: Archive automatic island alerts and original forecast snapshots
+        shell: bash
+        run: |
+          node weather-alert-mirror.mjs
+          test -f data/alerts/latest.json
+          test -f data/alerts/states.json
+          test -f data/alerts/history-index.json
+
       - name: Commit mirror only when changed
         shell: bash
         run: |
@@ -344,6 +352,7 @@ jobs:
           for attempt in 1 2 3 4; do
             git fetch origin main
             git reset --mixed origin/main
+            node weather-alert-mirror.mjs --merge-remote
             # Never overwrite a newer published Local Now snapshot.
             if ! python - <<'PY'
           import json,subprocess

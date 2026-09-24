@@ -351,20 +351,39 @@ function pointRisk(p,id=null){
   const nowFresh=freshEnough(n?.sampled_time||fullNowcast?.sampled_time||legacyNow.sampled_time,75);
   const conv=nowFresh?num(n?.convective_score):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
-  const gust=num(m.gust_kmh),rain=num(m.rain_3h_mm),hs=num(m.wave_hs_m);
-  const windProb=Math.max(0,...rows.map(x=>num(x.wind?.prob)).filter(v=>v!==null));
-  const rainProb=Math.max(0,...rows.map(x=>num(x.rain?.prob)).filter(v=>v!==null));
+  const guard=globalThis.JoTripWindGuard;
+  const freshModel=guard?.dashboardUsable(engineDashboard);
+  const now=Date.now();
+  const nearRows=freshModel?(engineDashboard?.points?.[id]?.hours||[])
+    .filter(r=>{
+      const t=Date.parse(r.time_iso||"");
+      return Number.isFinite(t)&&t>=now&&t<=now+3*3600000&&
+        guard.validForecastFrame(r);
+    }):[];
+  const maxOrNull=(values)=>values.length?Math.max(...values):null;
+  const gust=maxOrNull(nearRows.map(r=>num(r.gust)).filter(v=>v!==null));
+  const rain=maxOrNull(nearRows.map(r=>num(r.rain)).filter(v=>v!==null));
+  const hs=maxOrNull(nearRows.map(r=>num(r.wave)).filter(v=>v!==null));
+  const currentWind=localFresh&&l.available?num(l.wind_kmh):null;
+  const aligned=freshModel&&critical?.snapshot_id&&
+    critical.snapshot_id===engineDashboard?.snapshot_id&&
+    freshEnough(critical?.generated_at,150);
+  const nearEns=aligned?rows.filter(r=>num(r.lead_hours)!==null&&r.lead_hours<=6):[];
+  const windProb=Math.max(0,...nearEns.map(x=>num(x.wind?.prob)).filter(v=>v!==null));
+  const rainProb=Math.max(0,...nearEns.map(x=>num(x.rain?.prob)).filter(v=>v!==null));
   let level=0,reasons=[];
+  if(currentWind!==null&&currentWind>=40){level=Math.max(level,3);reasons.push("gió hiện tại mạnh theo ước tính địa phương")}
+  else if(currentWind!==null&&currentWind>=30){level=Math.max(level,2);reasons.push("gió hiện tại cần theo dõi")}
   if(conv!==null&&conv>=75){level=Math.max(level,2);reasons.push("mây phát triển rất cao")}
   else if(conv!==null&&conv>=60){level=Math.max(level,1);reasons.push("mây đang phát triển")}
   if(imminence!==null&&imminence>=75){level=Math.max(level,2);reasons.push("mưa cục bộ có thể tăng nhanh")}
   else if(imminence!==null&&imminence>=55){level=Math.max(level,1);reasons.push("mưa ngắn hạn cần theo dõi")}
-  if(gust!==null&&gust>=39){level=Math.max(level,3);reasons.push("gió giật mạnh")}
-  else if(gust!==null&&gust>=29){level=Math.max(level,2);reasons.push("gió giật cần theo dõi")}
-  if(rain!==null&&rain>=25){level=Math.max(level,3);reasons.push("mưa 3 giờ lớn")}
-  else if(rain!==null&&rain>=10){level=Math.max(level,2);reasons.push("mưa 3 giờ tăng")}
-  if(hs!==null&&hs>=2){level=Math.max(level,3);reasons.push("sóng nền cao")}
-  else if(hs!==null&&hs>=1.5){level=Math.max(level,2);reasons.push("sóng tăng")}
+  if(gust!==null&&gust>=50){level=Math.max(level,3);reasons.push("dự báo gió giật mạnh trong 3 giờ tới")}
+  else if(gust!==null&&gust>=40){level=Math.max(level,2);reasons.push("dự báo gió giật cần theo dõi trong 3 giờ tới")}
+  if(rain!==null&&rain>=25){level=Math.max(level,3);reasons.push("dự báo mưa 3 giờ lớn")}
+  else if(rain!==null&&rain>=10){level=Math.max(level,2);reasons.push("dự báo mưa 3 giờ tăng")}
+  if(hs!==null&&hs>=2){level=Math.max(level,3);reasons.push("sóng nền dự báo cao")}
+  else if(hs!==null&&hs>=1.5){level=Math.max(level,2);reasons.push("sóng nền dự báo tăng")}
   if(windProb>=0.25){level=Math.max(level,2);reasons.push("vẫn còn kịch bản gió mạnh")}
   else if(windProb>=0.10){level=Math.max(level,1)}
   if(rainProb>=0.50){level=Math.max(level,2);reasons.push("nhiều kịch bản cùng nghiêng về mưa")}
@@ -531,15 +550,20 @@ function renderHazardBoard(){
     }
   }
 
-  // Gió & biển hiện tại: số hiện tại, không dùng xác suất.
+  // Current local wind and time-stamped background marine wave are separate
+  // sources. Do not silently substitute stale model wind for live local wind.
   const useLocal=localDataFresh();
-  const windNow=points.map(x=>({name:x.p.name,wind:num(useLocal?(x.p.local?.wind_kmh??x.p.model?.wind_kmh):x.p.model?.wind_kmh)||0}))
-    .sort((a,b)=>b.wind-a.wind)[0];
-  const waveNow=points.map(x=>({name:x.p.name,hs:num(useLocal?(x.p.local?.wave_hs_m??x.p.model?.wave_hs_m):x.p.model?.wave_hs_m)||0}))
+  const windNow=useLocal?points.map(x=>({
+    name:x.p.name,wind:x.p.local?.available?num(x.p.local.wind_kmh):null
+  })).filter(x=>x.wind!==null).sort((a,b)=>b.wind-a.wind)[0]:null;
+  const waveNow=points.map(x=>({
+    name:x.p.name,hs:num(x.p.model?.wave_hs_m),
+    sampled:x.p.model?.marine_sampled_time
+  })).filter(x=>x.hs!==null&&freshEnough(x.sampled,210))
     .sort((a,b)=>b.hs-a.hs)[0];
-  const windLabel=windNow?("Gió mạnh nhất "+windNow.name+" ~"+fmt(windNow.wind,0)+" km/h"):"Chưa đủ số gió";
-  const windMeta=waveNow?("Sóng Hs cao nhất ~"+fmt(waveNow.hs,1)+" m tại "+waveNow.name):"";
-  setHazard("hazardWind",windLabel,windMeta||"Đang tổng hợp điều kiện biển",windNow?.wind>=40||waveNow?.hs>=2?3:windNow?.wind>=30||waveNow?.hs>=1.5?2:0);
+  const windLabel=windNow?("Gió địa phương cao nhất "+windNow.name+" ~"+fmt(windNow.wind,0)+" km/h"):"Chưa có số gió tại điểm đủ mới";
+  const windMeta=waveNow?("Sóng nền MÔ HÌNH ~"+fmt(waveNow.hs,1)+" m tại "+waveNow.name+" · "+phuQuocClock(waveNow.sampled)):"Chưa có số sóng nền mới";
+  setHazard("hazardWind",windLabel,windMeta,windNow?.wind>=40||waveNow?.hs>=2?3:windNow?.wind>=30||waveNow?.hs>=1.5?2:0);
 
   // 12 giờ tới: dùng giá trị JoTrip forecast dễ đọc, không lấy probability làm dòng chính.
   const future=[];
@@ -608,7 +632,7 @@ function renderTechnicalPointForecast(){
     '<td><b>'+esc(localTime(r.time_iso))+'</b></td>'+
     '<td>'+ (num(r.temperature)===null?'-':fmt(r.temperature,1)+'°C') +'</td>'+
     '<td>'+ (num(r.wind)===null?'-':fmt(r.wind,1)+' km/h') +'</td>'+
-    '<td>'+ (num(r.gust)===null?'-':fmt(r.gust,1)+' km/h') +'</td>'+
+    '<td>'+ (safeModelGust(r)===null?'-':fmt(r.gust,1)+' km/h') +'</td>'+
     '<td>'+ (num(r.rain)===null?'-':fmt(r.rain,2)+' mm/mốc') +'</td>'+
     '<td>'+ (num(r.wave)===null?'-':fmt(r.wave,2)+' m') +'</td>'+
   '</tr>').join("");
@@ -683,7 +707,7 @@ function summary(p){
   const rain=localFresh?num(l.rain_rate_mm_h):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
   const conv=nowFresh?num(effectiveNowcast()?.convective_score??l.convection_score):null;
-  const wind=localFresh?num(l.wind_kmh??m.wind_kmh):num(m.wind_kmh);
+  const wind=localFresh&&l.available?num(l.wind_kmh):null;
   const wave=localFresh?num(l.wave_hs_m??m.wave_hs_m):num(m.wave_hs_m);
   if(rain!==null)bits.push(rain>=3?"Đang có mưa đáng chú ý":rain>.2?"Có mưa nhẹ hoặc rải rác":"Mưa hiện tại ít");
   if(imminence!==null&&imminence>=75)bits.push("mưa cục bộ có thể tăng nhanh trong 0-60 phút");
@@ -797,7 +821,7 @@ function renderHero(){
   const t=localFresh?(num(l.temperature_c)??num(m.temperature_c)):num(m.temperature_c);
   // "Mưa tại điểm" must not show an old model rate as if it were current rain.
   const rain=localFresh&&l.available?num(l.rain_rate_mm_h):null;
-  const wind=localFresh?(num(l.wind_kmh)??num(m.wind_kmh)):num(m.wind_kmh);
+  const wind=localFresh&&l.available?num(l.wind_kmh):null;
   const marineTimestamp=engineDashboard?.points?.[current]?.marine_sampled_time||m.marine_sampled_time||null;
   const marineFresh=marineTimestamp&&freshEnough(marineTimestamp,210);
   const wave=marineFresh?(num(m.wave_hs_m)??num(l.wave_hs_m)):null;
@@ -826,7 +850,7 @@ function renderHero(){
   $("heroWind").textContent=wind===null?"--":fmt(wind,0);
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   if($("heroRainMeta"))$("heroRainMeta").textContent=rain===null?"mm/h · chưa đủ số mới":"mm/h · JoTrip ước tính";
-  if($("heroWindMeta"))$("heroWindMeta").textContent=localFresh?"km/h · JoTrip ước tính":"km/h · mô hình gần nhất";
+  if($("heroWindMeta"))$("heroWindMeta").textContent=wind===null?"km/h · chưa có số gió mới":"km/h · JoTrip ước tính";
   if($("heroWaveMeta"))$("heroWaveMeta").textContent=marineTimestamp
     ?("m Hs · sóng nền mô hình lúc "+phuQuocClock(marineTimestamp)+(marineFresh?"":" · đã trễ"))
     :"m Hs · chưa có mốc biển";
@@ -869,19 +893,22 @@ function todayLiveOverride(){
   if(!localFresh&&!nowcastFresh)return {cls:"watch",label:"Cần để ý",reason:"Dữ liệu live đang trễ - kiểm tra bản đồ"};
   return null;
 }
+function safeModelGust(row){
+  return globalThis.JoTripWindGuard?.validForecastFrame(row)?num(row.gust):null;
+}
 function todayUiState(row,index=0){
   if(index===0&&Math.abs(Date.parse(row?.time_iso||"")-Date.now())<=60*60*1000){
     const live=todayLiveOverride();
     if(live)return live;
   }
   // Future slots keep JoTrip Engine land-tour gates; this is not a new forecast model.
-  const rain=num(row?.rain),gust=num(row?.gust);
+  const rain=num(row?.rain),gust=safeModelGust(row);
   if((rain!==null&&rain>=50)||(gust!==null&&gust>=62))return {cls:"avoid",label:"Nên né khung này"};
   if((rain!==null&&rain>=20)||(gust!==null&&gust>=50))return {cls:"watch",label:"Cần để ý"};
   return {cls:"good",label:"Khá thuận lợi"};
 }
 function todayWeatherIcon(row){
-  const rain=num(row?.rain)||0,gust=num(row?.gust)||0;
+  const rain=num(row?.rain)||0,gust=safeModelGust(row)||0;
   const d=new Date(row?.time_iso||"");
   const hour=Number.isFinite(d.getTime())?Number(d.toLocaleString("en-US",{timeZone:"Asia/Ho_Chi_Minh",hour:"numeric",hour12:false})):12;
   if(rain>=20||gust>=50)return "⛈️";
@@ -905,6 +932,11 @@ function renderTodayDecision(){
   if(!engineDashboard){
     root.innerHTML='<span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>';
     summaryEl.textContent="Đang đọc các mốc thời tiết còn lại hôm nay.";
+    return;
+  }
+  if(!globalThis.JoTripWindGuard?.dashboardUsable(engineDashboard)){
+    root.innerHTML='<div class="today-decision-empty"><b>Dự báo theo giờ đang trễ hoặc chu kỳ mô hình đã cũ</b><span>Không dùng số cũ để kết luận biển an toàn. Theo dõi quan trắc và thông báo chính thức.</span></div>';
+    summaryEl.textContent="Chưa có dự báo mới đủ điều kiện công bố các mốc còn lại hôm nay.";
     return;
   }
   const rows=engineTodayRows();
@@ -938,7 +970,7 @@ function renderTodayDecision(){
     const state=todayUiState(r,index),icon=todayWeatherIcon(r);
     if(state.cls==="good")goodCount++;
     if(!worst||rank[state.cls]>rank[worst.state.cls])worst={row:r,state};
-    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),wave=num(r.wave),temp=num(r.temperature);
+    const rain=num(r.rain),wind=num(r.wind),gust=safeModelGust(r),wave=num(r.wave),temp=num(r.temperature);
     return '<article class="today-decision-card '+state.cls+'">'+
       '<time>'+esc(phuQuocClock(r.time_iso))+'</time>'+
       '<div class="today-weather-icon" aria-hidden="true">'+icon+'</div>'+
@@ -965,9 +997,11 @@ async function loadEngineDashboard(){
   try{
     engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
     refreshSnapshotAuthority();
+    renderStatus();
     renderTodayDecision();
     renderJoTripForecast();
     renderForecastDayDetail();
+    renderQuickAlert();
     if($("deepWeatherDetails")?.open){renderTechnicalPointForecast();renderTechnicalFreshness()}
   }catch(e){
     console.warn("[Weather V2] JoTrip Engine today",e);
@@ -980,8 +1014,8 @@ async function loadEngineDashboard(){
 function renderCurrent(){
   const l=localPoint(),m=modelPoint(),n=effectiveNowcast();
   const localFresh=localDataFresh();
-  setMetric("windNow",localFresh?(l.wind_kmh??m.wind_kmh):m.wind_kmh,1);
-  setBadge("windClass",localFresh?(l.wind_class||"ESTIMATED_NOW"):"MODEL_ONLY",localFresh?null:"MÔ HÌNH");
+  setMetric("windNow",localFresh&&l.available?l.wind_kmh:null,1);
+  setBadge("windClass",localFresh&&l.available?(l.wind_class||"ESTIMATED_NOW"):"UNAVAILABLE",localFresh&&l.available?null:"CHƯA CÓ SỐ MỚI");
   const rainMeta=$("rainMeta"),rainCtx=$("rainActualContext");
   const rainNowValue=localFresh&&l.available?num(l.rain_rate_mm_h):(num(m.rain_3h_mm)===null?null:num(m.rain_3h_mm)/3);
   setMetric("rainNow",rainNowValue,2);
@@ -1567,24 +1601,36 @@ function buildQuickWatchEvents(){
     });
   });
 
-  // Today's fresh An Thoi forecast, deliberately separate from current measured wind.
-  const todayKey=phuQuocDateKey(new Date(now).toISOString());
-  const atRows=critical?.points?.an_thoi?.today||[];
-  const at13=atRows.find(r=>phuQuocDateKey(r.t)===todayKey&&/T13:00:00/.test(r.t||""));
-  const at16=atRows.find(r=>phuQuocDateKey(r.t)===todayKey&&/T16:00:00/.test(r.t||""));
-  const valid=r=>num(r?.wind)!==null&&num(r?.gust)!==null&&num(r.wind)>=0&&num(r.gust)>=num(r.wind);
-  if(freshEnough(critical?.generated_at,120)&&at13&&at16&&now<Date.parse(at16.t)&&
-     valid(at13)&&valid(at16)&&
-     (Math.max(at13.wind,at16.wind)>=30||Math.max(at13.gust,at16.gust)>=40)){
+  // One forecast frame = one wind/gust pair. Do not interpolate 3-hour
+  // samples into a claim of continuous strong wind, or trust publisher time
+  // when underlying ECMWF / ICON cycles have expired.
+  const marineWatch=globalThis.JoTripWindGuard?.deriveAfternoonWatch(
+    engineDashboard,now,"an_thoi"
+  );
+  if(marineWatch?.status==="VALID"){
+    const clock=iso=>phuQuocClock(iso);
+    const slots=marineWatch.events.map(r=>
+      "Mốc "+clock(r.time)+": gió "+fmt(r.wind_kmh,0)+
+      ", giật dự báo "+fmt(r.gust_kmh,0)+" km/h"
+    );
     events.push({
-      key:"an-thoi-forecast-wind:"+todayKey,
-      severity:Math.max(at13.gust,at16.gust)>=50?"alert":"watch",
-      when:"DỰ BÁO 13H-16H",
-      title:"Biển An Thới: dự báo gió mạnh, cần theo dõi trước khi ra biển",
-      detail:"Mốc 13h: gió "+fmt(at13.wind,0)+", giật "+fmt(at13.gust,0)+
-        " km/h. Mốc 16h: gió "+fmt(at16.wind,0)+", giật "+fmt(at16.gust,0)+
-        " km/h. Đây là dự báo JoTrip, không phải quan trắc thực địa; đối chiếu cảnh báo chính thức và thông báo của cảng.",
+      key:"an-thoi-forecast-wind:"+phuQuocDateKey(marineWatch.first_risk_time),
+      severity:marineWatch.severity,
+      when:"DỰ BÁO "+marineWatch.events.map(r=>clock(r.time)).join(" · "),
+      title:"Biển An Thới: dự báo gió mạnh tại các mốc chiều nay",
+      detail:slots.join(". ")+". Đây là các mốc dự báo mô hình, KHÔNG phải quan trắc gió giật ngoài biển hoặc khẳng định gió mạnh liên tục. Dữ liệu cập nhật "+
+        phuQuocClock(marineWatch.generated_at)+
+        ". Đối chiếu VISHIPEL và thông báo cảng trước khi hoạt động.",
       sort:-5
+    });
+  }else if(["STALE","MISSING","INVALID"].includes(marineWatch?.status)){
+    events.push({
+      key:"an-thoi-forecast-unavailable",
+      severity:"watch",
+      when:"DỰ BÁO BIỂN AN THỚI",
+      title:"Chưa đủ dữ liệu mới để đánh giá gió chiều nay",
+      detail:"Một mốc dự báo hoặc chu kỳ mô hình đang thiếu, trễ hay không nhất quán. Không hiểu việc thiếu cảnh báo là điều kiện biển an toàn; kiểm tra nguồn chính thức và thông tin tại cảng.",
+      sort:-4
     });
   }
 
@@ -1743,7 +1789,7 @@ function renderForecastDayDetail(){
   const step=engineDayStepHours(dayRows);
   if(note)note.textContent="JoTrip Engine · "+(step?("mốc "+fmt(step,0)+" giờ"):"mốc theo chu kỳ nguồn")+" · chạm ngày khác để đổi.";
   slots.innerHTML=dayRows.map(r=>{
-    const rain=num(r.rain),wind=num(r.wind),gust=num(r.gust),wave=num(r.wave),temp=num(r.temperature);
+    const rain=num(r.rain),wind=num(r.wind),gust=safeModelGust(r),wave=num(r.wave),temp=num(r.temperature);
     return '<article class="forecast-hour-slot">'+
       '<header><time>'+esc(phuQuocClock(r.time_iso))+'</time><span aria-hidden="true">'+todayWeatherIcon(r)+'</span></header>'+
       '<strong>'+(temp===null?'-':fmt(temp,0)+'°')+'</strong>'+
@@ -2393,7 +2439,7 @@ function ensureLeaflet(){
 }
 function pointCoords(id,p){
   const fallback={
-    duong_dong:[10.2172,103.9593],an_thoi:[9.905,104.005],ganh_dau:[10.37077,103.84472],
+    duong_dong:[10.2172,103.9593],an_thoi:[10.0191,104.015],ganh_dau:[10.37077,103.84472],
     rach_gia:[10.00677,105.07845],cua_can:[10.292693,103.914799],bai_thom:[10.411765,104.031055],
     ham_ninh:[10.18062,104.04463],bai_sao:[10.0572576,104.0363948]
   };
@@ -2401,22 +2447,27 @@ function pointCoords(id,p){
   return lat!==null&&lon!==null?[lat,lon]:(fallback[id]||null);
 }
 function pointMapLevel(p){
-  const l=p?.local||{},m=p?.model||{};
-  const rain=num(l.rain_rate_mm_h)||0,wind=num(l.wind_kmh)||0,gust=num(m.gust_kmh)||0;
-  if(rain>=7.5||wind>=40||gust>=50)return 3;
-  if(rain>=2.5||wind>=30||gust>=40)return 2;
-  if(rain>=.5||wind>=22)return 1;
+  const l=p?.local||{};
+  if(!localDataFresh()||!l.available)return -1;
+  const rain=num(l.rain_rate_mm_h),wind=num(l.wind_kmh);
+  if(rain===null&&wind===null)return -1;
+  if((rain!==null&&rain>=7.5)||(wind!==null&&wind>=40))return 3;
+  if((rain!==null&&rain>=2.5)||(wind!==null&&wind>=30))return 2;
+  if((rain!==null&&rain>=.5)||(wind!==null&&wind>=22))return 1;
   return 0;
 }
 function pointMapColor(level){
-  return ["#4c8fae","#d5a62e","#df7e31","#c94e57"][Math.max(0,Math.min(3,level))];
+  return level<0?"#a1adb4":["#4c8fae","#d5a62e","#df7e31","#c94e57"][Math.max(0,Math.min(3,level))];
 }
 function mapPopup(id,p){
   const l=p?.local||{},m=p?.model||{},n=effectiveNowcastFor(id);
   const cloud=cloudStateLabel(n),parts=[];
-  if(num(l.rain_rate_mm_h)!==null)parts.push("Mưa "+fmt(l.rain_rate_mm_h,1)+" mm/h");
-  if(num(l.wind_kmh)!==null)parts.push("Gió "+fmt(l.wind_kmh,0)+" km/h");
-  if(num(l.wave_hs_m??m.wave_hs_m)!==null)parts.push("Sóng Hs "+fmt(l.wave_hs_m??m.wave_hs_m,1)+" m");
+  if(localDataFresh()&&l.available){
+    if(num(l.rain_rate_mm_h)!==null)parts.push("Mưa JoTrip "+fmt(l.rain_rate_mm_h,1)+" mm/h");
+    if(num(l.wind_kmh)!==null)parts.push("Gió JoTrip "+fmt(l.wind_kmh,0)+" km/h");
+  }
+  if(freshEnough(m.marine_sampled_time,210)&&num(m.wave_hs_m)!==null)
+    parts.push("Sóng nền mô hình "+fmt(m.wave_hs_m,1)+" m");
   return '<div class="jotrip-map-popup"><b>'+esc(p?.name||id)+'</b>'+
     '<span>'+esc(parts.join(" · ")||"Đang tổng hợp số liệu")+'</span>'+
     '<small>'+esc(cloud.label)+(cloud.detail?" · "+esc(cloud.detail):"")+'</small></div>';

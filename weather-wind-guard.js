@@ -43,6 +43,9 @@
   function deriveAfternoonWatch(dashboard,now=Date.now(),pointId="an_thoi"){
     const invalid=(status,reason)=>({status,reason,events:[]});
     if(!Number.isFinite(now))return invalid("INVALID","invalid_now");
+    // The afternoon event must disappear after 16:00 even if the model stalled.
+    const hour=localParts(now)?.hour;
+    if(hour>=16)return invalid("EXPIRED","forecast_window_finished");
     if(!dashboard?.points?.[pointId])return invalid("MISSING","point_missing");
     const snapshotAge=ageHours(dashboard.generated_at,now);
     if(snapshotAge<-.17||snapshotAge>2.5)return invalid("STALE","forecast_snapshot_stale");

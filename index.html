@@ -29,7 +29,8 @@
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
   <script defer src="/weather-wind-guard.js?v=20260924-qc1"></script>
-  <script defer src="/weather-v2.js?v=20260924-wind-qc1"></script>
+  <script defer src="/weather-gust-outlook.js?v=20260924-0930"></script>
+  <script defer src="/weather-v2.js?v=20260924-gust-outlook1"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -89,7 +90,12 @@
       <div class="weather-now-facts" aria-label="Thông tin nhanh">
         <div><span>Mưa tại điểm</span><b id="heroRain">--</b><small id="heroRainMeta">mm/h · ước tính tại điểm</small></div>
         <div><span>Gió</span><b id="heroWind">--</b><small id="heroWindMeta">km/h · JoTrip</small></div>
+        <div class="weather-gust-fact"><span>Gió giật tại điểm</span><b id="heroGust">--</b><small id="heroGustMeta">Đang tìm số liệu có nguồn</small></div>
         <div><span>Sóng nền</span><b id="heroWave">--</b><small id="heroWaveMeta">m Hs · mô hình biển</small></div>
+      </div>
+      <div id="gustShortOutlook" class="gust-short-outlook unknown" role="status" aria-live="polite">
+        <b id="gustShortTitle">Gió giật 0-30 phút tới: đang kiểm tra</b>
+        <span id="gustShortDetail">Chỉ công bố số gió giật khi có số đo hoặc mốc mô hình rõ ràng.</span>
       </div>
     </div>
   </section>

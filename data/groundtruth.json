@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-25T20:20:56.513169+00:00",
+  "generated_at": "2026-09-25T20:50:52.632011+00:00",
   "status": "READY",
   "actual_policy": "Only machine-readable numeric observations with timestamps are ACTUAL. Remote sensing and models are separate classes.",
   "atmosphere": {
@@ -14,7 +14,7 @@
       "source": "AVIATION_WEATHER_CENTER_METAR",
       "source_channel": "METAR",
       "data_class": "ACTUAL",
-      "observed_at": "2026-09-25T20:00:00+00:00",
+      "observed_at": "2026-09-25T20:30:00+00:00",
       "age_minutes": 20.9,
       "temperature_c": 26.0,
       "dewpoint_c": 25.0,
@@ -38,17 +38,17 @@
         }
       ],
       "flight_category": "MVFR",
-      "raw_observation": "METAR VVPQ 252000Z VRB02KT 8000 SCT015 SCT040 26/25 Q1013 NOSIG",
+      "raw_observation": "METAR VVPQ 252030Z VRB02KT 8000 SCT015 SCT040 26/25 Q1013 NOSIG",
       "qc": "PASS",
       "provenance_url": "https://aviationweather.gov/api/data/metar?ids=VVPQ&format=json&hours=24",
-      "raw_payload_hash": "c1aba11f77aadacf4290296a803975250dfc602c604db8c6299c5be050d435ba"
+      "raw_payload_hash": "f3efe452a321abd9809af638c11ce0a441b95879d3dc44e637845e6ddd868edb"
     }
   },
   "rainfall": {
     "status": "FRESH",
     "source": "VRAIN_PUBLIC",
     "period_start": "2026-09-25T12:00:00+00:00",
-    "period_end": "2026-09-25T20:20:58+00:00",
+    "period_end": "2026-09-25T20:50:54+00:00",
     "stations": {
       "bai_thom": {
         "station_id": "VRAIN_BAI_THOM",
@@ -59,13 +59,13 @@
         "source": "VRAIN_PUBLIC",
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
-        "observed_at": "2026-09-25T20:20:58+00:00",
+        "observed_at": "2026-09-25T20:50:54+00:00",
         "age_minutes": 0.0,
         "variable": "precipitation",
         "accumulation_mm": 41.6,
         "accumulation_label": "Mưa vừa",
         "period_start": "2026-09-25T12:00:00+00:00",
-        "period_end": "2026-09-25T20:20:58+00:00",
+        "period_end": "2026-09-25T20:50:54+00:00",
         "statistic": "ACCUMULATION",
         "timestamp_semantics": "END_OF_WINDOW",
         "increment_mm": 0.0,
@@ -89,13 +89,13 @@
         "source": "VRAIN_PUBLIC",
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
-        "observed_at": "2026-09-25T20:20:58+00:00",
+        "observed_at": "2026-09-25T20:50:54+00:00",
         "age_minutes": 0.0,
         "variable": "precipitation",
         "accumulation_mm": 39.6,
         "accumulation_label": "Mưa vừa",
         "period_start": "2026-09-25T12:00:00+00:00",
-        "period_end": "2026-09-25T20:20:58+00:00",
+        "period_end": "2026-09-25T20:50:54+00:00",
         "statistic": "ACCUMULATION",
         "timestamp_semantics": "END_OF_WINDOW",
         "increment_mm": 0.0,
@@ -119,13 +119,13 @@
         "source": "VRAIN_PUBLIC",
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
-        "observed_at": "2026-09-25T20:20:58+00:00",
+        "observed_at": "2026-09-25T20:50:54+00:00",
         "age_minutes": 0.0,
         "variable": "precipitation",
         "accumulation_mm": 17.2,
         "accumulation_label": "Mưa vừa",
         "period_start": "2026-09-25T12:00:00+00:00",
-        "period_end": "2026-09-25T20:20:58+00:00",
+        "period_end": "2026-09-25T20:50:54+00:00",
         "statistic": "ACCUMULATION",
         "timestamp_semantics": "END_OF_WINDOW",
         "increment_mm": 0.0,
@@ -155,5 +155,5 @@
     }
   },
   "errors": [],
-  "payload_hash": "5a0d4b9c5eb678e09f8553cd92ddff7116617c74aba4a83bb882469e1d746368"
+  "payload_hash": "e2e82f129e1da3c8c6b5d0bf6ac9f7963b9c7ccb9a6a7f747d3ff8c99e789e1e"
 }

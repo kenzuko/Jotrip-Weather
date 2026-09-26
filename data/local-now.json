@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "engine": "PQ_LOCAL_NOW_V2",
-  "generated_at": "2026-09-26T22:51:28.555781+00:00",
+  "generated_at": "2026-09-26T23:01:40.620026+00:00",
   "data_class": "ESTIMATED_NOW",
   "title": "PQ Local Now",
   "policy": {
@@ -16,7 +16,7 @@
       "lat": 10.2172,
       "lon": 103.9593,
       "reference_type": "production_point",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 24.9,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -24,10 +24,10 @@
         "baseline_model": 24.8,
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
-        "applied_residual_c": 0.14,
-        "confidence": 0.74
+        "applied_residual_c": 0.13,
+        "confidence": 0.71
       },
-      "wind_kmh": 10.5,
+      "wind_kmh": 10.2,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -41,18 +41,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 4.489621,
           "q90_kmh": 11.447576,
           "spread_kmh": 8.029928,
-          "adaptive_gain": 1.202,
-          "kalman_like_gain": 0.849,
+          "adaptive_gain": 1.188,
+          "kalman_like_gain": 0.829,
           "background_sigma_kmh": 6.15,
-          "observation_repr_sigma_kmh": 2.59,
+          "observation_repr_sigma_kmh": 2.8,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.71
+        "confidence": 0.67
       },
       "rain": {
         "rain_rate_mm_h": 0.01,
@@ -135,7 +135,7 @@
         "remote_gauge_uncertainty_share": 0.09,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.5,
           "q90_mm": 3.6,
           "spread_mm": 2.05,
@@ -167,7 +167,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -175,7 +175,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -183,7 +183,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -193,7 +193,7 @@
       "lat": 10.0191,
       "lon": 104.015,
       "reference_type": "production_point",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 27.6,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -201,10 +201,10 @@
         "baseline_model": 27.5,
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
-        "applied_residual_c": 0.11,
-        "confidence": 0.66
+        "applied_residual_c": 0.1,
+        "confidence": 0.63
       },
-      "wind_kmh": 18.9,
+      "wind_kmh": 18.7,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -218,18 +218,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 15.66444,
           "q90_kmh": 22.622395,
           "spread_kmh": 8.029928,
-          "adaptive_gain": 1.124,
-          "kalman_like_gain": 0.734,
+          "adaptive_gain": 1.109,
+          "kalman_like_gain": 0.711,
           "background_sigma_kmh": 5.99,
-          "observation_repr_sigma_kmh": 3.61,
+          "observation_repr_sigma_kmh": 3.82,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.57
+        "confidence": 0.54
       },
       "rain": {
         "rain_rate_mm_h": 0.0,
@@ -313,7 +313,7 @@
         "colocated_actual_rate_mm_h": 0.0,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.31394,
           "q90_mm": 2.260368,
           "spread_mm": 1.287154,
@@ -345,7 +345,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -353,7 +353,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -361,7 +361,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -371,7 +371,7 @@
       "lat": 10.3759,
       "lon": 103.9,
       "reference_type": "production_point",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 27.8,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -380,9 +380,9 @@
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
         "applied_residual_c": 0.09,
-        "confidence": 0.61
+        "confidence": 0.59
       },
-      "wind_kmh": 6.6,
+      "wind_kmh": 6.5,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -396,18 +396,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 9.677289,
           "q90_kmh": 15.777428,
           "spread_kmh": 6.166647,
-          "adaptive_gain": 1.013,
-          "kalman_like_gain": 0.57,
-          "background_sigma_kmh": 5.13,
-          "observation_repr_sigma_kmh": 4.45,
+          "adaptive_gain": 0.998,
+          "kalman_like_gain": 0.547,
+          "background_sigma_kmh": 5.12,
+          "observation_repr_sigma_kmh": 4.66,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.48
+        "confidence": 0.46
       },
       "rain": {
         "rain_rate_mm_h": 0.01,
@@ -490,7 +490,7 @@
         "remote_gauge_uncertainty_share": 0.086,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.3,
           "q90_mm": 4.0,
           "spread_mm": 1.5,
@@ -522,7 +522,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -530,7 +530,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -538,7 +538,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -548,7 +548,7 @@
       "lat": 10.292693,
       "lon": 103.914799,
       "reference_type": "island_watch_groundtruth_anchor",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 24.9,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -556,10 +556,10 @@
         "baseline_model": 24.8,
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
-        "applied_residual_c": 0.11,
-        "confidence": 0.66
+        "applied_residual_c": 0.1,
+        "confidence": 0.64
       },
-      "wind_kmh": 9.5,
+      "wind_kmh": 9.3,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -573,18 +573,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 9.677289,
           "q90_kmh": 15.777428,
           "spread_kmh": 6.166647,
-          "adaptive_gain": 1.059,
-          "kalman_like_gain": 0.637,
-          "background_sigma_kmh": 4.72,
-          "observation_repr_sigma_kmh": 3.56,
+          "adaptive_gain": 1.041,
+          "kalman_like_gain": 0.61,
+          "background_sigma_kmh": 4.71,
+          "observation_repr_sigma_kmh": 3.77,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.56
+        "confidence": 0.53
       },
       "rain": {
         "rain_rate_mm_h": 0.0,
@@ -668,7 +668,7 @@
         "colocated_actual_rate_mm_h": 0.0,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.377588,
           "q90_mm": 5.034504,
           "spread_mm": 1.887939,
@@ -700,7 +700,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -708,7 +708,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -716,7 +716,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -726,7 +726,7 @@
       "lat": 10.411765,
       "lon": 104.031055,
       "reference_type": "island_watch_groundtruth_anchor",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 27.8,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -734,10 +734,10 @@
         "baseline_model": 27.7,
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
-        "applied_residual_c": 0.09,
-        "confidence": 0.59
+        "applied_residual_c": 0.08,
+        "confidence": 0.58
       },
-      "wind_kmh": 6.5,
+      "wind_kmh": 6.4,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -751,18 +751,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 9.677289,
           "q90_kmh": 15.777428,
           "spread_kmh": 6.166647,
-          "adaptive_gain": 0.999,
-          "kalman_like_gain": 0.548,
-          "background_sigma_kmh": 5.13,
-          "observation_repr_sigma_kmh": 4.66,
+          "adaptive_gain": 0.984,
+          "kalman_like_gain": 0.526,
+          "background_sigma_kmh": 5.12,
+          "observation_repr_sigma_kmh": 4.86,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.46
+        "confidence": 0.44
       },
       "rain": {
         "rain_rate_mm_h": 0.0,
@@ -846,7 +846,7 @@
         "colocated_actual_rate_mm_h": 0.0,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.303606,
           "q90_mm": 4.04808,
           "spread_mm": 1.51803,
@@ -878,7 +878,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -886,7 +886,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -894,7 +894,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -904,7 +904,7 @@
       "lat": 10.18062,
       "lon": 104.04463,
       "reference_type": "island_watch_locality",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 24.9,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -912,10 +912,10 @@
         "baseline_model": 24.8,
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
-        "applied_residual_c": 0.14,
-        "confidence": 0.75
+        "applied_residual_c": 0.13,
+        "confidence": 0.72
       },
-      "wind_kmh": 10.6,
+      "wind_kmh": 10.4,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -929,18 +929,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 15.66444,
           "q90_kmh": 22.622395,
           "spread_kmh": 8.029928,
-          "adaptive_gain": 1.233,
-          "kalman_like_gain": 0.894,
+          "adaptive_gain": 1.222,
+          "kalman_like_gain": 0.878,
           "background_sigma_kmh": 7.23,
-          "observation_repr_sigma_kmh": 2.49,
+          "observation_repr_sigma_kmh": 2.69,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.73
+        "confidence": 0.69
       },
       "rain": {
         "rain_rate_mm_h": 0.03,
@@ -1023,7 +1023,7 @@
         "remote_gauge_uncertainty_share": 0.175,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.5,
           "q90_mm": 3.6,
           "spread_mm": 2.05,
@@ -1055,7 +1055,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -1063,7 +1063,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -1071,7 +1071,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -1081,7 +1081,7 @@
       "lat": 10.0572576,
       "lon": 104.0363948,
       "reference_type": "island_watch_beach",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 27.6,
       "temperature": {
         "data_class": "ESTIMATED_NOW",
@@ -1089,10 +1089,10 @@
         "baseline_model": 27.5,
         "anchor_observed": 25.0,
         "anchor_model_proxy": 24.8,
-        "applied_residual_c": 0.12,
-        "confidence": 0.68
+        "applied_residual_c": 0.11,
+        "confidence": 0.66
       },
-      "wind_kmh": 19.0,
+      "wind_kmh": 18.8,
       "wind_direction_deg": null,
       "wind": {
         "data_class": "ESTIMATED_NOW",
@@ -1106,18 +1106,18 @@
         "ensemble_context": {
           "available": true,
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_kmh": 12.779392,
           "q90_kmh": 17.504728,
           "spread_kmh": 5.560697,
-          "adaptive_gain": 1.079,
-          "kalman_like_gain": 0.667,
+          "adaptive_gain": 1.06,
+          "kalman_like_gain": 0.639,
           "background_sigma_kmh": 4.6,
-          "observation_repr_sigma_kmh": 3.25,
+          "observation_repr_sigma_kmh": 3.46,
           "source_skill_multiplier": 0.966,
           "source_skill_status": "PROVISIONAL"
         },
-        "confidence": 0.59
+        "confidence": 0.56
       },
       "rain": {
         "rain_rate_mm_h": 0.01,
@@ -1200,7 +1200,7 @@
         "remote_gauge_uncertainty_share": 0.034,
         "ensemble_context": {
           "valid_time": "2026-09-27T00:00:00+00:00",
-          "gap_hours": 1.14,
+          "gap_hours": 0.97,
           "q50_mm": 0.5,
           "q90_mm": 3.6,
           "spread_mm": 2.05,
@@ -1232,7 +1232,7 @@
             "lon": 103.914799,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "Bãi Thơm",
@@ -1240,7 +1240,7 @@
             "lon": 104.031055,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           },
           {
             "station": "An Thới",
@@ -1248,7 +1248,7 @@
             "lon": 104.0149,
             "accumulation_mm": 0.0,
             "increment_mm": 0.0,
-            "increment_window_minutes": 10.1
+            "increment_window_minutes": 10.2
           }
         ]
       }
@@ -1258,7 +1258,7 @@
       "lat": 10.00677,
       "lon": 105.07845,
       "reference_type": "coastal_operations_reference",
-      "analysis_time": "2026-09-26T22:51:28.555781+00:00",
+      "analysis_time": "2026-09-26T23:01:40.620026+00:00",
       "temperature_c": 26.4,
       "temperature": {
         "data_class": "MODEL_ONLY",

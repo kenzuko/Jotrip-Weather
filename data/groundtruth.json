@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-26T08:30:52.760219+00:00",
+  "generated_at": "2026-09-26T09:10:53.758111+00:00",
   "status": "READY",
   "actual_policy": "Only machine-readable numeric observations with timestamps are ACTUAL. Remote sensing and models are separate classes.",
   "atmosphere": {
@@ -14,14 +14,14 @@
       "source": "AVIATION_WEATHER_CENTER_METAR",
       "source_channel": "METAR",
       "data_class": "ACTUAL",
-      "observed_at": "2026-09-26T08:00:00+00:00",
-      "age_minutes": 30.9,
+      "observed_at": "2026-09-26T09:00:00+00:00",
+      "age_minutes": 10.9,
       "temperature_c": 28.0,
-      "dewpoint_c": 25.0,
-      "wind_direction_deg": 230.0,
-      "wind_speed_kt": 6.0,
-      "wind_speed_ms": 3.087,
-      "wind_speed_kmh": 11.11,
+      "dewpoint_c": 26.0,
+      "wind_direction_deg": 220.0,
+      "wind_speed_kt": 10.0,
+      "wind_speed_ms": 5.144,
+      "wind_speed_kmh": 18.52,
       "pressure_hpa": 1009.0,
       "visibility_sm": null,
       "visibility_m": null,
@@ -29,7 +29,7 @@
       "convective_cloud": false,
       "clouds": [
         {
-          "cover": "SCT",
+          "cover": "FEW",
           "base": 1500
         },
         {
@@ -38,17 +38,17 @@
         }
       ],
       "flight_category": "VFR",
-      "raw_observation": "METAR VVPQ 260800Z 23006KT 9999 SCT015 BKN040 28/25 Q1009 NOSIG",
+      "raw_observation": "METAR VVPQ 260900Z 22010KT 9999 FEW015 BKN040 28/26 Q1009 NOSIG",
       "qc": "PASS",
       "provenance_url": "https://aviationweather.gov/api/data/metar?ids=VVPQ&format=json&hours=24",
-      "raw_payload_hash": "520e3ae954310efcf8885f7cf2f1507a21bd38805af50e1b25bf2ba35749e998"
+      "raw_payload_hash": "63ed624087b7f4a1c41d3814dd1002031497043d0ddd5d24b391d2b24ae69bb3"
     }
   },
   "rainfall": {
     "status": "FRESH",
     "source": "VRAIN_PUBLIC",
     "period_start": "2026-09-25T12:00:00+00:00",
-    "period_end": "2026-09-26T08:30:53+00:00",
+    "period_end": "2026-09-26T09:10:58+00:00",
     "stations": {
       "cua_can": {
         "station_id": "VRAIN_CUA_CAN",
@@ -59,13 +59,13 @@
         "source": "VRAIN_PUBLIC",
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
-        "observed_at": "2026-09-26T08:30:53+00:00",
+        "observed_at": "2026-09-26T09:10:58+00:00",
         "age_minutes": 0.0,
         "variable": "precipitation",
         "accumulation_mm": 60.2,
         "accumulation_label": "Mưa to",
         "period_start": "2026-09-25T12:00:00+00:00",
-        "period_end": "2026-09-26T08:30:53+00:00",
+        "period_end": "2026-09-26T09:10:58+00:00",
         "statistic": "ACCUMULATION",
         "timestamp_semantics": "END_OF_WINDOW",
         "increment_mm": 0.0,
@@ -89,13 +89,13 @@
         "source": "VRAIN_PUBLIC",
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
-        "observed_at": "2026-09-26T08:30:53+00:00",
+        "observed_at": "2026-09-26T09:10:58+00:00",
         "age_minutes": 0.0,
         "variable": "precipitation",
         "accumulation_mm": 50.0,
         "accumulation_label": "Mưa vừa",
         "period_start": "2026-09-25T12:00:00+00:00",
-        "period_end": "2026-09-26T08:30:53+00:00",
+        "period_end": "2026-09-26T09:10:58+00:00",
         "statistic": "ACCUMULATION",
         "timestamp_semantics": "END_OF_WINDOW",
         "increment_mm": 0.0,
@@ -119,13 +119,13 @@
         "source": "VRAIN_PUBLIC",
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
-        "observed_at": "2026-09-26T08:30:53+00:00",
+        "observed_at": "2026-09-26T09:10:58+00:00",
         "age_minutes": 0.0,
         "variable": "precipitation",
         "accumulation_mm": 35.8,
         "accumulation_label": "Mưa vừa",
         "period_start": "2026-09-25T12:00:00+00:00",
-        "period_end": "2026-09-26T08:30:53+00:00",
+        "period_end": "2026-09-26T09:10:58+00:00",
         "statistic": "ACCUMULATION",
         "timestamp_semantics": "END_OF_WINDOW",
         "increment_mm": 0.0,
@@ -155,5 +155,5 @@
     }
   },
   "errors": [],
-  "payload_hash": "914beb11761ebd0b693753012d3846716fef1759627b4394e1512419eb2de40a"
+  "payload_hash": "7c82901864fe9fa628e47265eb22e91e779b9659199a78db5369cd2c722569da"
 }

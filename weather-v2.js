@@ -11,9 +11,10 @@ const NOWCAST=["https://jotrip-weather-fresh.kenzuko.workers.dev/nowcast-compact
 const FRESH_BUNDLE="https://jotrip-weather-fresh.kenzuko.workers.dev/current-bundle.json";
 const JOTRIP_FORECAST="/data/jotrip-forecast.json";
 const ENGINE_DASHBOARD="/data/dashboard-data.json";
+const ENGINE_DASHBOARD_CANONICAL="https://raw.githubusercontent.com/kenzuko/Jotrip-Lab/feat/weather-lab-data-engine-v1/weather/dashboard-data.json";
 const RUNTIME_AUTHORITY="/data/runtime-authority.json";
 const LIVE_REFRESH_MS=2*60*1000;
-const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,JOTRIP_FORECAST,ENGINE_DASHBOARD,RUNTIME_AUTHORITY,FRESH_BUNDLE,...NOWCAST];
+const LIVE_NO_STORE_URLS=[CRITICAL,LOCAL_NOW,GROUND_TRUTH,CURRENT_BUNDLE,JOTRIP_FORECAST,ENGINE_DASHBOARD,ENGINE_DASHBOARD_CANONICAL,RUNTIME_AUTHORITY,FRESH_BUNDLE,...NOWCAST];
 const WEATHER_LIVE_API="https://jotrip-weather-live.kenzuko.workers.dev";
 const FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback";
 const RECENT_FEEDBACK_ENDPOINT=WEATHER_LIVE_API+"/feedback/recent?minutes=90&limit=30";
@@ -1062,9 +1063,46 @@ function renderTodayDecision(){
     summaryEl.textContent=liveLead+"Dự báo tại điểm chưa vượt ngưỡng theo dõi thời tiết trên đất liền. Biển cần đánh giá riêng theo tuyến và thông báo chính thức.";
   }
 }
+// The GitHub Pages mirror can trail the independently running engine.
+function completeDashboardCandidate(value,now=Date.now()){
+  const issued=Date.parse(value?.generated_at||"");
+  if(value?.report_status!=="LIVE"||!Number.isFinite(issued)||issued>now+10*60000)return false;
+  const points=Object.values(value?.points||{});
+  return points.length>=8&&points.every(p=>(p.hours||[]).some(r=>{
+    const t=Date.parse(r.time_iso||"");
+    return Number.isFinite(t)&&t>=now-10*60000&&t<=now+24*3600000&&
+      typeof r.wind==="number"&&typeof r.gust==="number"&&
+      r.wind>=0&&r.gust>=r.wind&&typeof r.rain==="number";
+  }));
+}
+function selectNewerDashboard(mirror,canonical,now=Date.now()){
+  const primary=completeDashboardCandidate(mirror,now)?mirror:null;
+  const latest=completeDashboardCandidate(canonical,now)?canonical:null;
+  if(!primary)return latest;
+  if(!latest)return primary;
+  const p=Date.parse(primary.source_cycles?.ECMWF||"")||0;
+  const l=Date.parse(latest.source_cycles?.ECMWF||"")||0;
+  return l>p+60000||(l>=p&&Date.parse(latest.generated_at)>Date.parse(primary.generated_at)+60000)
+    ?latest:primary;
+}
+async function freshestEngineDashboard(){
+  let mirror=null,mirrorError=null;
+  try{mirror=await getJSON(ENGINE_DASHBOARD,5*60*1000)}
+  catch(error){mirrorError=error}
+  const aligned=!critical?.snapshot_id||mirror?.snapshot_id===critical.snapshot_id;
+  if(completeDashboardCandidate(mirror)&&aligned&&
+     globalThis.JoTripWindGuard?.dashboardUsable(mirror))return mirror;
+  try{
+    const canonical=await getJSON(ENGINE_DASHBOARD_CANONICAL,2*60*1000);
+    const best=selectNewerDashboard(mirror,canonical);
+    if(best)return best;
+  }catch(error){console.warn("[Weather V2] direct engine dashboard unavailable",error)}
+  if(completeDashboardCandidate(mirror))return mirror; // Still subject to the unchanged publication safety gate.
+  throw mirrorError||new Error("Neither dashboard has a valid forecast contract");
+}
 async function loadEngineDashboard(){
   try{
-    engineDashboard=await getJSON(ENGINE_DASHBOARD,5*60*1000);
+    engineDashboard=await freshestEngineDashboard();
     refreshSnapshotAuthority();
     renderStatus();
     renderHero();

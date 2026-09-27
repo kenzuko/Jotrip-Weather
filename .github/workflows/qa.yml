@@ -3,6 +3,8 @@ name: Weather Lab QA
 on:
   push:
     branches: [main, "fix/weather-*", "feat/weather-*"]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 */6 * * *'

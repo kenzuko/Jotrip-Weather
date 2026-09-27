@@ -76,6 +76,7 @@ jobs:
           node --check weather-model-coverage.mjs
           node weather-model-coverage.mjs --test
           node weather-today-decision.test.mjs weather-v2.js
+          node weather-dashboard-fetch.test.mjs weather-v2.js
           node --check weather-wind-guard.js
           node weather-wind-guard.test.mjs weather-wind-guard.js
           node --check weather-gust-outlook.js

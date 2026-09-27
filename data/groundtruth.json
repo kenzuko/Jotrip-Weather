@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-27T17:40:18.038427+00:00",
+  "generated_at": "2026-09-27T18:00:22.725528+00:00",
   "status": "READY",
   "actual_policy": "Only machine-readable numeric observations with timestamps are ACTUAL. Remote sensing and models are separate classes.",
   "atmosphere": {
@@ -15,7 +15,7 @@
       "source_channel": "METAR",
       "data_class": "ACTUAL",
       "observed_at": "2026-09-27T17:30:00+00:00",
-      "age_minutes": 10.3,
+      "age_minutes": 30.4,
       "temperature_c": 26.0,
       "dewpoint_c": 26.0,
       "wind_direction_deg": 80.0,
@@ -45,103 +45,9 @@
     }
   },
   "rainfall": {
-    "status": "FRESH",
-    "source": "VRAIN_PUBLIC",
-    "period_start": "2026-09-27T12:00:00+00:00",
-    "period_end": "2026-09-27T17:40:20+00:00",
-    "stations": {
-      "cua_can": {
-        "station_id": "VRAIN_CUA_CAN",
-        "station_name": "Cửa Cạn",
-        "location_id": "rain_cua_can",
-        "lat": 10.292693,
-        "lon": 103.914799,
-        "source": "VRAIN_PUBLIC",
-        "source_channel": "current/all.json",
-        "data_class": "ACTUAL",
-        "observed_at": "2026-09-27T17:40:20+00:00",
-        "age_minutes": 0.0,
-        "variable": "precipitation",
-        "accumulation_mm": 10.0,
-        "accumulation_label": "Mưa nhỏ",
-        "period_start": "2026-09-27T12:00:00+00:00",
-        "period_end": "2026-09-27T17:40:20+00:00",
-        "statistic": "ACCUMULATION",
-        "timestamp_semantics": "END_OF_WINDOW",
-        "increment_mm": 0.0,
-        "increment_window_minutes": 10.0,
-        "rain_observed": false,
-        "rain_intensity_mm_h": 0.0,
-        "recent_change_mm": 0.0,
-        "recent_change_window_minutes": 10.0,
-        "rain_recently_observed": false,
-        "increment_qc": "PASS",
-        "qc": "PASS",
-        "provenance_url": "https://data.vrain.vn/public/current/all.json",
-        "raw_payload_hash": "4f090c43795aff12b5efac9289393930f88efb1c88a52550253e97ab311d86f1"
-      },
-      "bai_thom": {
-        "station_id": "VRAIN_BAI_THOM",
-        "station_name": "Bãi Thơm",
-        "location_id": "rain_bai_thom",
-        "lat": 10.411765,
-        "lon": 104.031055,
-        "source": "VRAIN_PUBLIC",
-        "source_channel": "current/all.json",
-        "data_class": "ACTUAL",
-        "observed_at": "2026-09-27T17:40:20+00:00",
-        "age_minutes": 0.0,
-        "variable": "precipitation",
-        "accumulation_mm": 1.8,
-        "accumulation_label": "Mưa nhỏ",
-        "period_start": "2026-09-27T12:00:00+00:00",
-        "period_end": "2026-09-27T17:40:20+00:00",
-        "statistic": "ACCUMULATION",
-        "timestamp_semantics": "END_OF_WINDOW",
-        "increment_mm": 0.0,
-        "increment_window_minutes": 10.0,
-        "rain_observed": false,
-        "rain_intensity_mm_h": 0.0,
-        "recent_change_mm": 0.0,
-        "recent_change_window_minutes": 10.0,
-        "rain_recently_observed": false,
-        "increment_qc": "PASS",
-        "qc": "PASS",
-        "provenance_url": "https://data.vrain.vn/public/current/all.json",
-        "raw_payload_hash": "8a1a1f58fb23fca3fc7cc61881464d6643d72c93ffc907f36bd1cecb0dcb9721"
-      },
-      "an_thoi": {
-        "station_id": "VRAIN_AN_THOI",
-        "station_name": "An Thới",
-        "location_id": "rain_an_thoi",
-        "lat": 10.018482,
-        "lon": 104.0149,
-        "source": "VRAIN_PUBLIC",
-        "source_channel": "current/all.json",
-        "data_class": "ACTUAL",
-        "observed_at": "2026-09-27T17:40:20+00:00",
-        "age_minutes": 0.0,
-        "variable": "precipitation",
-        "accumulation_mm": 0.0,
-        "accumulation_label": "Không mưa",
-        "period_start": "2026-09-27T12:00:00+00:00",
-        "period_end": "2026-09-27T17:40:20+00:00",
-        "statistic": "ACCUMULATION",
-        "timestamp_semantics": "END_OF_WINDOW",
-        "increment_mm": 0.0,
-        "increment_window_minutes": 10.0,
-        "rain_observed": false,
-        "rain_intensity_mm_h": 0.0,
-        "recent_change_mm": 0.0,
-        "recent_change_window_minutes": 10.0,
-        "rain_recently_observed": false,
-        "increment_qc": "PASS",
-        "qc": "PASS",
-        "provenance_url": "https://data.vrain.vn/public/current/all.json",
-        "raw_payload_hash": "2260cc9e242cad0aacc580157c62abd03c428f446369ade7198a9546865f9cbd"
-      }
-    },
-    "provenance_url": "https://data.vrain.vn/public/current/all.json"
+    "status": "UNAVAILABLE",
+    "stations": {},
+    "detail": "<HTTPError 502: 'Bad Gateway'>"
   },
   "station_status": {
     "VVPQ": {
@@ -154,6 +60,11 @@
       "readiness": "PRODUCTION_ACTUAL"
     }
   },
-  "errors": [],
-  "payload_hash": "347cf2128d31e2936344476729346e01fb1726313f65987ee8a88f4396389ed2"
+  "errors": [
+    {
+      "source": "VRAIN",
+      "error": "<HTTPError 502: 'Bad Gateway'>"
+    }
+  ],
+  "payload_hash": "e8ba79a6a4c503abac1b57aeb9a71a1478f447b200a5651b93449339ec6d9adb"
 }

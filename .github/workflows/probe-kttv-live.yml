@@ -1,0 +1,160 @@
+name: Probe KTTV live transport
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-kttv-live.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install websocket client
+        run: |
+          mkdir -p /tmp/kttv-probe && cd /tmp/kttv-probe
+          npm init -y >/dev/null 2>&1
+          npm install ws@8 --silent
+      - name: Probe report, export and websocket
+        working-directory: /tmp/kttv-probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cat > probe.mjs <<'JS'
+          import fs from 'node:fs/promises';
+          import crypto from 'node:crypto';
+          import WebSocket from 'ws';
+
+          const ORIGIN='https://kttvtudong.net';
+          const pageUrl=ORIGIN+'/kttv/detail/view?sid=33';
+          const ua='Mozilla/5.0 (compatible; JoTrip-KTTV-public-source-probe/1.1)';
+          const baseHeaders={
+            'user-agent':ua,
+            'accept-language':'vi-VN,vi;q=0.9,en;q=0.5',
+            'referer':pageUrl
+          };
+          const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+          const safeHeaders=h=>Object.fromEntries(
+            ['content-type','content-disposition','content-length','server','date','cache-control','location']
+              .map(k=>[k,h.get(k)]).filter(([,v])=>v!==null)
+          );
+
+          const page=await fetch(pageUrl,{headers:{...baseHeaders,accept:'text/html,*/*'}});
+          const html=await page.text();
+          const localtime=Number((html.match(/var\s+localtime\s*=\s*(\d+)/)||[])[1]||0);
+          const realtime=Number((html.match(/var\s+realtime\s*=\s*(\d+)/)||[])[1]||0);
+          const setCookies=typeof page.headers.getSetCookie==='function'?page.headers.getSetCookie():[];
+          const cookie=setCookies.map(x=>x.split(';')[0]).join('; ');
+          const fields=[...html.matchAll(/<td\s+title="([^"]*)"\s+class="(\d+)">([^<]+)<\/td>/g)]
+            .map(m=>({se:Number(m[2]),name:m[3].trim(),title:m[1]}));
+          const result={
+            generated_at:new Date().toISOString(),
+            page:{status:page.status,localtime,realtime,cookie_names:setCookies.map(x=>x.split('=')[0]),fields},
+            reports:[],
+            exports:[],
+            websocket:{frames:[]}
+          };
+
+          async function postForm(path,obj,label){
+            const body=new URLSearchParams(obj);
+            const r=await fetch(ORIGIN+path,{
+              method:'POST',
+              redirect:'manual',
+              headers:{
+                ...baseHeaders,
+                accept:'application/json,text/plain,*/*',
+                'content-type':'application/x-www-form-urlencoded; charset=UTF-8',
+                'x-requested-with':'XMLHttpRequest',
+                ...(cookie?{cookie}:{})
+              },
+              body
+            });
+            const buf=Buffer.from(await r.arrayBuffer());
+            const text=buf.toString('utf8');
+            const rec={label,path,form:obj,status:r.status,headers:safeHeaders(r.headers),bytes:buf.length,sha256:sha(buf),preview:text.slice(0,1200)};
+            result.reports.push(rec);
+            await fs.writeFile('out/'+label+'.bin',buf);
+            return rec;
+          }
+
+          for(const sdid of ['2457','57']){
+            for(const hour of ['','6','24']){
+              await postForm('/kttv/report/huonggio?hour='+hour,{sdid},'huonggio-'+sdid+'-'+(hour||'blank'));
+              await postForm('/kttv/report/tocdogio?hour='+hour,{sdid},'tocdogio-'+sdid+'-'+(hour||'blank'));
+            }
+          }
+          for(const sdid of ['2458','58']){
+            for(const hour of ['','24','240']){
+              await postForm('/kttv/report/mucnuochaivan?hour='+hour,{sdid},'mucnuoc-'+sdid+'-'+(hour||'blank'));
+            }
+          }
+
+          async function exportExcel(fd,td,label){
+            const body=new URLSearchParams({fd,td});
+            const r=await fetch(ORIGIN+'/kttv/export/excelexport?sid=33',{
+              method:'POST',redirect:'manual',
+              headers:{...baseHeaders,accept:'*/*','content-type':'application/x-www-form-urlencoded',...(cookie?{cookie}:{})},
+              body
+            });
+            const buf=Buffer.from(await r.arrayBuffer());
+            const rec={label,fd,td,status:r.status,headers:safeHeaders(r.headers),bytes:buf.length,sha256:sha(buf),magic:buf.subarray(0,32).toString('hex')};
+            result.exports.push(rec);
+            await fs.writeFile('out/'+label+'.bin',buf);
+          }
+          await exportExcel('28/09/2026','28/09/2026','export-one-day');
+          await exportExcel('27/09/2026','28/09/2026','export-two-days');
+
+          await new Promise(resolve=>{
+            const ws=new WebSocket('wss://kttvtudong.net/kttvtudong.ashx?view=detail',{
+              origin:ORIGIN,
+              headers:{'User-Agent':ua,...(cookie?{Cookie:cookie}:{})},
+              handshakeTimeout:10000
+            });
+            let sent=false,done=false;
+            const finish=()=>{if(done)return;done=true;try{ws.close()}catch{};resolve();};
+            const timer=setTimeout(finish,18000);
+            ws.on('open',()=>{result.websocket.open=true;});
+            ws.on('upgrade',res=>{result.websocket.upgrade_status=res.statusCode; result.websocket.upgrade_headers={
+              server:res.headers.server||null,
+              'set-cookie':Array.isArray(res.headers['set-cookie'])?res.headers['set-cookie'].map(x=>x.split(';')[0].split('=')[0]):[]
+            };});
+            ws.on('message',data=>{
+              const text=data.toString();
+              let parsed=null; try{parsed=JSON.parse(text)}catch{}
+              result.websocket.frames.push(parsed??text.slice(0,5000));
+              if(parsed?.msg==='connected'&&!sent){
+                sent=true;
+                const req={Ctr:'LogDetail',Message:33,Times:localtime};
+                result.websocket.sent=req;
+                ws.send(JSON.stringify(req));
+              }
+              if(parsed?.msg==='logdetail'){
+                result.websocket.got_logdetail=true;
+                clearTimeout(timer);
+                setTimeout(finish,500);
+              }
+            });
+            ws.on('error',e=>{result.websocket.error=String(e); clearTimeout(timer); finish();});
+            ws.on('close',(code,reason)=>{result.websocket.close={code,reason:reason.toString()}; clearTimeout(timer); finish();});
+          });
+
+          await fs.writeFile('out/result.json',JSON.stringify(result,null,2));
+          console.log(JSON.stringify(result,null,2));
+          JS
+          node probe.mjs | tee out/run.log
+      - name: Upload live probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: kttv-phuquoc-live-probe
+          path: /tmp/kttv-probe/out/
+          retention-days: 7
+          if-no-files-found: error

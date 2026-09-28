@@ -1,0 +1,137 @@
+name: Probe KTTVDong Phu Quoc source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-kttv-source.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe public Phu Quoc hydromet pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p probe/raw probe/scripts
+          cat > /tmp/probe.mjs <<'JS'
+          import fs from 'node:fs/promises';
+          import crypto from 'node:crypto';
+
+          const targets = {
+            realtime: 'https://kttvtudong.net/kttv/detail/view?sid=33',
+            bhv1: 'https://kttvtudong.net/kttv/book/view?sid=60',
+            shv1: 'https://kttvtudong.net/kttv/book/viewday?sid=82'
+          };
+          const keywords = /60018|48917|DG60018|DS60018|export|excel|xlsx|xls|csv|txt|ajax|api|fetch\s*\(|XMLHttpRequest|\.post\s*\(|\.get\s*\(|download|report|detail\/|book\//ig;
+          const ua = 'Mozilla/5.0 (compatible; JoTrip-KTTV-public-source-probe/1.0)';
+
+          function attrs(tag) {
+            const out = {};
+            for (const m of tag.matchAll(/([:\w-]+)\s*=\s*(["'])(.*?)\2/gs)) out[m[1].toLowerCase()] = m[3];
+            for (const m of tag.matchAll(/\s([:\w-]+)(?=\s|>|\/)/g)) if (!(m[1].toLowerCase() in out)) out[m[1].toLowerCase()] = true;
+            return out;
+          }
+          function clips(text, re, radius=180, max=80) {
+            const found=[]; re.lastIndex=0; let m;
+            while ((m=re.exec(text)) && found.length<max) {
+              const a=Math.max(0,m.index-radius), b=Math.min(text.length,m.index+m[0].length+radius);
+              found.push(text.slice(a,b).replace(/\s+/g,' ').trim());
+              if (m.index===re.lastIndex) re.lastIndex++;
+            }
+            return [...new Set(found)];
+          }
+          async function get(url) {
+            return fetch(url, {
+              redirect:'follow',
+              headers:{
+                'user-agent':ua,
+                'accept':'text/html,application/xhtml+xml,application/javascript,text/javascript,*/*;q=0.8',
+                'accept-language':'vi-VN,vi;q=0.9,en;q=0.5',
+                'cache-control':'no-cache',
+                'pragma':'no-cache'
+              }
+            });
+          }
+
+          const summary = { generated_at:new Date().toISOString(), targets:{} };
+
+          for (const [name,url] of Object.entries(targets)) {
+            const started=Date.now();
+            try {
+              const res=await get(url);
+              const body=await res.text();
+              await fs.writeFile(`probe/raw/${name}.html`,body);
+              const forms=[];
+              for (const fm of body.matchAll(/<form\b[^>]*>[\s\S]*?<\/form>/gi)) {
+                const open=(fm[0].match(/^<form\b[^>]*>/i)||[''])[0];
+                const fa=attrs(open);
+                const inputs=[...fm[0].matchAll(/<input\b[^>]*>/gi)].map(x=>attrs(x[0]));
+                const buttons=[...fm[0].matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/gi)].map(x=>({
+                  ...attrs((x[0].match(/^<button\b[^>]*>/i)||[''])[0]),
+                  text:x[0].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,200)
+                }));
+                forms.push({attrs:fa,inputs,buttons});
+              }
+              const scripts=[...body.matchAll(/<script\b[^>]*>/gi)]
+                .map(x=>attrs(x[0]).src).filter(Boolean)
+                .map(src=>new URL(src,res.url).href);
+              const links=[...body.matchAll(/<a\b[^>]*>/gi)]
+                .map(x=>attrs(x[0]).href).filter(Boolean)
+                .map(href=>{try{return new URL(href,res.url).href}catch{return href}})
+                .filter(h=>/export|excel|xls|csv|txt|download|report|api|ajax|detail|book/i.test(h));
+              const page = {
+                requested_url:url,
+                final_url:res.url,
+                status:res.status,
+                ok:res.ok,
+                elapsed_ms:Date.now()-started,
+                content_type:res.headers.get('content-type'),
+                server:res.headers.get('server'),
+                content_length:body.length,
+                sha256:crypto.createHash('sha256').update(body).digest('hex'),
+                forms,
+                scripts:[...new Set(scripts)],
+                interesting_links:[...new Set(links)],
+                keyword_context:clips(body,keywords)
+              };
+              summary.targets[name]=page;
+
+              for (let i=0;i<page.scripts.length;i++) {
+                const su=page.scripts[i];
+                try {
+                  const sr=await get(su);
+                  const js=await sr.text();
+                  const safe=`${name}-${i}-${new URL(su).pathname.split('/').pop()||'script'}.txt`.replace(/[^\w.-]+/g,'_');
+                  await fs.writeFile(`probe/scripts/${safe}`,js);
+                  page[`script_${i}`] = {
+                    url:su,status:sr.status,content_type:sr.headers.get('content-type'),
+                    length:js.length,sha256:crypto.createHash('sha256').update(js).digest('hex'),
+                    keyword_context:clips(js,keywords,220,120)
+                  };
+                } catch (e) {
+                  page[`script_${i}`]={url:su,error:String(e)};
+                }
+              }
+            } catch (e) {
+              summary.targets[name]={requested_url:url,error:String(e),elapsed_ms:Date.now()-started};
+            }
+          }
+          await fs.writeFile('probe/summary.json',JSON.stringify(summary,null,2));
+          console.log(JSON.stringify(summary,null,2));
+          JS
+          node /tmp/probe.mjs | tee probe/run.log
+
+      - name: Upload raw probe evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kttv-phuquoc-source-probe
+          path: probe/
+          if-no-files-found: error
+          retention-days: 7

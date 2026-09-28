@@ -1,0 +1,65 @@
+name: Probe KTTV Phu Quoc book data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-kttv-book-data.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read public BHV1 and SHV1 data endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cat > /tmp/books.mjs <<'JS'
+          import fs from 'node:fs/promises';
+          const origin='https://kttvtudong.net';
+          const headers={
+            'user-agent':'Mozilla/5.0 (compatible; JoTrip-KTTV-public-book-probe/1.0)',
+            'referer':origin+'/kttv/book',
+            'content-type':'application/x-www-form-urlencoded; charset=UTF-8',
+            'x-requested-with':'XMLHttpRequest',
+            'accept':'application/json,text/plain,*/*'
+          };
+          async function post(path,obj){
+            const r=await fetch(origin+path,{method:'POST',headers,body:new URLSearchParams(obj)});
+            const text=await r.text();
+            let json=null; try{json=JSON.parse(text)}catch{}
+            const data=Array.isArray(json?.data)?json.data:[];
+            return {
+              path,request:obj,status:r.status,bytes:text.length,
+              err:json?.err,msg:json?.msg,current:json?.current,
+              count:data.length,
+              sample:data.slice(0,20),
+              raw_preview:json?undefined:text.slice(0,1000)
+            };
+          }
+          const out={generated_at:new Date().toISOString(),bhv1:[],shv1:[]};
+          for(const [year,month] of [[2026,9],[2026,8],[2026,7],[2026,1],[2025,9],[2025,1],[2024,9],[2024,1]]){
+            const rec=await post('/kttv/book/get',{year:String(year),month:String(month),sid:'60'});
+            out.bhv1.push(rec); console.log('BHV1',JSON.stringify(rec));
+            await new Promise(r=>setTimeout(r,500));
+          }
+          for(const [year,month,day] of [[2026,9,28],[2026,9,15],[2026,8,15],[2026,1,15],[2025,9,15],[2025,1,15],[2024,9,15],[2024,1,15]]){
+            const rec=await post('/kttv/book/gethour',{year:String(year),month:String(month),day:String(day),sid:'82'});
+            out.shv1.push(rec); console.log('SHV1',JSON.stringify(rec));
+            await new Promise(r=>setTimeout(r,500));
+          }
+          await fs.writeFile('out/book-data.json',JSON.stringify(out,null,2));
+          JS
+          node /tmp/books.mjs | tee out/run.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kttv-phuquoc-book-data
+          path: out/
+          retention-days: 7
+          if-no-files-found: error

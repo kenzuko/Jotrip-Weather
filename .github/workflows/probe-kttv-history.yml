@@ -1,0 +1,87 @@
+name: Probe KTTV 60018 history
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-kttv-history.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Install parser
+        run: python -m pip install --quiet openpyxl
+      - name: Sample public 60018 Excel history
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cat > /tmp/history.py <<'PY'
+          import io, json, time, hashlib, urllib.parse, urllib.request
+          from datetime import datetime
+          from openpyxl import load_workbook
+
+          url='https://kttvtudong.net/kttv/export/excelexport?sid=33'
+          dates=[
+            '28/09/2026','15/09/2026','01/09/2026','15/08/2026',
+            '01/07/2026','01/04/2026','15/01/2026','15/10/2025',
+            '15/06/2025','15/01/2025','15/09/2024','15/01/2024'
+          ]
+          results=[]
+          for d in dates:
+              data=urllib.parse.urlencode({'fd':d,'td':d}).encode()
+              req=urllib.request.Request(url,data=data,method='POST',headers={
+                  'User-Agent':'Mozilla/5.0 (compatible; JoTrip-KTTV-public-history-probe/1.0)',
+                  'Referer':'https://kttvtudong.net/kttv/detail/view?sid=33',
+                  'Content-Type':'application/x-www-form-urlencoded',
+                  'Accept':'*/*'
+              })
+              rec={'date':d}
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as r:
+                      blob=r.read()
+                      rec.update(status=r.status,bytes=len(blob),disposition=r.headers.get('Content-Disposition'),
+                                 sha256=hashlib.sha256(blob).hexdigest())
+                  wb=load_workbook(io.BytesIO(blob),read_only=True,data_only=True)
+                  ws=wb[wb.sheetnames[0]]
+                  headers=[]
+                  for row in ws.iter_rows(min_row=1,max_row=min(2,ws.max_row),values_only=True):
+                      headers.append(list(row))
+                  observations=0
+                  rows_with_values=0
+                  first_value_row=None
+                  last_value_row=None
+                  for ridx,row in enumerate(ws.iter_rows(min_row=3,values_only=True),start=3):
+                      vals=list(row)[1:]
+                      n=sum(v is not None and str(v).strip()!='' for v in vals)
+                      observations+=n
+                      if n:
+                          rows_with_values+=1
+                          compact=[row[0]]+vals
+                          if first_value_row is None:first_value_row=[str(x) if isinstance(x,datetime) else x for x in compact]
+                          last_value_row=[str(x) if isinstance(x,datetime) else x for x in compact]
+                  rec.update(rows=ws.max_row,cols=ws.max_column,observations=observations,
+                             rows_with_values=rows_with_values,first_value_row=first_value_row,last_value_row=last_value_row,
+                             headers=headers)
+                  open('out/'+d.replace('/','-')+'.xlsx','wb').write(blob)
+              except Exception as e:
+                  rec['error']=repr(e)
+              results.append(rec)
+              print(json.dumps(rec,ensure_ascii=False))
+              time.sleep(0.8)
+          with open('out/history-summary.json','w',encoding='utf-8') as f:
+              json.dump({'generated_at':datetime.utcnow().isoformat()+'Z','results':results},f,ensure_ascii=False,indent=2,default=str)
+          PY
+          python /tmp/history.py | tee out/run.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kttv-60018-history-probe
+          path: out/
+          retention-days: 7
+          if-no-files-found: error

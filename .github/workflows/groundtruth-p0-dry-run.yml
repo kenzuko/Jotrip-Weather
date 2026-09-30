@@ -1,4 +1,5 @@
-name: Groundtruth P0 dry run\n# trigger: final-parser-provenance-pass
+name: Groundtruth P0 dry run
+# trigger: actual-ogimet-header-pass
 
 on:
   push:

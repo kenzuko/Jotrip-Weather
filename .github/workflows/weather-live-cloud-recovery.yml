@@ -8,6 +8,7 @@ on:
       - "cloudflare/weather-fresh-worker.js"
       - "weather-scene-v3.js"
       - "weather-live-cloud-recovery.test.mjs"
+      - "weather-observation-cron.test.mjs"
       - "weather-source-lock.mjs"
       - ".github/workflows/weather-live-cloud-recovery.yml"
   pull_request:
@@ -15,6 +16,7 @@ on:
       - "cloudflare/weather-fresh-worker.js"
       - "weather-scene-v3.js"
       - "weather-live-cloud-recovery.test.mjs"
+      - "weather-observation-cron.test.mjs"
       - ".github/workflows/weather-live-cloud-recovery.yml"
   workflow_dispatch:
 
@@ -36,4 +38,6 @@ jobs:
           node --check weather-scene-v3.js
           node --check weather-live-cloud-recovery.test.mjs
           node weather-live-cloud-recovery.test.mjs
+          node --check weather-observation-cron.test.mjs
+          node weather-observation-cron.test.mjs
           node weather-source-lock.mjs

@@ -2,11 +2,13 @@ const assert=require("node:assert/strict");
 const h=require("../weather-human-contract.js");
 
 const critical={human_weather:{
-  island:{observation_status:"ACTUAL",data_class:"ACTUAL",spatial_scope:"ISLAND_ACTUAL_ANCHOR",
-    observed_at:"2026-09-30T03:00:00Z",temperature_c:31,
-    derived:{comfort_label:"Nóng và rất oi",comfort_reason:"Độ ẩm cao làm cơ thể cảm thấy nóng hơn nhiệt độ đo được.",
-      feels_like_c:40.6,data_class:"DERIVED"}},
-  points:{an_thoi:{rain:{actual:{observation_status:"ACTUAL",rain_observed:true,rate_mm_h:1.8,
+  island:{observation_status:"ACTUAL",spatial_scope:"ISLAND_ACTUAL_ANCHOR",
+    observed_at:"2026-09-30T03:00:00Z",
+    actual:{temperature_c:31,dewpoint_c:27,wind_kmh:4,data_class:"ACTUAL"},
+    derived:{humidity_percent:79.3,comfort_label:"Nóng và rất oi",comfort_reason:"Độ ẩm cao làm cơ thể cảm thấy nóng hơn nhiệt độ đo được.",
+      feels_like_c:40.6,data_class:"DERIVED_FROM_ACTUAL"}},
+  points:{an_thoi:{rain:{actual:{observation_status:"ACTUAL",rain_observed:true,
+      derived:{rate_mm_h:1.8,intensity_label:"mưa rào nhẹ",data_class:"DERIVED_FROM_ACTUAL"},
       observed_at:"2026-09-30T02:50:00Z"}},
     interpretation:{headline:"An Thới đang có mưa rào nhẹ.",
       detail:"Dự kiến mưa sẽ giảm trong khoảng 30-45 phút.",evidence_class:"ACTUAL",
@@ -27,7 +29,7 @@ const critical={human_weather:{
 {
   const stale=structuredClone(critical);
   stale.human_weather.island.observation_status="LAST_OBSERVED";
-  stale.human_weather.island.data_class="ACTUAL_STALE";
+  stale.human_weather.island.actual.data_class="ACTUAL_STALE";
   assert.equal(h.comfort(stale),null);
 }
 {

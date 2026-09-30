@@ -111,9 +111,10 @@ export default {
       console.error("Weather cron: dispatch token missing");
       return;
     }
-    const dispatch=async (file,workflow,thresholdMinutes)=>{
+    const nowcastProbe=origin("nowcast-compact.json").then(r=>r.json());
+    const dispatch=async (file,workflow,thresholdMinutes,payloadPromise)=>{
       try {
-        const payload=await (await origin(file)).json();
+        const payload=payloadPromise?await payloadPromise:await (await origin(file)).json();
         const generated=stamp(payload.generated_at);
         const ageMinutes=generated?(Date.now()-generated)/60000:Infinity;
         if(ageMinutes<thresholdMinutes){
@@ -192,14 +193,71 @@ export default {
         console.log("Weather static mirror dispatched",Math.round((sourceAt-mirrorAt)/60000)+"m behind");
       }catch(error){console.error("Weather mirror cron failed",String(error));}
     };
+    // Cloudflare must trigger observation-only publication by *its own*
+    // sample lag, not by local-now freshness or the full forecast mirror.
+    // GitHub's cron remains a fallback: its scheduling can be delayed.
+    const refreshObservationOverlay=async()=>{
+      try {
+        const upstream=await nowcastProbe;
+        const generated=stamp(upstream.generated_at),sampled=stamp(upstream.sampled_time);
+        const now=Date.now();
+        if(!sampled||!generated||sampled>now+5*60_000||
+           generated>now+5*60_000||now-generated>40*60_000||
+           now-sampled>60*60_000){
+          console.warn("Himawari overlay: latest candidate is too old or invalid");
+          return;
+        }
+        const res=await fetch(
+          "https://raw.githubusercontent.com/kenzuko/Jotrip-Weather/main/data/weather-runtime/manifest.json?t="+now,
+          {headers:{accept:"application/json"},cf:{cacheTtl:0,cacheEverything:false}}
+        );
+        if(!res.ok)throw Error("observation manifest HTTP "+res.status);
+        const manifest=await res.json();
+        // Require the canonical same-origin authority before dispatching.
+        if(manifest.status!=="READY"||
+           manifest.policy?.frontend_source!=="SAME_ORIGIN_CANONICAL_ONLY"||
+           manifest.files?.cloud!=="/data/weather-runtime/cloud.json")
+          throw Error("observation manifest authority mismatch");
+        const mirrored=stamp(manifest.source_times?.cloud_sampled_time);
+        if(!mirrored)throw Error("published observation timestamp unavailable");
+        if(sampled<=mirrored){
+          console.log("Himawari overlay current",upstream.sampled_time);
+          return;
+        }
+        const root="https://api.github.com/repos/kenzuko/Jotrip-Weather/actions/workflows/weather-observation-overlay.yml";
+        const headers={
+          authorization:"Bearer "+env.GITHUB_WEATHER_DISPATCH_TOKEN,
+          accept:"application/vnd.github+json",
+          "x-github-api-version":"2022-11-28",
+          "user-agent":"jotrip-weather-fresh-cron"
+        };
+        const runsRes=await fetch(root+"/runs?per_page=8",{headers});
+        if(!runsRes.ok)throw Error("observation workflow status HTTP "+runsRes.status);
+        const runs=await runsRes.json();
+        if((runs.workflow_runs||[]).some(run=>run.status!=="completed")){
+          console.log("Himawari overlay writer already active");
+          return;
+        }
+        const pushed=await fetch(root+"/dispatches",{
+          method:"POST",headers,body:JSON.stringify({ref:"main"})
+        });
+        if(pushed.status===403||pushed.status===404){
+          console.error("OBSERVATION_DISPATCH_SCOPE_REQUIRED: Jotrip-Weather Actions write permission");
+          return;
+        }
+        if(pushed.status!==204)throw Error("observation dispatch HTTP "+pushed.status);
+        console.log("Himawari observation-only overlay dispatched",
+          upstream.sampled_time,Math.round((sampled-mirrored)/60000)+"m ahead");
+      }catch(error){
+        console.error("Weather independent observation dispatch failed",String(error));
+      }
+    };
     await Promise.all([
       dispatch("local-now.json","weather-live-groundtruth-schedule.yml",8),
-      // Run near every Cloudflare tick (~10m) rather than every 30m.
-      // NOAA/JMA ingestion is commonly ~20m behind the wall clock; using
-      // pipeline generated_at+19m here made the UI's 35m observation
-      // freshness limit expire between otherwise successful runs.
-      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",6),
-      refreshStaticMirror()
+      // This source collector is independent of site publication.
+      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",6,nowcastProbe),
+      refreshStaticMirror(),
+      refreshObservationOverlay()
     ]);
   }
 };

@@ -1,0 +1,93 @@
+name: Groundtruth probe now
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/groundtruth-probe-now.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Probe public groundtruth endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/groundtruth-probe
+          cat > /tmp/probe.mjs <<'JS'
+          import fs from 'node:fs/promises';
+          import crypto from 'node:crypto';
+
+          const ua='Mozilla/5.0 (compatible; JoTrip-groundtruth-probe/1.0)';
+          const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+          const out={generated_at:new Date().toISOString(),kttv:{},ogimet:{},meteomanz:{}};
+
+          async function fetchRec(label,url,opts={}){
+            const started=Date.now();
+            try{
+              const r=await fetch(url,{redirect:'follow',...opts,headers:{'user-agent':ua,'accept-language':'vi-VN,vi;q=0.9,en;q=0.5',...(opts.headers||{})}});
+              const buf=Buffer.from(await r.arrayBuffer());
+              const text=buf.toString('utf8');
+              return {label,url,status:r.status,ok:r.ok,final_url:r.url,elapsed_ms:Date.now()-started,
+                content_type:r.headers.get('content-type'),content_disposition:r.headers.get('content-disposition'),
+                bytes:buf.length,sha256:sha(buf),preview:text.slice(0,6000)};
+            }catch(e){return {label,url,error:String(e),elapsed_ms:Date.now()-started}}
+          }
+
+          async function postForm(label,path,obj){
+            const url='https://kttvtudong.net'+path;
+            return fetchRec(label,url,{method:'POST',headers:{
+              accept:'application/json,text/plain,*/*',
+              referer:'https://kttvtudong.net/kttv/book',
+              'content-type':'application/x-www-form-urlencoded; charset=UTF-8',
+              'x-requested-with':'XMLHttpRequest'
+            },body:new URLSearchParams(obj)});
+          }
+
+          out.kttv.bhv1_2026_09=await postForm('bhv1_2026_09','/kttv/book/get',{year:'2026',month:'9',sid:'60'});
+          out.kttv.shv1_2026_09_28=await postForm('shv1_2026_09_28','/kttv/book/gethour',{year:'2026',month:'9',day:'28',sid:'82'});
+          out.kttv.shv1_2026_04_15=await postForm('shv1_2026_04_15','/kttv/book/gethour',{year:'2026',month:'4',day:'15',sid:'82'});
+          out.kttv.export_2026_09_28=await postForm('export_2026_09_28','/kttv/export/excelexport?sid=33',{fd:'28/09/2026',td:'28/09/2026'});
+          out.kttv.realtime=await fetchRec('realtime','https://kttvtudong.net/kttv/detail/view?sid=33',{headers:{accept:'text/html,*/*'}});
+
+          const og='https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202604010000&end=202604302359';
+          out.ogimet.apr2026=await fetchRec('ogimet_apr2026',og,{headers:{accept:'text/plain,text/csv,*/*',referer:'https://www.ogimet.com/'}});
+          if(out.ogimet.apr2026.preview){
+            const p=out.ogimet.apr2026.preview;
+            out.ogimet.apr2026.section222_hits=(p.match(/\b222\/{0,2}\b/g)||[]).length;
+            out.ogimet.apr2026.wmo48917_hits=(p.match(/\b48917\b/g)||[]).length;
+          }
+
+          const mm='https://www.meteomanz.com/sy3?l=1&cou=6020&ind=48917&d1=01&m1=04&y1=2026&d2=30&m2=04&y2=2026';
+          out.meteomanz.apr2026=await fetchRec('meteomanz_apr2026',mm,{headers:{accept:'text/html,*/*'}});
+
+          await fs.writeFile('data/groundtruth-probe/latest.json',JSON.stringify(out,null,2));
+          console.log(JSON.stringify({
+            generated_at:out.generated_at,
+            bhv1:{status:out.kttv.bhv1_2026_09.status,bytes:out.kttv.bhv1_2026_09.bytes,preview:out.kttv.bhv1_2026_09.preview?.slice(0,500)},
+            shv1:{status:out.kttv.shv1_2026_09_28.status,bytes:out.kttv.shv1_2026_09_28.bytes,preview:out.kttv.shv1_2026_09_28.preview?.slice(0,500)},
+            excel:{status:out.kttv.export_2026_09_28.status,bytes:out.kttv.export_2026_09_28.bytes,type:out.kttv.export_2026_09_28.content_type,disposition:out.kttv.export_2026_09_28.content_disposition},
+            ogimet:{status:out.ogimet.apr2026.status,bytes:out.ogimet.apr2026.bytes,hits222:out.ogimet.apr2026.section222_hits}
+          },null,2));
+          JS
+          node /tmp/probe.mjs
+      - name: Commit probe result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "jotrip-weather-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/groundtruth-probe/latest.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "data: capture groundtruth probe result [skip ci]"
+          git push

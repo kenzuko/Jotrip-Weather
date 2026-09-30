@@ -165,6 +165,7 @@ def parse_workbook(
     ws, layout = pick_sheet(wb)
 
     observations = []
+    rows_by_local_date: dict[str, int] = {}
     rows_with_time = 0
     rows_with_values = 0
     missing_time_rows = 0
@@ -184,6 +185,8 @@ def parse_workbook(
             continue
         rows_with_time += 1
         rows_with_values += 1
+        local_date = source_time[:10]
+        rows_by_local_date[local_date] = rows_by_local_date.get(local_date, 0) + 1
         first_time = first_time or source_time
         last_time = source_time
         for field, raw_value in present:
@@ -231,6 +234,7 @@ def parse_workbook(
         "rows_with_time": rows_with_time,
         "rows_with_values": rows_with_values,
         "rows_missing_time": missing_time_rows,
+        "rows_by_local_date": dict(sorted(rows_by_local_date.items())),
         "first_time": first_time,
         "last_time": last_time,
         "observations": count,

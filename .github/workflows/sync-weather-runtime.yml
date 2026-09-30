@@ -420,7 +420,7 @@ jobs:
               if remote_manifest.get('observation_overlay'):
                   manifest['observation_overlay']=remote_manifest['observation_overlay']
               manifest['generated_at']=datetime.now(timezone.utc).isoformat()
-              manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,separators=(',',':'))+'\\n')
+              manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,separators=(',',':'))+'\n')
               print('Preserved newer verified remote Himawari sample',live['sampled_time'])
           PY
             git add data weather-live-config.js

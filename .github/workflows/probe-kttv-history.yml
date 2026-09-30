@@ -85,3 +85,5 @@ jobs:
           path: out/
           retention-days: 7
           if-no-files-found: error
+
+# manual rerun marker 2026-09-30 groundtruth raw test

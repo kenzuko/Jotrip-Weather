@@ -10,7 +10,7 @@
 
   function comfort(critical){
     const island=critical?.human_weather?.island;
-    if(!island||island.observation_status!=="ACTUAL"||island.data_class!=="ACTUAL")return null;
+    if(!island||island.observation_status!=="ACTUAL")return null;
     const actual=island.actual||{},t=num(actual.temperature_c),d=island.derived||{},feels=num(d.feels_like_c);
     if(actual.data_class!=="ACTUAL"||t===null||!d.comfort_label)return null;
     const note=[t.toFixed(1)+"°C đo thực tế"];
@@ -23,7 +23,7 @@
       actualTemperatureC:t,
       feelsLikeC:feels,
       actualLabel:"ACTUAL",
-      derivedLabel:"DERIVED",
+      derivedLabel:"DERIVED_FROM_ACTUAL",
       spatialScope:island.spatial_scope||"ISLAND_ACTUAL_ANCHOR"
     };
   }

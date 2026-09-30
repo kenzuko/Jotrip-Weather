@@ -45,4 +45,29 @@ const critical={human_weather:{
   assert.equal(r.rainObserved,null);
 }
 assert.equal(JSON.stringify(h.pointView(critical,"an_thoi")).includes("source"),false);
+
+// Missing airport observations and derived values are not numeric zero.
+for(const missing of [null,undefined,"","   ",false]){
+  const bad=structuredClone(critical);
+  bad.human_weather.reference.actual.temperature_c=missing;
+  assert.equal(h.comfort(bad),null,"missing actual temperature must hide comfort");
+}
+{
+  const bad=structuredClone(critical);
+  bad.human_weather.reference.derived.feels_like_c=null;
+  bad.human_weather.reference.derived.humidity_pct=null;
+  const v=h.comfort(bad);
+  assert.equal(v.feelsLikeC,null);
+  assert.equal(v.humidityPct,null);
+  assert.equal(v.heatIndexText,null);
+  assert.equal(v.heatIndexMethod,null);
+}
+{
+  const noRate=structuredClone(critical);
+  noRate.human_weather.rain.an_thoi.derived_rate_mm_h=null;
+  assert.equal(h.pointRain(noRate,"an_thoi").rateMmH,null);
+  noRate.human_weather.rain.an_thoi.observed=false;
+  assert.equal(h.pointRain(noRate,"an_thoi"),null,
+    "an event without confirmed observed rain must not render as an ACTUAL event");
+}
 console.log("weather human contract tests passed");

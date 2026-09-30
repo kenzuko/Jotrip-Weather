@@ -48,6 +48,7 @@ class SynopDecodeTests(unittest.TestCase):
             rows = [json.loads(x) for x in dst.read_text(encoding="utf-8").splitlines()]
             self.assertTrue(rows)
             self.assertTrue(all(r["stream"]["key"] == "WMO_INDEX:48917:CURRENT_VVPQ_METADATA" for r in rows))
+            self.assertTrue(all(r["station_time_key"] == "WMO_INDEX:48917:CURRENT_VVPQ_METADATA:2026-04-15T06:00:00Z" for r in rows))
 
 
 if __name__ == "__main__":

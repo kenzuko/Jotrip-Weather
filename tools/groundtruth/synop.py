@@ -276,8 +276,11 @@ def normalize_csv(
         fetched_at = fetched_at or manifest.get("fetched_at")
         raw_sha256 = raw_sha256 or manifest.get("sha256")
         raw_path = raw_path or manifest.get("raw_path")
+    actual_sha256 = sha256_file(src)
+    if raw_sha256 is not None and raw_sha256 != actual_sha256:
+        raise RuntimeError(f"Raw SYNOP checksum mismatch: manifest={raw_sha256} actual={actual_sha256}")
     if raw_sha256 is None:
-        raw_sha256 = sha256_file(src)
+        raw_sha256 = actual_sha256
     if raw_path is None:
         raw_path = str(src)
     observations: list[dict[str, Any]] = []

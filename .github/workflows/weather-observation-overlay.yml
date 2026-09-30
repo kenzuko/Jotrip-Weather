@@ -21,11 +21,6 @@ on:
 permissions:
   contents: write
 
-# Do not cancel an in-flight full mirror: observations are independently validated.
-concurrency:
-  group: weather-runtime-mirror
-  cancel-in-progress: false
-
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -39,12 +34,24 @@ jobs:
         run: |
           node --check scripts/weather-observation-overlay.mjs
           node tests/weather-observation-overlay.test.mjs
+      - name: Checkout canonical read-only observation fixtures
+        uses: actions/checkout@v4
+        with:
+          repository: kenzuko/Jotrip-Lab
+          ref: data-weather
+          path: lab-data
+          fetch-depth: 1
+      - name: Dry-run new observations against actual upstream
+        run: node scripts/weather-observation-overlay.mjs --dry-run --source lab-data/data
 
   update:
     needs: verify
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    concurrency:
+      group: weather-runtime-mirror
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:

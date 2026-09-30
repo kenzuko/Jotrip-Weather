@@ -249,7 +249,7 @@ jobs:
           now=datetime.now(timezone.utc)
           lo=now-timedelta(hours=4)
           hi=now+timedelta(hours=72)
-          keep_fc=('cell_id','lat','lon','valid_time','lead_hours','temperature_c','u10_ms','v10_ms','wind_kmh','wind_direction_deg','gust_kmh','rain_mm','wave_hs_m','wave_direction_deg','wave_period_s')
+          keep_fc=('cell_id','lat','lon','valid_time','lead_hours','temperature_c','u10_ms','v10_ms','wind_kmh','wind_direction_deg','gust_kmh','wind_gust_source','rain_mm','wave_hs_m','wave_direction_deg','wave_period_s')
           fc_frames=[]
           for fr in ecmwf.get('spatial',{}).get('frames',[]):
             try:

@@ -20,7 +20,7 @@ const critical={human_weather:{
   assert.equal(v.comfort.title,"Nóng và rất oi");
   assert.equal(v.comfort.note,"31.0°C đo thực tế · cảm giác khoảng 41°C");
   assert.equal(v.comfort.actualLabel,"ACTUAL");
-  assert.equal(v.comfort.derivedLabel,"DERIVED");
+  assert.equal(v.comfort.derivedLabel,"DERIVED_FROM_ACTUAL");
   assert.equal(v.rain.headline,"An Thới đang có mưa rào nhẹ.");
   assert.equal(v.rain.detail,"Dự kiến mưa sẽ giảm trong khoảng 30-45 phút.");
   assert.equal(v.rain.evidenceClass,"ACTUAL");

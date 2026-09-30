@@ -111,9 +111,10 @@ export default {
       console.error("Weather cron: dispatch token missing");
       return;
     }
-    const dispatch=async (file,workflow,thresholdMinutes)=>{
+    const nowcastProbe=origin("nowcast-compact.json").then(r=>r.json());
+    const dispatch=async (file,workflow,thresholdMinutes,payloadPromise)=>{
       try {
-        const payload=await (await origin(file)).json();
+        const payload=payloadPromise?await payloadPromise:await (await origin(file)).json();
         const generated=stamp(payload.generated_at);
         const ageMinutes=generated?(Date.now()-generated)/60000:Infinity;
         if(ageMinutes<thresholdMinutes){
@@ -197,7 +198,7 @@ export default {
     // GitHub's cron remains a fallback: its scheduling can be delayed.
     const refreshObservationOverlay=async()=>{
       try {
-        const upstream=await (await origin("nowcast-compact.json")).json();
+        const upstream=await nowcastProbe;
         const generated=stamp(upstream.generated_at),sampled=stamp(upstream.sampled_time);
         const now=Date.now();
         if(!sampled||!generated||sampled>now+5*60_000||
@@ -254,7 +255,7 @@ export default {
     await Promise.all([
       dispatch("local-now.json","weather-live-groundtruth-schedule.yml",8),
       // This source collector is independent of site publication.
-      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",6),
+      dispatch("nowcast-compact.json","weather-live-himawari-schedule.yml",6,nowcastProbe),
       refreshStaticMirror(),
       refreshObservationOverlay()
     ]);

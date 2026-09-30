@@ -12,7 +12,7 @@
     const reference=critical?.human_weather?.reference;
     if(!reference||reference.status!=="ACTUAL")return null;
     const actual=reference.actual||{},t=num(actual.temperature_c),d=reference.derived||{},feels=num(d.feels_like_c);
-    if(actual.class!=="ACTUAL"||t===null||!d.label)return null;
+    if(t===null||!d.label)return null;
     const referenceLocation=reference.location||"Sân bay Phú Quốc";
     const note=[t.toFixed(1)+"°C đo thực tế tại "+referenceLocation];
     if(feels!==null&&Math.abs(feels-t)>=1)note.push("cảm giác khoảng "+Math.round(feels)+"°C");
@@ -31,20 +31,19 @@
   }
 
   function pointRain(critical,pointId){
-    const point=critical?.human_weather?.points?.[pointId];
-    const i=point?.message,a=point?.rain?.actual,e=point?.rain?.estimate;
-    if(!i)return null;
-    if(i.evidence==="ACTUAL"&&a?.status==="ACTUAL"){
+    const item=critical?.human_weather?.rain?.[pointId];
+    if(!item)return null;
+    if(item.evidence==="ACTUAL"){
       return {
-        headline:clean(i.headline),detail:clean(i.detail),evidenceClass:"ACTUAL",
-        rainObserved:a.observed===true,rateMmH:num(a.derived?.rate_mm_h),
-        observedAt:a.at||null,duration:i.duration_min||null
+        headline:clean(item.headline),detail:clean(item.detail),evidenceClass:"ACTUAL",
+        rainObserved:item.observed===true,rateMmH:num(item.derived_rate_mm_h),
+        observedAt:item.at||null,duration:item.duration_min||null
       };
     }
-    if(i.evidence==="DERIVED"){
+    if(item.evidence==="DERIVED"){
       return {
-        headline:clean(i.headline),detail:clean(i.detail),evidenceClass:"DERIVED",
-        rainObserved:null,rateMmH:num(e?.rate_mm_h),observedAt:null,duration:null
+        headline:clean(item.headline),detail:clean(item.detail),evidenceClass:"DERIVED",
+        rainObserved:null,rateMmH:num(item.estimated_rate_mm_h),observedAt:null,duration:null
       };
     }
     return null;

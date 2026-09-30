@@ -2730,6 +2730,7 @@ footer{font-size:9.5px}
 .human-comfort-layer>strong{display:block;font-size:19px;line-height:1.3;color:#223e49}
 .human-comfort-layer>p{margin:4px 0 2px;font-size:13px;font-weight:750;line-height:1.5;color:#345765}
 .human-comfort-layer>small{display:block;font-size:11px;line-height:1.5;color:#637b84}
+.human-comfort-layer .human-comfort-index{margin-top:6px;font-weight:850;color:#345765}
 .human-comfort-layer .human-comfort-method{margin-top:5px;color:#829198}
 @media(max-width:640px){
   .human-comfort-layer{padding:12px 13px;border-radius:14px}

@@ -11,8 +11,8 @@
   function comfort(critical){
     const island=critical?.human_weather?.island;
     if(!island||island.observation_status!=="ACTUAL"||island.data_class!=="ACTUAL")return null;
-    const t=num(island.temperature_c),d=island.derived||{},feels=num(d.feels_like_c);
-    if(t===null||!d.comfort_label)return null;
+    const actual=island.actual||{},t=num(actual.temperature_c),d=island.derived||{},feels=num(d.feels_like_c);
+    if(actual.data_class!=="ACTUAL"||t===null||!d.comfort_label)return null;
     const note=[t.toFixed(1)+"°C đo thực tế"];
     if(feels!==null&&Math.abs(feels-t)>=1)note.push("cảm giác khoảng "+Math.round(feels)+"°C");
     return {
@@ -35,7 +35,7 @@
     if(i.evidence_class==="ACTUAL"&&a?.observation_status==="ACTUAL"){
       return {
         headline:clean(i.headline),detail:clean(i.detail),evidenceClass:"ACTUAL",
-        rainObserved:a.rain_observed===true,rateMmH:num(a.rate_mm_h),
+        rainObserved:a.rain_observed===true,rateMmH:num(a.derived?.rate_mm_h),
         observedAt:a.observed_at||null,duration:i.duration||null
       };
     }

@@ -30,7 +30,8 @@
   <link rel="manifest" href="/weather-manifest.webmanifest">
   <script defer src="/weather-wind-guard.js?v=20260924-qc1"></script>
   <script defer src="/weather-gust-outlook.js?v=20260924-0930"></script>
-  <script defer src="/weather-v2.js?v=20260927-today-fresh1"></script>
+  <script defer src="/weather-human-contract.js?v=20260930-human1"></script>
+  <script defer src="/weather-v2.js?v=20260930-human1"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -103,6 +104,14 @@
           <b id="heroCondition">Đang đọc thời tiết...</b>
           <p id="heroSummary">Đang đọc dữ liệu quan trắc và phân tích địa phương...</p>
         </div>
+      </div>
+
+      <div id="humanComfortLayer" class="human-comfort-layer" hidden aria-live="polite">
+        <div class="human-comfort-head"><span>CẢM NHẬN NGOÀI TRỜI</span><em>ĐO THỰC TẾ + CẢM NHẬN</em></div>
+        <strong id="humanComfortTitle">-</strong>
+        <p id="humanComfortNote">-</p>
+        <small id="humanComfortReason">-</small>
+        <small class="human-comfort-method">Cảm nhận là số tính từ quan trắc, không phải nhiệt độ đo trực tiếp.</small>
       </div>
 
       <div class="weather-now-facts" aria-label="Thông tin nhanh">

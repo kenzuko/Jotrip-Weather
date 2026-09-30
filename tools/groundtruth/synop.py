@@ -229,9 +229,22 @@ def decode_report(report: str) -> dict[str, Any]:
 
 
 def _row_time_iso(row: dict[str, str]) -> str:
-    fields = ["YEAR", "MONTH", "DAY", "HOUR", "MIN"]
-    if all((row.get(k) or "").strip() for k in fields):
-        dt = datetime(*(int(row[k]) for k in fields), tzinfo=timezone.utc)
+    def pick(*keys: str) -> str:
+        for key in keys:
+            value = row.get(key)
+            if value is not None and str(value).strip() != "":
+                return str(value).strip()
+        return ""
+
+    parts = (
+        pick("YEAR", "ANO", "year"),
+        pick("MONTH", "MES", "month"),
+        pick("DAY", "DIA", "day"),
+        pick("HOUR", "HORA", "hour"),
+        pick("MIN", "MINUTO", "minute"),
+    )
+    if all(parts):
+        dt = datetime(*(int(x) for x in parts), tzinfo=timezone.utc)
         return dt.isoformat().replace("+00:00", "Z")
     for key in ("observation_time_utc", "obs_time_utc"):
         if row.get(key):
@@ -240,8 +253,8 @@ def _row_time_iso(row: dict[str, str]) -> str:
 
 
 def _normalize_input_row(row: dict[str, str]) -> tuple[str, str]:
-    station = (row.get("WMOIND") or row.get("wmo_index") or "").strip()
-    report = (row.get("REPORT") or row.get("raw_report") or "").strip()
+    station = (row.get("WMO_ID") or row.get("WMOIND") or row.get("wmo_index") or "").strip()
+    report = (row.get("PARTE") or row.get("REPORT") or row.get("raw_report") or "").strip()
     return station, report
 
 

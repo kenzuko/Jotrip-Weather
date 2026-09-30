@@ -1,4 +1,4 @@
-name: Groundtruth P0 dry run
+name: Groundtruth P0 dry run\n# trigger: final-parser-provenance-pass
 
 on:
   push:

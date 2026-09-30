@@ -1,0 +1,98 @@
+name: Weather Independent Observation Overlay
+
+on:
+  # Himawari source is probed each 10 minutes; this consumes only new verified samples.
+  schedule:
+    - cron: "9,19,29,39,49,59 * * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/weather-observation-overlay.mjs"
+      - "tests/weather-observation-overlay.test.mjs"
+      - ".github/workflows/weather-observation-overlay.yml"
+      - ".github/workflows/sync-weather-runtime.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/weather-observation-overlay.mjs"
+      - "tests/weather-observation-overlay.test.mjs"
+      - ".github/workflows/weather-observation-overlay.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate observation boundary and fail-closed scenarios
+        run: |
+          node --check scripts/weather-observation-overlay.mjs
+          node tests/weather-observation-overlay.test.mjs
+      - name: Checkout canonical read-only observation fixtures
+        uses: actions/checkout@v4
+        with:
+          repository: kenzuko/Jotrip-Lab
+          ref: data-weather
+          path: lab-data
+          fetch-depth: 1
+      - name: Dry-run new observations against actual upstream
+        run: node scripts/weather-observation-overlay.mjs --dry-run --source lab-data/data
+
+  update:
+    needs: verify
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: weather-runtime-mirror
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Checkout canonical read-only observation source
+        uses: actions/checkout@v4
+        with:
+          repository: kenzuko/Jotrip-Lab
+          ref: data-weather
+          path: lab-data
+          fetch-depth: 1
+      - name: Publish verified observations if and only if newer
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "jotrip-weather-observation-bot"
+          git config user.email "jotrip-weather-observation-bot@users.noreply.github.com"
+          for attempt in 1 2 3 4; do
+            # A fresh remote base means a failed push cannot roll back a newer sample.
+            git fetch origin main
+            git reset --hard origin/main
+            node scripts/weather-observation-overlay.mjs --apply --source lab-data/data
+            git add -- \
+              data/nowcast.json data/nowcast-compact.json \
+              data/weather-runtime/cloud.json data/weather-runtime/compact.json \
+              data/weather-runtime/manifest.json \
+              data/weather-scene/cloud.json data/weather-scene/compact.json
+            if git diff --cached --quiet; then
+              echo "Observation unchanged, stale or already newer on remote; no commit"
+              exit 0
+            fi
+            git commit -m "data(weather): publish verified Himawari observation overlay [skip ci]"
+            if git push origin HEAD:main; then
+              echo "Independent observation update committed"
+              exit 0
+            fi
+            echo "Concurrent writer; rechecking fresh main ($attempt/4)"
+          done
+          echo "::error::Independent observation update could not publish without conflicts"
+          exit 1

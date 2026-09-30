@@ -18,7 +18,7 @@ on:
 
 concurrency:
   group: weather-runtime-mirror
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -381,6 +381,48 @@ jobs:
             then
               exit 0
             fi
+            # The independent observation writer can commit during the heavy model
+            # build. Never let an older full mirror roll that verified sample back.
+            python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          from datetime import datetime, timezone
+          def remote(path):
+              try:
+                  return subprocess.check_output(['git','show','origin/main:'+path])
+              except subprocess.CalledProcessError:
+                  return b''
+          def parse(raw):
+              try:return json.loads(raw)
+              except (TypeError,ValueError):return {}
+          def time(v):
+              try:return datetime.fromisoformat(str(v).replace('Z','+00:00')).timestamp()
+              except (TypeError,ValueError):return 0
+          candidate=parse(Path('data/weather-runtime/cloud.json').read_bytes())
+          live=parse(remote('data/weather-runtime/cloud.json'))
+          if time(live.get('sampled_time'))>time(candidate.get('sampled_time')):
+              # Restore the remote writer's complete matched observation group;
+              # preserve the fresh forecast and marine built by this workflow.
+              paths=('data/nowcast.json','data/nowcast-compact.json',
+                  'data/weather-runtime/cloud.json','data/weather-runtime/compact.json',
+                  'data/weather-scene/cloud.json','data/weather-scene/compact.json')
+              for path in paths:
+                  data=remote(path)
+                  if not data:raise SystemExit('Missing remote observation artifact: '+path)
+                  Path(path).write_bytes(data)
+              manifest_path=Path('data/weather-runtime/manifest.json')
+              manifest=parse(manifest_path.read_bytes())
+              remote_manifest=parse(remote('data/weather-runtime/manifest.json'))
+              manifest['source_times']['cloud_sampled_time']=live['sampled_time']
+              remote_compact=parse(remote('data/weather-runtime/compact.json'))
+              if remote_compact.get('sampled_time'):
+                  manifest['source_times']['compact_sampled_time']=remote_compact['sampled_time']
+              if remote_manifest.get('observation_overlay'):
+                  manifest['observation_overlay']=remote_manifest['observation_overlay']
+              manifest['generated_at']=datetime.now(timezone.utc).isoformat()
+              manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,separators=(',',':'))+'\n')
+              print('Preserved newer verified remote Himawari sample',live['sampled_time'])
+          PY
             git add data weather-live-config.js
             if git diff --cached --quiet; then
               echo 'Mirror unchanged'

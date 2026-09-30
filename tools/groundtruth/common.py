@@ -96,8 +96,12 @@ def build_observation(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stream_key = canonical_stream_key(namespace, identifier, station_epoch)
+    station_time_key = f"{stream_key}:{source_time}"
+    logical_key = hashlib.sha256(f"{station_time_key}|{metric}|{observation_type}".encode("utf-8")).hexdigest()
     row: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
+        "station_time_key": station_time_key,
+        "observation_key": logical_key,
         "observation_id": observation_id(stream_key, source_time, metric, raw_group, value),
         "stream": {
             "namespace": namespace,

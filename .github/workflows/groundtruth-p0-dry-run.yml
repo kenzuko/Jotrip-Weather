@@ -1,5 +1,5 @@
 name: Groundtruth P0 dry run
-# trigger: actual-ogimet-header-pass
+# trigger: p1-validation-pass
 
 on:
   push:

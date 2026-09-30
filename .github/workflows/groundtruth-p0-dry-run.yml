@@ -1,0 +1,79 @@
+name: Groundtruth P0 dry run
+
+on:
+  push:
+    branches:
+      - groundtruth-p0-build-20260930
+    paths:
+      - ".github/workflows/groundtruth-p0-dry-run.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install parser dependency
+        run: python -m pip install --quiet -r tools/groundtruth/requirements.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s tools/groundtruth/tests -v
+
+      - name: Acquire and normalize April 2026 SYNOP 48917
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python tools/groundtruth/synop.py fetch             --begin 202604010000             --end 202604302359             --archive-root out/raw | tee out/synop-fetch.json
+          SYNOP_RAW="$(find out/raw/ogimet -type f -name '*.csv' | head -n 1)"
+          test -n "$SYNOP_RAW"
+          python tools/groundtruth/synop.py normalize             --input "$SYNOP_RAW"             --output out/synop-2026-04.normalized.jsonl             --station-epoch CURRENT_VVPQ_METADATA             --raw-path "$SYNOP_RAW" | tee out/synop-normalize-summary.json
+
+      - name: Acquire and normalize KTTV 60018 XLSX
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/groundtruth/kttv60018.py fetch             --from 28/09/2026             --to 30/09/2026             --archive-root out/raw | tee out/kttv60018-fetch.json
+          XLSX="$(find out/raw/kttv60018 -type f -name '*.xlsx' | head -n 1)"
+          test -n "$XLSX"
+          python tools/groundtruth/kttv60018.py normalize             --input "$XLSX"             --output out/kttv60018.normalized.jsonl             --raw-path "$XLSX" | tee out/kttv60018-normalize-summary.json
+
+      - name: Build dry-run report
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+
+          report={"mode":"DRY_RUN_ONLY","production_write":False,"merge":False,"deploy":False}
+          for name in ("synop-2026-04.normalized.jsonl","kttv60018.normalized.jsonl"):
+              path=Path("out")/name
+              rows=[json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+              report[name]={
+                  "rows":len(rows),
+                  "metrics":dict(Counter(r["metric"] for r in rows)),
+                  "streams":sorted({r["stream"]["key"] for r in rows}),
+                  "first_source_time":min((r["source_time"] for r in rows),default=None),
+                  "last_source_time":max((r["source_time"] for r in rows),default=None),
+                  "qc_flags":dict(Counter(flag for r in rows for flag in r["qc"]["flags"])),
+              }
+          Path("out/dry-run-report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: groundtruth-p0-dry-run
+          path: out/
+          retention-days: 7
+          if-no-files-found: error

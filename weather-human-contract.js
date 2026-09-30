@@ -14,15 +14,21 @@
     const actual=reference.actual||{},t=num(actual.temperature_c),d=reference.derived||{},feels=num(d.feels_like_c);
     if(t===null||!d.label)return null;
     const referenceLocation=reference.location||"Sân bay Phú Quốc";
-    const note=[t.toFixed(1)+"°C đo thực tế tại "+referenceLocation];
-    if(feels!==null&&Math.abs(feels-t)>=1)note.push("cảm giác khoảng "+Math.round(feels)+"°C");
+    const humidity=num(d.humidity_pct);
+    const showHeatIndex=feels!==null&&Math.abs(feels-t)>=1;
     return {
       title:clean(d.label),
-      note:note.join(" · "),
+      note:t.toFixed(1)+"°C đo thực tế tại "+referenceLocation,
+      heatIndexText:showHeatIndex?"Chỉ số cảm giác nóng: khoảng "+Math.round(feels)+"°C":null,
+      heatIndexMethod:showHeatIndex&&humidity!==null
+        ?"Tính từ nhiệt độ "+Math.round(t)+"°C và độ ẩm khoảng "+Math.round(humidity)+"%."
+        :null,
+      heatIndexNote:showHeatIndex?"Đây là chỉ số suy ra, không phải nhiệt độ đo trực tiếp.":null,
       reason:clean(d.reason),
       observedAt:reference.at||null,
       actualTemperatureC:t,
       feelsLikeC:feels,
+      humidityPct:humidity,
       actualLabel:"ACTUAL",
       derivedLabel:"DERIVED_FROM_ACTUAL",
       spatialScope:reference.scope||"REFERENCE_STATION_ACTUAL",

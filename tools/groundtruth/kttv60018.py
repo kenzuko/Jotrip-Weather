@@ -159,20 +159,28 @@ def parse_workbook(
         fetched_at = fetched_at or manifest.get("fetched_at")
         raw_sha256 = raw_sha256 or manifest.get("sha256")
         raw_path = raw_path or manifest.get("raw_path")
-    raw_sha256 = raw_sha256 or sha256_file(src)
+    actual_sha256 = sha256_file(src)
+    if raw_sha256 is not None and raw_sha256 != actual_sha256:
+        raise RuntimeError(f"Raw XLSX checksum mismatch: manifest={raw_sha256} actual={actual_sha256}")
+    raw_sha256 = raw_sha256 or actual_sha256
     raw_path = raw_path or str(src)
     wb = load_workbook(src, read_only=True, data_only=True)
     ws, layout = pick_sheet(wb)
 
     observations = []
-    rows_by_local_date: dict[str, int] = {}
-    rows_with_time = 0
-    rows_with_values = 0
+    timestamp_rows = 0
+    timestamp_rows_by_local_date: dict[str, int] = {}
+    value_rows = 0
+    value_rows_by_local_date: dict[str, int] = {}
     missing_time_rows = 0
     first_time = None
     last_time = None
     for ridx in range(layout["row"] + 1, ws.max_row + 1):
         source_time = _to_iso(ws.cell(ridx, layout["time_col"]).value)
+        if source_time:
+            timestamp_rows += 1
+            local_date = source_time[:10]
+            timestamp_rows_by_local_date[local_date] = timestamp_rows_by_local_date.get(local_date, 0) + 1
         present = []
         for field, cidx in layout["fields"].items():
             val = ws.cell(ridx, cidx).value
@@ -183,10 +191,9 @@ def parse_workbook(
         if not source_time:
             missing_time_rows += 1
             continue
-        rows_with_time += 1
-        rows_with_values += 1
+        value_rows += 1
         local_date = source_time[:10]
-        rows_by_local_date[local_date] = rows_by_local_date.get(local_date, 0) + 1
+        value_rows_by_local_date[local_date] = value_rows_by_local_date.get(local_date, 0) + 1
         first_time = first_time or source_time
         last_time = source_time
         for field, raw_value in present:
@@ -231,10 +238,13 @@ def parse_workbook(
         "header_row": layout["row"],
         "time_col": layout["time_col"],
         "fields": layout["fields"],
-        "rows_with_time": rows_with_time,
-        "rows_with_values": rows_with_values,
+        "timestamp_rows": timestamp_rows,
+        "timestamp_rows_by_local_date": dict(sorted(timestamp_rows_by_local_date.items())),
+        "value_rows": value_rows,
+        "value_rows_by_local_date": dict(sorted(value_rows_by_local_date.items())),
         "rows_missing_time": missing_time_rows,
-        "rows_by_local_date": dict(sorted(rows_by_local_date.items())),
+        "data_status": "VALUES_PRESENT" if count else "SCHEMA_PRESENT_NO_VALUES",
+        "quantitative_corpus_ready": bool(count),
         "first_time": first_time,
         "last_time": last_time,
         "observations": count,

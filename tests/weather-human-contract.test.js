@@ -2,7 +2,8 @@ const assert=require("node:assert/strict");
 const h=require("../weather-human-contract.js");
 
 const critical={human_weather:{
-  island:{observation_status:"ACTUAL",spatial_scope:"ISLAND_ACTUAL_ANCHOR",
+  island:{observation_status:"ACTUAL",spatial_scope:"REFERENCE_STATION_ACTUAL",
+    reference_location_name:"Sân bay Phú Quốc",
     observed_at:"2026-09-30T03:00:00Z",
     actual:{temperature_c:31,dewpoint_c:27,wind_kmh:4,data_class:"ACTUAL"},
     derived:{humidity_percent:79.3,comfort_label:"Nóng và rất oi",comfort_reason:"Độ ẩm cao làm cơ thể cảm thấy nóng hơn nhiệt độ đo được.",
@@ -18,8 +19,10 @@ const critical={human_weather:{
 {
   const v=h.pointView(critical,"an_thoi");
   assert.equal(v.comfort.title,"Nóng và rất oi");
-  assert.equal(v.comfort.note,"31.0°C đo thực tế · cảm giác khoảng 41°C");
+  assert.equal(v.comfort.note,"31.0°C đo thực tế tại Sân bay Phú Quốc · cảm giác khoảng 41°C");
   assert.equal(v.comfort.actualLabel,"ACTUAL");
+  assert.equal(v.comfort.spatialScope,"REFERENCE_STATION_ACTUAL");
+  assert.equal(v.comfort.referenceLocation,"Sân bay Phú Quốc");
   assert.equal(v.comfort.derivedLabel,"DERIVED_FROM_ACTUAL");
   assert.equal(v.rain.headline,"An Thới đang có mưa rào nhẹ.");
   assert.equal(v.rain.detail,"Dự kiến mưa sẽ giảm trong khoảng 30-45 phút.");

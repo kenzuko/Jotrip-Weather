@@ -673,9 +673,7 @@ function renderStatus(){
   const localStale=localAge===null||localAge>35;
   const cloudDelayed=nowAge===null||nowAge>35;
   $("liveDot").className=localDelayed||cloudDelayed?"warn":"ok";
-  const localLabel=critical?.local_generated_at?"Tại điểm "+ageText(critical.local_generated_at):"Tại điểm chưa có dữ liệu";
-  const cloudLabel=nowcastTimestamp()?" · mây "+ageText(nowcastTimestamp()):" · mây chưa cập nhật";
-  $("liveLabel").textContent=(localStale?"DỮ LIỆU TẠI ĐIỂM ĐANG TRỄ":localDelayed?"ĐANG CHỜ BẢN LÚC NÀY":"LÚC NÀY ĐÃ CẬP NHẬT")+" · "+localLabel+cloudLabel;
+  $("liveLabel").textContent=localStale?"DỮ LIỆU ĐANG TRỄ":(localDelayed||cloudDelayed?"ĐANG CẬP NHẬT":"LIVE");
 
   const assessment=islandAssessment();
   const coverage=coverageScore();
@@ -937,11 +935,11 @@ function renderHero(){
     }
   }
 
-  $("updatedAt").textContent=(localFresh?"Cập nhật ":"Dữ liệu tại điểm gần nhất ")+localTime(liveTimestamp())+" · "+ageText(liveTimestamp());
+  $("updatedAt").textContent=localFresh?"LIVE":"ĐANG CẬP NHẬT";
   $("updatedAt").classList.toggle("stale",!localFresh);
   if($("scenePoint"))$("scenePoint").textContent=p.name||current;
   if($("sceneTemp"))$("sceneTemp").textContent=t===null?"--":fmt(t,1)+"°";
-  if($("sceneUpdated"))$("sceneUpdated").textContent=(localFresh?"JoTrip Local Now":"JoTrip gần nhất")+" · "+ageText(liveTimestamp());
+  if($("sceneUpdated"))$("sceneUpdated").textContent=localFresh?"LIVE":"ĐANG CẬP NHẬT";
   document.querySelector(".weather-overview")?.setAttribute("data-mood",condition.mood);
 }
 
@@ -1472,7 +1470,7 @@ function renderCloudMotionTable(){
       '<td>'+esc(impact)+'</td>'+
     '</tr>';
   }).join("");
-  if(age)age.textContent="Himawari · "+ageText(nowcastRef)+(nowcastFresh?"":" · dữ liệu đang trễ");
+  if(age)age.textContent=nowcastFresh?"Himawari · LIVE":"Himawari · ĐANG CẬP NHẬT";
 }
 function renderMapConvective(){
   const n=effectiveNowcast();
@@ -1508,7 +1506,8 @@ function renderMapConvective(){
   }
   if(fresh){
     const ref=n?.sampled_time||fullNowcast?.sampled_time;
-    fresh.textContent=(ref?"Himawari · "+ageText(ref)+" · ":"")+"Quan trắc đỉnh mây, không phải xác suất mưa hay sét.";
+    const stale=ageMinutes(ref)>45;
+    fresh.textContent=(stale?"Ảnh mây đang cập nhật · ":"LIVE · ")+"Quan trắc đỉnh mây, không phải xác suất mưa hay sét.";
   }
 }
 
@@ -1645,7 +1644,7 @@ function buildQuickWatchEvents(){
       key:"weather-data-delayed",
       severity:"alert",when:"DỮ LIỆU ĐANG TRỄ",
       title:"Chưa có cập nhật đủ mới để kết luận thời tiết đã ổn",
-      detail:stale.join(" · ")+". Không xem dữ liệu cũ là điều kiện hiện tại; ưu tiên cảnh báo chính thức và thông tin thực địa.",
+      detail:"Một hoặc nhiều lớp dữ liệu live đang chậm cập nhật. Hệ thống đã hạ mức tin cậy và không dùng dữ liệu cũ để kết luận thời tiết đang ổn.",
       sort:-9
     });
   }

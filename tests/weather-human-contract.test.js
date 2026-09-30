@@ -4,7 +4,8 @@ const h=require("../weather-human-contract.js");
 const critical={human_weather:{
   reference:{status:"ACTUAL",at:"2026-09-30T03:00:00Z",scope:"REFERENCE_STATION_ACTUAL",
     location:"Sân bay Phú Quốc",actual:{temperature_c:31},
-    derived:{humidity_pct:79.3,label:"Nóng và rất oi",
+    derived:{humidity_pct:79.3,comfort_code:"hot_very_humid",reason_codes:["humidity_hotter"],
+      label:"Nóng và rất oi",
       reason:"Độ ẩm cao làm cơ thể cảm thấy nóng hơn nhiệt độ đo được.",feels_like_c:40.6}},
   rain:{an_thoi:{evidence:"ACTUAL",at:"2026-09-30T02:50:00Z",observed:true,
     derived_rate_mm_h:1.8,headline:"An Thới đang có mưa rào nhẹ.",
@@ -14,7 +15,10 @@ const critical={human_weather:{
 {
   const v=h.pointView(critical,"an_thoi");
   assert.equal(v.comfort.title,"Nóng và rất oi");
-  assert.equal(v.comfort.note,"31.0°C đo thực tế tại Sân bay Phú Quốc · cảm giác khoảng 41°C");
+  assert.equal(v.comfort.note,"31.0°C đo thực tế tại Sân bay Phú Quốc");
+  assert.equal(v.comfort.heatIndexText,"Chỉ số cảm giác nóng: khoảng 41°C");
+  assert.equal(v.comfort.heatIndexMethod,"Tính từ nhiệt độ 31°C và độ ẩm khoảng 79%.");
+  assert.equal(v.comfort.heatIndexNote,"Đây là chỉ số suy ra, không phải nhiệt độ đo trực tiếp.");
   assert.equal(v.comfort.actualLabel,"ACTUAL");
   assert.equal(v.comfort.derivedLabel,"DERIVED_FROM_ACTUAL");
   assert.equal(v.comfort.spatialScope,"REFERENCE_STATION_ACTUAL");

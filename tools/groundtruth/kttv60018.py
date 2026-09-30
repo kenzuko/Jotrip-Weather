@@ -152,6 +152,13 @@ def parse_workbook(
     raw_sha256: str | None = None,
 ) -> dict[str, Any]:
     src = Path(src)
+    manifest_path = Path(str(src) + ".manifest.json")
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        source_url = source_url or manifest.get("source_url")
+        fetched_at = fetched_at or manifest.get("fetched_at")
+        raw_sha256 = raw_sha256 or manifest.get("sha256")
+        raw_path = raw_path or manifest.get("raw_path")
     raw_sha256 = raw_sha256 or sha256_file(src)
     raw_path = raw_path or str(src)
     wb = load_workbook(src, read_only=True, data_only=True)

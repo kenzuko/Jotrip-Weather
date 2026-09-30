@@ -5,7 +5,7 @@
   root.JoTripHumanWeather=api;
 })(typeof globalThis!=="undefined"?globalThis:this,function(){
   "use strict";
-  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
+  const num=v=>{if((typeof v!=="number"&&typeof v!=="string")||(typeof v==="string"&&!v.trim()))return null;const n=Number(v);return Number.isFinite(n)?n:null};
   const clean=s=>String(s||"").trim();
 
   function comfort(critical){
@@ -39,7 +39,7 @@
   function pointRain(critical,pointId){
     const item=critical?.human_weather?.rain?.[pointId];
     if(!item)return null;
-    if(item.evidence==="ACTUAL"){
+    if(item.evidence==="ACTUAL"&&item.observed===true){
       return {
         headline:clean(item.headline),detail:clean(item.detail),evidenceClass:"ACTUAL",
         rainObserved:item.observed===true,rateMmH:num(item.derived_rate_mm_h),

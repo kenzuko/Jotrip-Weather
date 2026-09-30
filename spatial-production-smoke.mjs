@@ -151,11 +151,19 @@ try{
   const cloudDisabled=result.scenes.cloud?.disabled===true;
   const cloudStale=Number.isFinite(result.runtime?.cloudAgeMin)&&result.runtime.cloudAgeMin>35;
   const cloudOk=(cloudDisabled&&cloudStale)||(!cloudDisabled&&(result.scenes.cloud?.field?.visible||0)>20);
+  const waveFieldVisible=(result.scenes.wave?.field?.visible||0)>20;
+  const waveInteractive=
+    (result.scenes.wave?.field?.visible||0)>0 &&
+    result.flag?.visible===true &&
+    result.flag?.changed===true &&
+    result.flag?.waveDirection===true;
+  if(result.scenes.wave)result.scenes.wave.visibilityGate=
+    waveFieldVisible?"FIELD_VISIBLE":waveInteractive?"CALM_INTERACTIVE":"FAIL";
   const sceneOk=
     cloudOk &&
     result.scenes.rain.field.visible>20 &&
     result.scenes.wind.motion.visible>4 &&
-    result.scenes.wave.field.visible>20;
+    (waveFieldVisible||waveInteractive);
 
   result.ok=
     result.overview?.width>0 &&

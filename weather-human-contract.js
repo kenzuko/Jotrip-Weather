@@ -13,7 +13,8 @@
     if(!island||island.observation_status!=="ACTUAL")return null;
     const actual=island.actual||{},t=num(actual.temperature_c),d=island.derived||{},feels=num(d.feels_like_c);
     if(actual.data_class!=="ACTUAL"||t===null||!d.comfort_label)return null;
-    const note=[t.toFixed(1)+"°C đo thực tế"];
+    const referenceLocation=island.reference_location_name||"Sân bay Phú Quốc";
+    const note=[t.toFixed(1)+"°C đo thực tế tại "+referenceLocation];
     if(feels!==null&&Math.abs(feels-t)>=1)note.push("cảm giác khoảng "+Math.round(feels)+"°C");
     return {
       title:clean(d.comfort_label),
@@ -24,7 +25,8 @@
       feelsLikeC:feels,
       actualLabel:"ACTUAL",
       derivedLabel:"DERIVED_FROM_ACTUAL",
-      spatialScope:island.spatial_scope||"ISLAND_ACTUAL_ANCHOR"
+      spatialScope:island.spatial_scope||"REFERENCE_STATION_ACTUAL",
+      referenceLocation
     };
   }
 

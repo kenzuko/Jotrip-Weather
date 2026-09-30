@@ -256,6 +256,13 @@ def normalize_csv(
     raw_sha256: str | None = None,
 ) -> dict[str, Any]:
     src = Path(src)
+    manifest_path = Path(str(src) + ".manifest.json")
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        source_url = source_url or manifest.get("source_url")
+        fetched_at = fetched_at or manifest.get("fetched_at")
+        raw_sha256 = raw_sha256 or manifest.get("sha256")
+        raw_path = raw_path or manifest.get("raw_path")
     if raw_sha256 is None:
         raw_sha256 = sha256_file(src)
     if raw_path is None:

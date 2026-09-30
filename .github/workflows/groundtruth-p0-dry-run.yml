@@ -1,5 +1,5 @@
 name: Groundtruth P0 dry run
-# trigger: p1-validation-pass
+# trigger: p0-store-and-empty-60018-pass
 
 on:
   push:

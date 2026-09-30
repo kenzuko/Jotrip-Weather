@@ -928,6 +928,11 @@ function renderHero(){
     if(comfort){
       $("humanComfortTitle").textContent=comfort.title;
       $("humanComfortNote").textContent=comfort.note;
+      const heatIndex=$("humanHeatIndex"),heatMethod=$("humanHeatIndexMethod"),heatNote=$("humanHeatIndexNote");
+      const showHeat=Boolean(comfort.heatIndexText);
+      if(heatIndex){heatIndex.hidden=!showHeat;heatIndex.textContent=comfort.heatIndexText||""}
+      if(heatMethod){heatMethod.hidden=!showHeat;heatMethod.textContent=comfort.heatIndexMethod||""}
+      if(heatNote){heatNote.hidden=!showHeat;heatNote.textContent=comfort.heatIndexNote||""}
       $("humanComfortReason").textContent=comfort.reason||"Cảm nhận ngoài trời được tính từ các quan trắc hiện có.";
     }
   }

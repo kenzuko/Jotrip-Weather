@@ -23,7 +23,7 @@ check("incomparable gust cannot be green",row(0,25,12,.6),"watch","Thiếu");
 check("dry calm valid forecast",row(0,8,14,.6),"good");
 console.log("10/10 multi-hazard forecast decisions PASS");
 
-assert.match(src,/rain:\/RA\\\|DZ\//,"VVPQ TS alone must not be treated as measured rain");
-assert.doesNotMatch(src,/rain:\/RA\\\|SHRA\\\|TS\//,"TS without a precipitation code must not imply rain");
+assert.ok(src.includes("rain:/RA|DZ/.test(wx)"),"VVPQ TS alone must not be treated as measured rain");
+assert.ok(!src.includes("rain:/RA|SHRA|TS/.test(wx)"),"TS without a precipitation code must not imply rain");
 assert.doesNotMatch(src,/thunder:\/TS\/\.test\(wx\)\|\|Boolean\(v\.convective_cloud\)/,"convective cloud must not be relabelled as observed thunder");
 console.log("VVPQ thunder/rain semantics PASS");

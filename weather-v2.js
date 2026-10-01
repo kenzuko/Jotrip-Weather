@@ -1700,26 +1700,74 @@ function buildQuickWatchEvents(){
     }
   });
 
-  // 0b) Fresh airport observation is ACTUAL and can override model language nearby.
+  // 0b) Fresh airport observation is ACTUAL, but METAR phenomenon codes do
+  // not by themselves describe how widespread or long-lived a shower is.
+  // TS without RA means thunderstorm, not automatically "heavy thunderstorm rain".
   const vvpq=critical?.actual?.vvpq||{};
-  const vwx=String(vvpq.weather||"").toUpperCase();
-  if(freshEnough(vvpq.observed_at,35)&&(/TS/.test(vwx)||vvpq.convective_cloud)){
+  const vwx=String(vvpq.weather||"").toUpperCase().replace(/\s+/g," ");
+  const vvpqFresh=freshEnough(vvpq.observed_at,35);
+  const hasThunder=/\bTS\b|TSRA|VCTS/.test(vwx);
+  const vicinityThunder=/VCTS/.test(vwx);
+  const hasRain=/RA|SHRA|DZ/.test(vwx);
+  const heavyRain=/\+[^ ]*(?:RA|SHRA)|\+(?:TSRA|SHRA)/.test(vwx);
+  const lightRain=/-[^ ]*(?:RA|SHRA)|-(?:TSRA|SHRA)/.test(vwx);
+  const airportWind=num(vvpq.wind_kmh),airportVisibility=num(vvpq.visibility_m);
+  const airportRef=critical?.human_weather?.reference||{};
+  const airportHumidity=freshEnough(airportRef.at,35)?num(airportRef?.derived?.humidity_pct):null;
+  const airportMotion=effectiveNowcastFor("duong_dong")?.cloud_motion||{};
+  const motionStatus=String(airportMotion.status||"").toUpperCase();
+  const motionContext=motionStatus==="PASSING_BY"?"Himawari: cụm mây đang đi ngang khu vực":
+    motionStatus==="MOVING_AWAY"?"Himawari: cụm mây đang rời xa khu vực":
+    motionStatus==="APPROACHING"?"Himawari: cụm mây đang tiến gần khu vực":
+    motionStatus==="NEARBY"?"Himawari: cụm mây đối lưu đang ở gần khu vực":"";
+  const airportMetrics=[
+    vvpq.observed_at?("VVPQ "+phuQuocClock(vvpq.observed_at)):null,
+    airportWind!==null?("gió "+fmt(airportWind,0)+" km/h"):null,
+    num(vvpq.temperature_c)!==null?(fmt(vvpq.temperature_c,1)+"°C"):null,
+    airportHumidity!==null?("ẩm "+fmt(airportHumidity,0)+"%"):null,
+    airportVisibility!==null?("tầm nhìn "+fmt(airportVisibility/1000,1)+" km"):null,
+    motionContext||null
+  ].filter(Boolean).join(" · ");
+  if(vvpqFresh&&hasThunder){
+    const strongSignal=heavyRain||(airportWind!==null&&airportWind>=30)||
+      (airportVisibility!==null&&airportVisibility<=3000);
+    const severity=strongSignal?"alert":"watch";
+    const phenomenon=vicinityThunder?"dông ở vùng lân cận sân bay":
+      hasRain?(heavyRain?"mưa dông mạnh":lightRain?"mưa dông nhẹ":"mưa dông"):"dông cục bộ";
+    const title=vicinityThunder
+      ?"Có dông ở vùng lân cận sân bay Phú Quốc"
+      :"Sân bay Phú Quốc đang ghi nhận "+phenomenon;
+    const strengthNote=strongSignal
+      ?"Có thêm chỉ dấu cường độ đáng chú ý trong quan trắc hiện tại."
+      :"Chưa có chỉ dấu trong số liệu đang có cho thấy đây là một đợt kéo dài hoặc đặc biệt mạnh.";
     events.push({
       key:"vvpq-thunderstorm:"+vvpq.observed_at,
-      severity:"alert",
-      when:"ĐANG XẢY RA",
-      title:"Khu vực gần sân bay Phú Quốc đang có mưa dông",
-      detail:"Quan trắc VVPQ ghi nhận mưa dông và mây đối lưu. Đây là số liệu thực tế, được ưu tiên hơn dự báo mô hình tại thời điểm này.",
+      severity,
+      when:"ĐANG XẢY RA · "+phuQuocClock(vvpq.observed_at),
+      title,
+      detail:(airportMetrics?airportMetrics+". ":"")+strengthNote,
       sort:-1.5
     });
-  }else if(freshEnough(vvpq.observed_at,35)&&/RA|SHRA/.test(vwx)){
+  }else if(vvpqFresh&&hasRain){
+    const rainLabel=heavyRain?"mưa mạnh":lightRain?"mưa nhẹ":"mưa";
     events.push({
       key:"vvpq-rain:"+vvpq.observed_at,
-      severity:"watch",
-      when:"ĐANG XẢY RA",
-      title:"Khu vực gần sân bay Phú Quốc đang có mưa",
-      detail:"Quan trắc VVPQ đang ghi nhận mưa thực tế.",
+      severity:heavyRain?"alert":"watch",
+      when:"ĐANG XẢY RA · "+phuQuocClock(vvpq.observed_at),
+      title:"Sân bay Phú Quốc đang ghi nhận "+rainLabel,
+      detail:(airportMetrics?airportMetrics+". ":"")+
+        "Đây là quan trắc tại trạm sân bay, không đại diện cho toàn đảo.",
       sort:-1.2
+    });
+  }else if(vvpqFresh&&vvpq.convective_cloud){
+    events.push({
+      key:"vvpq-convective-cloud:"+vvpq.observed_at,
+      severity:"info",
+      when:"ĐANG THEO DÕI · "+phuQuocClock(vvpq.observed_at),
+      title:"Mây đối lưu đang được ghi nhận gần sân bay Phú Quốc",
+      detail:(airportMetrics?airportMetrics+". ":"")+
+        "Có mây đối lưu không đồng nghĩa tại trạm đang có mưa dông.",
+      sort:-0.8
     });
   }
 
@@ -1840,13 +1888,21 @@ function buildQuickWatchEvents(){
   }
 
   // 3) Satellite cloud paths: publish only tracks that pass the backend safety gate.
+  // ETA alone must not turn a passing shower into a red alert. Severity also
+  // needs an intensity/context signal.
   const impacts=[];
   islandIds().forEach(id=>{
     const n=effectiveNowcastFor(id),m=n.cloud_motion||{};
     const eta=num(m.eta_minutes);
     if(!freshEnough(n.sampled_time||fullNowcast?.sampled_time,40))return;
     if(!m.public_track_usable||!m.predicted_impact||eta===null||eta<=0||eta>180)return;
-    impacts.push({id,name:pointDisplayName(id),n,m,eta});
+    const p=critical?.points?.[id]||{},l=p.local||{},model=p.model||{};
+    const background=num(l.rain_impact_background_mm_h);
+    const modelHourly=Math.max(0,(num(model.rain_3h_mm)||0)/3);
+    impacts.push({
+      id,name:pointDisplayName(id),n,m,eta,
+      rainRate:background!==null?background:modelHourly
+    });
   });
   const groups=new Map();
   impacts.forEach(x=>{
@@ -1859,14 +1915,30 @@ function buildQuickWatchEvents(){
   groups.forEach(items=>{
     items.sort((a,b)=>a.eta-b.eta);
     const first=items[0],names=items.map(x=>x.name);
-    const arrival=first.m.arrival_time?localTime(first.m.arrival_time).split(" ").pop():("~"+Math.round(first.eta)+" phút nữa");
+    const arrivalClock=first.m.arrival_time?phuQuocClock(first.m.arrival_time):null;
+    const etaText="~"+Math.round(first.eta)+" phút";
     const impactLabels=[...new Set(items.map(x=>cloudImpactText(x.id,x.n)).filter(Boolean))];
+    const peakRain=Math.max(0,...items.map(x=>num(x.rainRate)||0));
+    const strong=peakRain>=7.5;
+    const moderate=peakRain>=2.5;
+    const severity=strong&&first.eta<=60?"alert":moderate?"watch":"info";
+    const titlePrefix=strong?"Vùng mưa mạnh":moderate?"Vùng mưa":"Vùng mây đối lưu";
+    const sourceSector=first.m.source_sector?("từ "+first.m.source_sector):null;
+    const heading=first.m.motion_heading?("đi "+first.m.motion_heading):null;
+    const speed=num(first.m.motion_speed_kmh);
+    const motionBits=[
+      sourceSector,heading,
+      speed!==null?("~"+fmt(speed,0)+" km/h"):null,
+      "ETA "+etaText,
+      impactLabels[0]||null
+    ].filter(Boolean);
     events.push({
-      key:"cloud:"+names.join("|")+":"+arrival,
-      severity:first.eta<=60?"alert":"watch",
-      when:"DỰ KIẾN "+arrival,
-      title:"Vùng mây mưa đang hướng tới "+names.join(", "),
-      detail:"Himawari cho thấy đường đi đang cắt qua khu vực. "+(impactLabels[0]||"Cường độ đang được đối chiếu với model và ensemble")+".",
+      key:"cloud:"+names.join("|")+":"+(arrivalClock||etaText),
+      severity,
+      when:(arrivalClock?("DỰ KIẾN "+arrivalClock):("THEO DÕI "+etaText)),
+      title:titlePrefix+" đang tiến gần "+names.join(", "),
+      detail:"Himawari · "+motionBits.join(" · ")+
+        ". Đây là quỹ đạo mây, không phải khẳng định cả khu vực sẽ mưa cùng cường độ.",
       sort:Math.max(2,first.eta/60)
     });
   });

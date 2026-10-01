@@ -794,8 +794,9 @@ function nearbyVvpqActual(maxKm=12,maxMinutes=35){
   return {
     ...v,
     distance_km:dist,
-    thunder:/TS/.test(wx)||Boolean(v.convective_cloud),
-    rain:/RA|SHRA|TS/.test(wx)
+    thunder:/TS/.test(wx),
+    rain:/RA|DZ/.test(wx),
+    convective_cloud:Boolean(v.convective_cloud)
   };
 }
 

@@ -19,7 +19,7 @@ const NOW=Date.parse("2026-10-01T10:00:00Z");
   }}}};
   const view=v3.nowView(critical,"an_thoi",NOW);
   assert.equal(view.state,"NO_DIRECT_RAIN_CONFIRMATION");
-  assert.match(view.detail,/không dùng dữ liệu thiếu/i);
+  assert.match(view.detail,/chưa nên kết luận trời đang khô/i);
 }
 {
   const nowcast={
@@ -31,7 +31,7 @@ const NOW=Date.parse("2026-10-01T10:00:00Z");
   const view=v3.soonView(nowcast,"an_thoi",NOW);
   assert.equal(view.evidenceClass,"DERIVED_NOWCAST");
   assert.equal(view.window,"30_60_MIN");
-  assert.match(view.detail,/chưa phải mưa đo tại mặt đất/i);
+  assert.match(view.detail,/chưa phải số đo mưa tại mặt đất/i);
 }
 {
   const nowcast={
@@ -43,6 +43,14 @@ const NOW=Date.parse("2026-10-01T10:00:00Z");
   const view=v3.soonView(nowcast,"an_thoi",NOW);
   assert.equal(view.state,"PASSING_BY");
   assert.doesNotMatch(view.headline,/mưa đang tới/i);
+}
+{
+  const nowcast={
+    sampled_time:"2026-10-01T08:59:00Z",
+    points:{an_thoi:{score:100,cloud_motion:{public_track_usable:true,predicted_impact:true,eta_minutes:10}}}
+  };
+  const view=v3.soonView(nowcast,"an_thoi",NOW);
+  assert.equal(view.state,"STALE","Himawari older than 60 minutes must not drive public short-term wording");
 }
 {
   const nowcast={

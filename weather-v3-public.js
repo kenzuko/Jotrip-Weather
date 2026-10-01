@@ -32,10 +32,10 @@ async function readJSON(url){
 }
 function evidenceLabel(kind){
   const k=String(kind||"").toUpperCase();
-  if(k==="ACTUAL")return "QUAN TRẮC";
-  if(k==="DERIVED_NOWCAST")return "NOWCAST";
-  if(k==="REMOTE_OBSERVED")return "VỆ TINH";
-  return "CHƯA XÁC NHẬN";
+  if(k==="ACTUAL")return "SỐ ĐO THỰC TẾ";
+  if(k==="DERIVED_NOWCAST")return "DIỄN BIẾN MÂY";
+  if(k==="REMOTE_OBSERVED")return "ẢNH VỆ TINH";
+  return "CHƯA CÓ SỐ ĐO";
 }
 function stateClass(state){
   const s=String(state||"");
@@ -63,7 +63,7 @@ function render(){
   if($("v3NowEvidence"))$("v3NowEvidence").textContent=evidenceLabel(now.evidenceClass);
   if($("v3NowTitle"))$("v3NowTitle").textContent=now.headline;
   if($("v3NowDetail"))$("v3NowDetail").textContent=now.detail;
-  if($("v3NowTime"))$("v3NowTime").textContent=now.observedAt?("Cập nhật "+clock(now.observedAt)):"Không có mẫu mưa trực tiếp mới";
+  if($("v3NowTime"))$("v3NowTime").textContent=now.observedAt?("Cập nhật "+clock(now.observedAt)):"Chưa có số đo mưa mới";
 
   if($("v3SoonEvidence"))$("v3SoonEvidence").textContent=evidenceLabel(soon.evidenceClass);
   if($("v3SoonTitle"))$("v3SoonTitle").textContent=soon.headline;
@@ -82,10 +82,8 @@ async function refresh(){
     if(n.status==="fulfilled")nowcast=n.value;
     if(!critical&&!nowcast)throw new Error("V3 beta sources unavailable");
     render();
-    const state=$("v3BetaState");
-    if(state)state.textContent="BETA";
   }catch(err){
-    console.warn("[Weather V3 Beta] giữ nguyên lớp V2 vì không đọc được dữ liệu V3 beta.",err);
+    console.warn("[Weather] chưa đọc được lớp thông tin ngắn hạn, giữ nguyên phần còn lại.",err);
     const panel=$("v3ObservationPanel");
     if(panel)panel.hidden=true;
   }

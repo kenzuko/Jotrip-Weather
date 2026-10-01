@@ -51,7 +51,6 @@ try{
     width:el.getBoundingClientRect().width,
     scrollWidth:el.scrollWidth,
     point:(document.getElementById('v3PointLabel')?.textContent||'').trim(),
-    beta:(document.getElementById('v3BetaState')?.textContent||'').trim(),
     nowEvidence:(document.getElementById('v3NowEvidence')?.textContent||'').trim(),
     nowTitle:(document.getElementById('v3NowTitle')?.textContent||'').trim(),
     soonEvidence:(document.getElementById('v3SoonEvidence')?.textContent||'').trim(),
@@ -195,11 +194,10 @@ try{
     result.overview?.temp!=='--' &&
     result.v3?.width>0 &&
     result.v3?.scrollWidth<=result.v3?.width+2 &&
-    result.v3?.beta==='BETA' &&
     result.v3?.nowTitle.length>0 &&
     result.v3?.soonTitle.length>0 &&
-    ['QUAN TRẮC','CHƯA XÁC NHẬN'].includes(result.v3?.nowEvidence) &&
-    ['NOWCAST','VỆ TINH'].includes(result.v3?.soonEvidence) &&
+    ['SỐ ĐO THỰC TẾ','CHƯA CÓ SỐ ĐO'].includes(result.v3?.nowEvidence) &&
+    ['DIỄN BIẾN MÂY','ẢNH VỆ TINH'].includes(result.v3?.soonEvidence) &&
     (!result.v3?.pointAfterSwitch || /An Thới/.test(result.v3.pointAfterSwitch)) &&
     result.embed?.embedMode===true &&
     result.embed?.topbarDisplay==='none' &&

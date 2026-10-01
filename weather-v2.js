@@ -350,7 +350,7 @@ function pointRisk(p,id=null){
   const m=p.model||{},legacyNow=p.nowcast||{},l=p.local||{},rows=p.ensemble?.rows||[];
   const n=id?effectiveNowcastFor(id):legacyNow;
   const localFresh=localDataFresh();
-  const nowFresh=freshEnough(n?.sampled_time||fullNowcast?.sampled_time||legacyNow.sampled_time,75);
+  const nowFresh=freshEnough(n?.sampled_time||fullNowcast?.sampled_time||legacyNow.sampled_time,60);
   const conv=nowFresh?num(n?.convective_score):null;
   const imminence=localFresh?num(l.rain_imminence_score):null;
   const guard=globalThis.JoTripWindGuard;
@@ -865,7 +865,7 @@ function renderHero(){
   $("placeName").textContent=p.name||current;
   const localFresh=localDataFresh();
   const nowcastRef=fullNowcast?.sampled_time||(p.nowcast||{}).sampled_time;
-  const nowcastFresh=freshEnough(nowcastRef,75);
+  const nowcastFresh=freshEnough(nowcastRef,60);
   const conv=nowcastFresh?num(n?.convective_score??l.convection_score):null;
   const t=localFresh?(num(l.temperature_c)??num(m.temperature_c)):num(m.temperature_c);
   // "Mưa tại điểm" must not show an old model rate as if it were current rain.
@@ -907,15 +907,15 @@ function renderHero(){
   $("heroWave").textContent=wave===null?"--":fmt(wave,1);
   renderPointGust();
   if($("heroRainMeta"))$("heroRainMeta").textContent=rain===null?"mm/h · chưa đủ số mới":
-    actualRainRate!==null?"mm/h · tính từ lượng mưa đo tại điểm":"mm/h · JoTrip ước tính";
-  if($("heroWindMeta"))$("heroWindMeta").textContent=wind===null?"km/h · chưa có số gió mới":"km/h · JoTrip ước tính";
+    actualRainRate!==null?"mm/h · tính từ lượng mưa đo tại điểm":"mm/h · ước tính tại điểm";
+  if($("heroWindMeta"))$("heroWindMeta").textContent=wind===null?"km/h · chưa có số gió mới":"km/h · ước tính tại điểm";
   if($("heroWaveMeta"))$("heroWaveMeta").textContent=marineTimestamp
     ?("m Hs · sóng nền mô hình lúc "+phuQuocClock(marineTimestamp)+(marineFresh?"":" · đã trễ"))
     :"m Hs · chưa có mốc biển";
   let heroSummary=summary(p);
   if(humanRain?.evidenceClass==="ACTUAL"&&humanRain?.rainObserved===true&&humanRain?.detail)heroSummary=humanRain.detail;
-  else if(nearbyActual?.thunder&&nearbyActual?.rain)heroSummary="Quan trắc VVPQ đang ghi nhận mưa dông cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km. Ưu tiên tình trạng đang xảy ra hơn dự báo mô hình.";
-  else if(nearbyActual?.rain)heroSummary="Quan trắc VVPQ đang ghi nhận mưa cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km.";
+  else if(nearbyActual?.thunder&&nearbyActual?.rain)heroSummary="Trạm sân bay đang ghi nhận mưa dông cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km. Ưu tiên tình trạng đang xảy ra hơn dự báo mô hình.";
+  else if(nearbyActual?.rain)heroSummary="Trạm sân bay đang ghi nhận mưa cách điểm này khoảng "+fmt(nearbyActual.distance_km,1)+" km.";
   else if(!localFresh&&!nowcastFresh)heroSummary="Dữ liệu tại điểm và ảnh mây đều đang trễ - không nên dùng số cũ để kết luận trời đang ổn.";
   else if(!localFresh&&nowcastFresh&&conv!==null&&conv>=50)heroSummary="Tín hiệu vệ tinh đang đáng chú ý. Số mưa tại điểm chưa có cập nhật mới - xem bản đồ nếu chuẩn bị ra ngoài.";
   $("heroSummary").textContent=heroSummary;
@@ -1023,7 +1023,7 @@ function renderTodayDecision(){
   const root=$("todayDecisionStrip"),summaryEl=$("todayDecisionSummary"),meta=$("todayEngineMeta"),badge=$("todayEngineBadge");
   if(!root||!summaryEl)return;
   if(!engineDashboard){
-    root.innerHTML='<span class="inline-loader">Đang lấy dữ liệu từ JoTrip Engine...</span>';
+    root.innerHTML='<span class="inline-loader">Đang cập nhật dự báo...</span>';
     summaryEl.textContent="Đang đọc các mốc thời tiết còn lại hôm nay.";
     return;
   }
@@ -1034,9 +1034,9 @@ function renderTodayDecision(){
   }
   const rows=engineTodayRows();
   const enginePoint=engineDashboard.points?.[current]||{};
-  if(badge)badge.textContent=(enginePoint.name||point().name||"Phú Quốc")+" · JoTrip Engine";
+  if(badge)badge.textContent="Dự báo JoTrip";
   const cycle=engineDashboard.source_cycles?.ECMWF;
-  if(meta)meta.textContent="JoTrip Engine · ECMWF · mốc thật 3 giờ"+(cycle?" · chu kỳ "+localTime(cycle):"");
+  if(meta)meta.textContent="Dự báo JoTrip · ECMWF · mốc 3 giờ"+(cycle?" · cập nhật "+localTime(cycle):"");
   const marineLabel=$("todayMarineReference");
   if(marineLabel){
     const mt=enginePoint.marine_sampled_time;
@@ -1452,7 +1452,7 @@ function renderCloudMotionTable(){
     return;
   }
   const nowcastRef=fullNowcast?.sampled_time||rows[0]?.sampled;
-  const nowcastFresh=freshEnough(nowcastRef,75);
+  const nowcastFresh=freshEnough(nowcastRef,60);
   body.innerHTML=rows.map(r=>{
     const m=r.motion||{},cloud=cloudStateLabel(r.nowcast||{convective_score:r.score});
     const id=Object.keys(critical?.points||{}).find(k=>(critical.points[k]?.name||k)===r.name)||null;
@@ -1470,7 +1470,7 @@ function renderCloudMotionTable(){
       '<td>'+esc(impact)+'</td>'+
     '</tr>';
   }).join("");
-  if(age)age.textContent=nowcastFresh?"Himawari · LIVE":"Himawari · ĐANG CẬP NHẬT";
+  if(age)age.textContent="Ảnh vệ tinh · "+ageText(nowcastRef)+(nowcastFresh?"":" · đang chờ ảnh mới");
 }
 function renderMapConvective(){
   const n=effectiveNowcast();
@@ -1824,7 +1824,7 @@ function buildQuickWatchEvents(){
   });
   const convContextFresh=
     freshEnough(liveTimestamp(),30)&&
-    freshEnough(fullNowcast?.sampled_time||effectiveNowcast()?.sampled_time,75);
+    freshEnough(fullNowcast?.sampled_time||effectiveNowcast()?.sampled_time,60);
   const convWet=islandWet.filter(x=>x.conv>=70&&x.rain>=.5);
   if(convContextFresh&&convWet.length>=4){
     const rates=convWet.map(x=>x.rain),lo=Math.min(...rates),hi=Math.max(...rates);
@@ -1833,7 +1833,7 @@ function buildQuickWatchEvents(){
       severity:"watch",
       when:"HIỆN TẠI",
       title:"Nhiều khu vực trên đảo đang có mây rất cao kèm tín hiệu mưa",
-      detail:"JoTrip Local Now tại các điểm đang ở khoảng "+fmt(lo,1)+"-"+fmt(hi,1)+" mm/h. Mưa dông cục bộ giữa các điểm có thể mạnh hơn giá trị trung bình này.",
+      detail:"Ước tính tại các điểm đang ở khoảng "+fmt(lo,1)+"-"+fmt(hi,1)+" mm/h. Mưa dông cục bộ giữa các điểm có thể mạnh hơn giá trị trung bình này.",
       sort:1.5
     });
   }

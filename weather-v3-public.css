@@ -1,0 +1,108 @@
+.v3-observation-panel{
+  margin-top:14px;
+  border:1px solid #d9e8ee;
+  background:
+    radial-gradient(circle at 95% 10%,rgba(58,169,216,.11),transparent 24%),
+    linear-gradient(180deg,#fff,#f8fbfc);
+}
+.v3-observation-panel[hidden]{display:none!important}
+.v3-observation-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.v3-observation-head h2{margin:3px 0 0}
+.v3-beta-badge{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#eef7fb;
+  color:#2e6b86;
+  border:1px solid #cfe5ef;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.v3-observation-intro{
+  margin:9px 0 0;
+  color:#657d89;
+  font-size:8.5px;
+  line-height:1.55;
+}
+.v3-signal-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-top:12px;
+}
+.v3-signal-card{
+  min-width:0;
+  border:1px solid #e1e9ed;
+  border-radius:14px;
+  background:#fff;
+  padding:12px;
+}
+.v3-signal-card.rain{border-color:#c9dff0;background:#f7fbfe}
+.v3-signal-card.watch{border-color:#eadfb6;background:#fffdf5}
+.v3-signal-card.stale{border-color:#e6e9eb;background:#fafbfc}
+.v3-signal-card.neutral{border-color:#dfe8ec}
+.v3-signal-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+.v3-signal-top span{
+  color:#6d8490;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.v3-signal-top em{
+  font-style:normal;
+  border-radius:999px;
+  padding:3px 6px;
+  background:#eef4f7;
+  color:#5f7784;
+  font-size:6px;
+  font-weight:850;
+}
+.v3-signal-card b{
+  display:block;
+  margin-top:8px;
+  color:#274f64;
+  font-size:11px;
+  line-height:1.35;
+}
+.v3-signal-card p{
+  margin:5px 0 0;
+  color:#6e828c;
+  font-size:8px;
+  line-height:1.55;
+}
+.v3-signal-card small{
+  display:block;
+  margin-top:7px;
+  color:#93a0a7;
+  font-size:6.8px;
+}
+.v3-observation-foot{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  margin-top:10px;
+  padding-top:9px;
+  border-top:1px solid #edf2f4;
+  color:#7d9099;
+  font-size:7px;
+  line-height:1.5;
+}
+.v3-observation-foot b{color:#536f7d}
+@media(max-width:620px){
+  .v3-signal-grid{grid-template-columns:1fr}
+  .v3-observation-panel{margin-top:10px}
+}

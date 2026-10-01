@@ -24,8 +24,8 @@
       return {
         state:"ACTUAL_RAIN",
         evidenceClass:"ACTUAL",
-        headline:clean(item.headline)||"Đang có mưa tại điểm quan trắc.",
-        detail:clean(item.detail)||"Quan trắc thực tế đang ghi nhận mưa tại khu vực này.",
+        headline:clean(item.headline)||"Đang có mưa ở khu vực này.",
+        detail:clean(item.detail)||"Số đo mới đang ghi nhận mưa ở khu vực này.",
         observedAt:item.at||null
       };
     }
@@ -39,8 +39,8 @@
         return {
           state:thunder?"NEARBY_ACTUAL_THUNDER_RAIN":"NEARBY_ACTUAL_RAIN",
           evidenceClass:"ACTUAL",
-          headline:thunder?"Quan trắc gần đảo đang ghi nhận mưa dông.":"Quan trắc gần đảo đang ghi nhận mưa.",
-          detail:"Đây là quan trắc tại trạm tham chiếu, không có nghĩa mọi khu vực trên đảo đều đang mưa.",
+          headline:thunder?"Trạm gần khu vực đang ghi nhận mưa dông.":"Trạm gần khu vực đang ghi nhận mưa.",
+          detail:"Mưa có thể không xảy ra đồng thời ở mọi nơi trên đảo.",
           observedAt:vvpq.observed_at||null
         };
       }
@@ -49,20 +49,20 @@
     return {
       state:"NO_DIRECT_RAIN_CONFIRMATION",
       evidenceClass:"UNKNOWN",
-      headline:"Chưa có quan trắc mưa trực tiếp mới tại điểm này.",
-      detail:"Hệ thống không dùng dữ liệu thiếu để kết luận là trời đang khô.",
+      headline:"Chưa có số đo mưa mới ở khu vực này.",
+      detail:"Chưa có số đo mới thì chưa nên kết luận trời đang khô.",
       observedAt:null
     };
   }
 
   function soonView(nowcast,pointId,nowMs=Date.now()){
     const sampled=nowcast?.sampled_time||null;
-    if(!sampled||ageMinutes(sampled,nowMs)>75){
+    if(!sampled||ageMinutes(sampled,nowMs)>60){
       return {
         state:"STALE",
         evidenceClass:"REMOTE_OBSERVED",
-        headline:"Chưa đủ dữ liệu mới cho dự báo cực ngắn.",
-        detail:"Ảnh vệ tinh đang trễ hoặc chưa có dữ liệu phù hợp.",
+        headline:"Ảnh mây mới chưa về.",
+        detail:"Tạm thời chưa đưa ra nhận định cho 30-120 phút tới.",
         observedAt:sampled
       };
     }
@@ -82,8 +82,8 @@
       return {
         state:"APPROACHING_CONVECTION",
         evidenceClass:"DERIVED_NOWCAST",
-        headline:"Có vùng mây đối lưu đang tiến gần khu vực này.",
-        detail:"Cần theo dõi mưa dông "+windowText+". Đây là suy luận từ vệ tinh, chưa phải mưa đo tại mặt đất.",
+        headline:"Một vùng mây phát triển mạnh đang tiến gần khu vực này.",
+        detail:"Cần để ý khả năng mưa "+windowText+". Đây là diễn biến từ ảnh mây, chưa phải số đo mưa tại mặt đất.",
         observedAt:sampled,
         window:windowCode
       };
@@ -93,8 +93,8 @@
       return {
         state:"MOVING_AWAY",
         evidenceClass:"DERIVED_NOWCAST",
-        headline:"Vùng mây đối lưu đang dịch ra xa điểm này.",
-        detail:"Tín hiệu vệ tinh hiện chưa cho thấy vùng mây đang tiến vào điểm đang xem.",
+        headline:"Vùng mây phát triển mạnh đang dịch ra xa khu vực này.",
+        detail:"Đường đi hiện tại chưa cho thấy vùng mây đang tiến vào khu vực đang xem.",
         observedAt:sampled
       };
     }
@@ -103,8 +103,8 @@
       return {
         state:"PASSING_BY",
         evidenceClass:"DERIVED_NOWCAST",
-        headline:"Vùng mây đối lưu đang đi ngang khu vực.",
-        detail:"Hiện chưa có đường đi đủ rõ để nói vùng mây sẽ cắt vào điểm đang xem.",
+        headline:"Một vùng mây phát triển mạnh đang đi ngang qua khu vực.",
+        detail:"Đường đi hiện tại chưa cắt vào khu vực đang xem.",
         observedAt:sampled
       };
     }
@@ -113,8 +113,8 @@
       return {
         state:"CONVECTIVE_WATCH",
         evidenceClass:"REMOTE_OBSERVED",
-        headline:"Có mây đối lưu đáng chú ý quanh khu vực.",
-        detail:"Tiếp tục theo dõi diễn biến ngắn hạn. Chưa đủ dữ liệu để kết luận mưa sẽ tới điểm này.",
+        headline:"Có vùng mây phát triển mạnh quanh khu vực.",
+        detail:"Nên theo dõi thêm. Chưa đủ để nói mưa sẽ tới khu vực này.",
         observedAt:sampled
       };
     }
@@ -122,8 +122,8 @@
     return {
       state:"NO_STRONG_SHORT_SIGNAL",
       evidenceClass:"REMOTE_OBSERVED",
-      headline:"Chưa có tín hiệu ngắn hạn đủ mạnh để phát cảnh báo.",
-      detail:"Điều này không đồng nghĩa chắc chắn sẽ không có mưa cục bộ.",
+      headline:"Chưa thấy tín hiệu ngắn hạn đáng chú ý.",
+      detail:"Mưa cục bộ vẫn có thể xuất hiện.",
       observedAt:sampled
     };
   }

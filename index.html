@@ -26,12 +26,15 @@
   <meta name="twitter:description" content="Quan trắc, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày dành riêng cho Phú Quốc.">
   <meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Phu_Quoc_beach_01.jpg/1280px-Phu_Quoc_beach_01.jpg">
   <link rel="stylesheet" href="/weather-v2.css?v=20260924-compact-icons2">
+  <link rel="stylesheet" href="/weather-v3-public.css?v=20261001-beta1">
   <link rel="preload" as="fetch" href="https://kenzuko.github.io/Jotrip-Lab/weather/data/critical.json" crossorigin="anonymous">
   <link rel="manifest" href="/weather-manifest.webmanifest">
   <script defer src="/weather-wind-guard.js?v=20260924-qc1"></script>
   <script defer src="/weather-gust-outlook.js?v=20260924-0930"></script>
   <script defer src="/weather-human-contract.js?v=20260930-human1"></script>
+  <script defer src="/weather-v3-public-contract.js?v=20261001-beta1"></script>
   <script defer src="/weather-v2.js?v=20260930-human1"></script>
+  <script defer src="/weather-v3-public.js?v=20261001-beta1"></script>
   <link rel="canonical" href="https://weather.openphuquoc.com/">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebApplication","name":"JoTrip Weather Intelligence","url":"https://weather.openphuquoc.com/","applicationCategory":"WeatherApplication","operatingSystem":"Web","inLanguage":"vi","description":"Hệ thống thời tiết dành riêng cho Phú Quốc với quan trắc thực tế, radar - vệ tinh, biển, AQI và dự báo JoTrip 10 ngày."}
@@ -127,6 +130,32 @@
         <span id="gustShortDetail">Chỉ công bố số gió giật khi có số đo hoặc mốc mô hình rõ ràng.</span>
       </div>
     </div>
+  </section>
+
+  <section id="v3ObservationPanel" class="panel v3-observation-panel" aria-label="Quan trắc và dự báo cực ngắn V3" hidden>
+    <div class="v3-observation-head">
+      <div><span class="eyebrow">V3 · OBSERVATION &amp; NOWCAST</span><h2>Mưa quanh đảo</h2></div>
+      <div>
+        <span id="v3PointLabel" class="v3-beta-badge">Theo Dương Đông</span>
+        <span id="v3BetaState" class="v3-beta-badge">BETA</span>
+      </div>
+    </div>
+    <p class="v3-observation-intro">Quan trắc thực tế và ảnh vệ tinh được đọc cùng nhau để nhận biết điều đang xảy ra và tín hiệu rất ngắn hạn quanh điểm bạn chọn.</p>
+    <div class="v3-signal-grid">
+      <article id="v3NowCard" class="v3-signal-card neutral">
+        <div class="v3-signal-top"><span>LÚC NÀY</span><em id="v3NowEvidence">CHƯA XÁC NHẬN</em></div>
+        <b id="v3NowTitle">Đang đọc quan trắc...</b>
+        <p id="v3NowDetail">Hệ thống ưu tiên số đo thực tế khi có.</p>
+        <small id="v3NowTime">Đang chờ dữ liệu mới</small>
+      </article>
+      <article id="v3SoonCard" class="v3-signal-card neutral">
+        <div class="v3-signal-top"><span>30-120 PHÚT TỚI</span><em id="v3SoonEvidence">VỆ TINH</em></div>
+        <b id="v3SoonTitle">Đang đọc diễn biến mây...</b>
+        <p id="v3SoonDetail">Nowcast chỉ xuất hiện khi tín hiệu ngắn hạn đủ rõ.</p>
+        <small id="v3SoonTime">Đang chờ ảnh vệ tinh mới</small>
+      </article>
+    </div>
+    <div class="v3-observation-foot"><b>V3 Beta</b><span>Dữ liệu thiếu sẽ để trống hoặc báo chưa đủ thay vì tự suy thành “không mưa”. V2 vẫn là lớp quyết định chính trong giai đoạn kiểm chứng.</span></div>
   </section>
 
   <section class="panel field-feedback-panel" aria-label="Phản hồi tại chỗ">

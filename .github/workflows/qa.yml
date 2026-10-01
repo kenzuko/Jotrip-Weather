@@ -31,6 +31,9 @@ jobs:
           test -f weather-wind-guard.js
           test -f weather-gust-outlook.js
           test -f weather-human-contract.js
+          test -f weather-v3-public-contract.js
+          test -f weather-v3-public.js
+          test -f weather-v3-public.css
           test -f weather-alert-ledger.js
           test -f weather-alert-mirror.mjs
           grep -q "weather-gust-outlook.js" index.html
@@ -65,6 +68,10 @@ jobs:
           grep -q 'weather-v2.js' index.html
           grep -q 'weather-v2.css' index.html
           grep -q 'weather-human-contract.js' index.html
+          grep -q 'weather-v3-public-contract.js' index.html
+          grep -q 'weather-v3-public.js' index.html
+          grep -q 'weather-v3-public.css' index.html
+          grep -q 'id="v3ObservationPanel"' index.html
           grep -q 'weather-scene-v3.html' weather-v2.js
           grep -q 'BẢN ĐỒ JOTRIP' index.html
           grep -q 'data-layer="wind"' spatial-lab.html
@@ -87,6 +94,9 @@ jobs:
           node weather-gust-outlook.test.mjs weather-gust-outlook.js
           node --check weather-human-contract.js
           node tests/weather-human-contract.test.js
+          node --check weather-v3-public-contract.js
+          node --check weather-v3-public.js
+          node tests/weather-v3-public-contract.test.js
           node --check weather-alert-ledger.js
           node --check weather-alert-mirror.mjs
           node weather-alert-ledger.test.mjs weather-alert-ledger.js

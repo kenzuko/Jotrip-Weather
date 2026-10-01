@@ -106,3 +106,33 @@
   .v3-signal-grid{grid-template-columns:1fr}
   .v3-observation-panel{margin-top:10px}
 }
+
+.weather-version-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:5px;
+  min-width:24px;
+  height:16px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#163f5a;
+  color:#fff;
+  font:900 7px/1 system-ui,sans-serif;
+  letter-spacing:.08em;
+  vertical-align:middle;
+  box-shadow:0 0 0 1px rgba(22,63,90,.08);
+}
+.brand strong{
+  display:flex;
+  align-items:center;
+  gap:2px;
+}
+@media(max-width:520px){
+  .weather-version-badge{
+    min-width:22px;
+    height:15px;
+    padding:0 5px;
+    font-size:6.5px;
+  }
+}

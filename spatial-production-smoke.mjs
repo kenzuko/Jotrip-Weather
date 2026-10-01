@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 
 const base='https://weather.openphuquoc.com';
-const result={ok:false,overview:null,embed:null,runtime:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
+const result={ok:false,overview:null,v3:null,embed:null,runtime:null,scenes:{},flag:null,comparisons:{},forecast:null,desktop:null,pageErrors:[],consoleErrors:[],failure:null};
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
 page.on('pageerror',e=>result.pageErrors.push(String(e)));
@@ -41,6 +41,29 @@ try{
     wave:(document.getElementById('heroWave')?.textContent||'').trim()
   }));
   await overview.screenshot({path:'/tmp/prod-weather-overview-mobile.png'});
+  const v3=page.locator('#v3ObservationPanel');
+  await v3.waitFor({state:'visible',timeout:30000});
+  await page.waitForFunction(()=>{
+    const panel=document.getElementById('v3ObservationPanel');
+    return panel && !panel.hidden && (document.getElementById('v3NowTitle')?.textContent||'').trim().length>0;
+  },null,{timeout:30000});
+  result.v3=await v3.evaluate(el=>({
+    width:el.getBoundingClientRect().width,
+    scrollWidth:el.scrollWidth,
+    point:(document.getElementById('v3PointLabel')?.textContent||'').trim(),
+    beta:(document.getElementById('v3BetaState')?.textContent||'').trim(),
+    nowEvidence:(document.getElementById('v3NowEvidence')?.textContent||'').trim(),
+    nowTitle:(document.getElementById('v3NowTitle')?.textContent||'').trim(),
+    soonEvidence:(document.getElementById('v3SoonEvidence')?.textContent||'').trim(),
+    soonTitle:(document.getElementById('v3SoonTitle')?.textContent||'').trim()
+  }));
+  const anThoi=page.locator('#pointTabs button[data-point="an_thoi"]');
+  if(await anThoi.count()){
+    await anThoi.click();
+    await page.waitForFunction(()=>/An Thới/.test(document.getElementById('v3PointLabel')?.textContent||''),null,{timeout:10000});
+    result.v3.pointAfterSwitch=(await page.locator('#v3PointLabel').innerText()).trim();
+  }
+  await v3.screenshot({path:'/tmp/prod-weather-v3-mobile.png'});
   await page.locator('.map-panel').scrollIntoViewIfNeeded();
   await page.locator('[data-map="jotrip"]').click();
 
@@ -170,6 +193,14 @@ try{
     result.overview?.scrollWidth<=result.overview?.width+2 &&
     result.overview?.condition.length>0 &&
     result.overview?.temp!=='--' &&
+    result.v3?.width>0 &&
+    result.v3?.scrollWidth<=result.v3?.width+2 &&
+    result.v3?.beta==='BETA' &&
+    result.v3?.nowTitle.length>0 &&
+    result.v3?.soonTitle.length>0 &&
+    ['QUAN TRẮC','CHƯA XÁC NHẬN'].includes(result.v3?.nowEvidence) &&
+    ['NOWCAST','VỆ TINH'].includes(result.v3?.soonEvidence) &&
+    (!result.v3?.pointAfterSwitch || /An Thới/.test(result.v3.pointAfterSwitch)) &&
     result.embed?.embedMode===true &&
     result.embed?.topbarDisplay==='none' &&
     String(result.embed?.renderer||'').includes('wave-island-anchors') &&

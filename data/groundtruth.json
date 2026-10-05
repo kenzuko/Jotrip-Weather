@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "generated_at": "2026-10-05T06:41:03.259321+00:00",
+  "generated_at": "2026-10-05T07:10:58.731076+00:00",
   "status": "READY",
   "actual_policy": "Current-time ACTUAL requires timestamped in-situ or raw coded observations. Historical aggregate/published observations are verification-only; remote sensing, models and fusion remain separate classes.",
   "atmosphere": {
@@ -14,14 +14,14 @@
       "source": "AVIATION_WEATHER_CENTER_METAR",
       "source_channel": "METAR",
       "data_class": "ACTUAL",
-      "observed_at": "2026-10-05T06:30:00+00:00",
-      "age_minutes": 11.1,
-      "temperature_c": 31.0,
+      "observed_at": "2026-10-05T07:00:00+00:00",
+      "age_minutes": 11.0,
+      "temperature_c": 32.0,
       "dewpoint_c": 26.0,
-      "wind_direction_deg": 250.0,
-      "wind_speed_kt": 8.0,
-      "wind_speed_ms": 4.116,
-      "wind_speed_kmh": 14.82,
+      "wind_direction_deg": 230.0,
+      "wind_speed_kt": 9.0,
+      "wind_speed_ms": 4.63,
+      "wind_speed_kmh": 16.67,
       "pressure_hpa": 1009.0,
       "visibility_sm": null,
       "visibility_m": null,
@@ -34,10 +34,10 @@
         }
       ],
       "flight_category": "VFR",
-      "raw_observation": "METAR VVPQ 050630Z 25008KT 9999 FEW017 31/26 Q1009 NOSIG",
+      "raw_observation": "METAR VVPQ 050700Z 23009KT 9999 FEW017 32/26 Q1009 NOSIG",
       "qc": "PASS",
       "provenance_url": "https://aviationweather.gov/api/data/metar?ids=VVPQ&format=json&hours=24",
-      "raw_payload_hash": "16a1b6ea3ddb8c134865fc46152e848adb585cf4f659f6b5fa51d1f1cbe934e0"
+      "raw_payload_hash": "6e237c957d0f4f350f4be09c761fdee8b5143eeb7ccd57aaf44d5fcd07de901f"
     },
     "synop_48917": {
       "status": "FRESH",
@@ -103,12 +103,12 @@
         }
       },
       "relocation_status": "NO_VERIFIED_POST_2012_RELOCATION_FOUND",
-      "provenance_url": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610030641&end=202610050641&lang=eng&header=yes",
-      "checked_at": "2026-10-05T06:41:05.045122+00:00",
+      "provenance_url": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610030710&end=202610050710&lang=eng&header=yes",
+      "checked_at": "2026-10-05T07:11:00.553243+00:00",
       "latest_observed_at": "2026-10-05T06:00:00+00:00",
-      "age_minutes": 41.1,
+      "age_minutes": 71.0,
       "latest_numeric_observed_at": "2026-10-05T06:00:00+00:00",
-      "numeric_age_minutes": 41.1,
+      "numeric_age_minutes": 71.0,
       "latest": {
         "source_namespace": "WMO_INDEX",
         "identifier": "48917",
@@ -637,9 +637,9 @@
     "status": "STALE",
     "source": "VRAIN_PUBLIC",
     "period_start": "2026-10-04T12:00:00+00:00",
-    "period_end": "2026-10-05T06:41:04+00:00",
-    "source_reported_at": "2026-10-05T06:41:04+00:00",
-    "fetched_at": "2026-10-05T06:41:03.259321+00:00",
+    "period_end": "2026-10-05T07:10:59+00:00",
+    "source_reported_at": "2026-10-05T07:10:59+00:00",
+    "fetched_at": "2026-10-05T07:10:58.731076+00:00",
     "stations": {
       "cua_can": {
         "station_id": "VRAIN_CUA_CAN",
@@ -651,13 +651,13 @@
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
         "observed_at": "2026-10-04T13:11:02+00:00",
-        "source_reported_at": "2026-10-05T06:41:04+00:00",
-        "fetched_at": "2026-10-05T06:41:03.259321+00:00",
-        "last_checked_at": "2026-10-05T06:41:03.259321+00:00",
+        "source_reported_at": "2026-10-05T07:10:59+00:00",
+        "fetched_at": "2026-10-05T07:10:58.731076+00:00",
+        "last_checked_at": "2026-10-05T07:10:58.731076+00:00",
         "last_value_changed_at": "2026-10-04T13:11:02+00:00",
         "sample_state": "UNCHANGED_PAYLOAD",
         "value_changed": false,
-        "age_minutes": 1050.0,
+        "age_minutes": 1079.9,
         "variable": "precipitation",
         "accumulation_mm": 0.0,
         "accumulation_label": "Không mưa",
@@ -687,13 +687,13 @@
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
         "observed_at": "2026-10-02T13:10:42+00:00",
-        "source_reported_at": "2026-10-05T06:41:04+00:00",
-        "fetched_at": "2026-10-05T06:41:03.259321+00:00",
-        "last_checked_at": "2026-10-05T06:41:03.259321+00:00",
+        "source_reported_at": "2026-10-05T07:10:59+00:00",
+        "fetched_at": "2026-10-05T07:10:58.731076+00:00",
+        "last_checked_at": "2026-10-05T07:10:58.731076+00:00",
         "last_value_changed_at": "2026-10-02T13:10:42+00:00",
         "sample_state": "UNCHANGED_PAYLOAD",
         "value_changed": false,
-        "age_minutes": 3930.4,
+        "age_minutes": 3960.3,
         "variable": "precipitation",
         "accumulation_mm": 0.0,
         "accumulation_label": "Không mưa",
@@ -723,13 +723,13 @@
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
         "observed_at": "2026-10-04T13:11:02+00:00",
-        "source_reported_at": "2026-10-05T06:41:04+00:00",
-        "fetched_at": "2026-10-05T06:41:03.259321+00:00",
-        "last_checked_at": "2026-10-05T06:41:03.259321+00:00",
+        "source_reported_at": "2026-10-05T07:10:59+00:00",
+        "fetched_at": "2026-10-05T07:10:58.731076+00:00",
+        "last_checked_at": "2026-10-05T07:10:58.731076+00:00",
         "last_value_changed_at": "2026-10-04T13:11:02+00:00",
         "sample_state": "UNCHANGED_PAYLOAD",
         "value_changed": false,
-        "age_minutes": 1050.0,
+        "age_minutes": 1079.9,
         "variable": "precipitation",
         "accumulation_mm": 0.0,
         "accumulation_label": "Không mưa",
@@ -785,7 +785,7 @@
   },
   "source_registry": {
     "schema_version": "groundtruth-operational-registry-v1",
-    "generated_at": "2026-10-05T06:41:05.046254+00:00",
+    "generated_at": "2026-10-05T07:11:00.554244+00:00",
     "source_count": 18,
     "tiers": [
       "ACTIVE_REALTIME",
@@ -820,11 +820,11 @@
         },
         "freshness": {
           "state": "FRESH",
-          "age_minutes": 11.1,
+          "age_minutes": 11.0,
           "budget_minutes": 90
         },
         "health": "HEALTHY",
-        "last_observation": "2026-10-05T06:30:00+00:00",
+        "last_observation": "2026-10-05T07:00:00+00:00",
         "status_reason": "Current METAR/SPECI observation is usable."
       },
       {
@@ -910,13 +910,13 @@
         ],
         "tier": "ACTIVE_NEAR_REALTIME",
         "provenance": {
-          "feed": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610030641&end=202610050641&lang=eng&header=yes",
+          "feed": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610030710&end=202610050710&lang=eng&header=yes",
           "observation_channel": "WMO FM-12 SYNOP AAXX raw",
           "registry": "WEATHER_GROUNDTRUTH_FINAL_HANDOFF_20260930 + REGISTRY_V5"
         },
         "freshness": {
           "state": "FRESH",
-          "age_minutes": 41.1,
+          "age_minutes": 71.0,
           "budget_minutes": 480
         },
         "health": "HEALTHY",
@@ -943,7 +943,7 @@
         },
         "freshness": {
           "state": "STALE",
-          "age_minutes": 1050.0,
+          "age_minutes": 1079.9,
           "budget_minutes": 90
         },
         "health": "DEGRADED_STALE",
@@ -1362,5 +1362,5 @@
     }
   },
   "errors": [],
-  "payload_hash": "cd22387a53744c8ba38d9d1e42af7bcff94ed49631dc449c48482f926759508b"
+  "payload_hash": "7b6a177fe3b4c08483810ac48353e9ba94ad0f431a5bebf4b54010503bbee784"
 }

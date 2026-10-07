@@ -1,9 +1,7 @@
 name: Weather Independent Observation Overlay
 
 on:
-  # Himawari source is probed each 10 minutes; this consumes only new verified samples.
-  schedule:
-    - cron: "9,19,29,39,49,59 * * * *"
+  # LAB ONLY: periodic observation overlay retired. Manual replay remains available.
   workflow_dispatch:
   pull_request:
     paths:

@@ -5,11 +5,7 @@ name: Weather runtime mirror
 # post-ground-nowcast-freshness refresh
 
 on:
-  schedule:
-    # Ground Truth + Himawari refresh at :03/:13/:23/... in Jotrip-Lab.
-    # Mirror after those writers so production does not consistently publish
-    # the previous 10-minute observation set.
-    - cron: '6,16,26,36,46,56 * * * *'
+  # LAB ONLY: periodic production mirroring retired. Manual replay remains available.
   workflow_dispatch:
   push:
     branches: [main]

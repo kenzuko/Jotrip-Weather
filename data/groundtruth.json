@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "generated_at": "2026-10-07T03:11:17.362018+00:00",
+  "generated_at": "2026-10-07T03:41:19.803925+00:00",
   "status": "READY",
   "actual_policy": "Current-time ACTUAL requires timestamped in-situ or raw coded observations. Historical aggregate/published observations are verification-only; remote sensing, models and fusion remain separate classes.",
   "atmosphere": {
@@ -14,15 +14,15 @@
       "source": "AVIATION_WEATHER_CENTER_METAR",
       "source_channel": "METAR",
       "data_class": "ACTUAL",
-      "observed_at": "2026-10-07T03:00:00+00:00",
+      "observed_at": "2026-10-07T03:30:00+00:00",
       "age_minutes": 11.3,
       "temperature_c": 32.0,
       "dewpoint_c": 25.0,
-      "wind_direction_deg": 100.0,
-      "wind_speed_kt": 5.0,
-      "wind_speed_ms": 2.572,
-      "wind_speed_kmh": 9.26,
-      "pressure_hpa": 1015.0,
+      "wind_direction_deg": 140.0,
+      "wind_speed_kt": 3.0,
+      "wind_speed_ms": 1.543,
+      "wind_speed_kmh": 5.56,
+      "pressure_hpa": 1014.0,
       "visibility_sm": null,
       "visibility_m": null,
       "weather": null,
@@ -34,10 +34,10 @@
         }
       ],
       "flight_category": "VFR",
-      "raw_observation": "METAR VVPQ 070300Z 10005KT 9999 SCT015 32/25 Q1015 NOSIG",
+      "raw_observation": "METAR VVPQ 070330Z 14003KT 070V220 9999 SCT015 32/25 Q1014 NOSIG",
       "qc": "PASS",
       "provenance_url": "https://aviationweather.gov/api/data/metar?ids=VVPQ&format=json&hours=24",
-      "raw_payload_hash": "967031dc4ee6821d6233c6e81fc837989af490288df2524b6fe1074d0f78528b"
+      "raw_payload_hash": "48b20ce4e1947d44c589484a4d7b7c6d39f0c4baeb4ce306b86e81b13c48e7c8"
     },
     "synop_48917": {
       "status": "FRESH",
@@ -103,12 +103,12 @@
         }
       },
       "relocation_status": "NO_VERIFIED_POST_2012_RELOCATION_FOUND",
-      "provenance_url": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610050311&end=202610070311&lang=eng&header=yes",
-      "checked_at": "2026-10-07T03:11:19.053253+00:00",
-      "latest_observed_at": "2026-10-07T00:00:00+00:00",
-      "age_minutes": 191.3,
-      "latest_numeric_observed_at": "2026-10-07T00:00:00+00:00",
-      "numeric_age_minutes": 191.3,
+      "provenance_url": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610050341&end=202610070341&lang=eng&header=yes",
+      "checked_at": "2026-10-07T03:41:21.455003+00:00",
+      "latest_observed_at": "2026-10-07T03:00:00+00:00",
+      "age_minutes": 41.3,
+      "latest_numeric_observed_at": "2026-10-07T03:00:00+00:00",
+      "numeric_age_minutes": 41.3,
       "latest": {
         "source_namespace": "WMO_INDEX",
         "identifier": "48917",
@@ -128,57 +128,27 @@
         "source_channel": "SYNOP_AAXX_RAW",
         "data_class": "ACTUAL",
         "observation_class": "RAW_OBS",
-        "observed_at": "2026-10-07T00:00:00+00:00",
-        "raw_observation": "AAXX 07001 48917 11598 60703 10277 20242 30130 40136 52013 69912 70382 83206 222// 00281 2//00 333 01027 20260 3/026 58020 83895 86299=",
-        "raw_payload_hash": "746035ff6ef9dac33978982a6252e0843e4335a58be80f399b9acbf3745d3060",
+        "observed_at": "2026-10-07T03:00:00+00:00",
+        "raw_observation": "AAXX 07031 48917 32598 63202 10300 20266 30143 40149 52013 82208 333 58012 82895 86299=",
+        "raw_payload_hash": "7b36db90bbe2a38919c2c005c15056823cf99c3d208a561a16733512280b638a",
         "decoded_actual": {
           "wind": {
-            "direction_deg": 70,
+            "direction_deg": 320,
             "direction_class": "DIRECTIONAL",
-            "speed_ms": 3.0,
-            "speed_kmh": 10.8,
+            "speed_ms": 2.0,
+            "speed_kmh": 7.2,
             "measurement_origin": "ANEMOMETER",
             "iw": 1,
-            "raw_group": "60703"
+            "raw_group": "63202"
           },
-          "air_temperature_c": 27.7,
-          "dewpoint_c": 24.2,
-          "station_pressure_hpa": 1013.0,
-          "sea_level_pressure_hpa": 1013.6,
-          "precipitation": [
-            {
-              "section": 1,
-              "accumulation_mm": 0.1,
-              "window_hours": 12,
-              "tR": 2,
-              "trace": false,
-              "raw_group": "69912",
-              "statistic": "ACCUMULATION",
-              "data_class": "ACTUAL"
-            }
-          ],
+          "air_temperature_c": 30.0,
+          "dewpoint_c": 26.6,
+          "station_pressure_hpa": 1014.3,
+          "sea_level_pressure_hpa": 1014.9,
+          "precipitation": [],
           "marine": {
-            "sea_surface_temperature": {
-              "temperature_c": 28.1,
-              "ss": 0,
-              "raw_group": "00281",
-              "data_class": "ACTUAL",
-              "observation_type": "SYNOP_SECTION2_SST"
-            },
-            "wind_wave": {
-              "period_s": null,
-              "period_code": "//",
-              "height_code": 0,
-              "height_nominal_m": 0.0,
-              "height_bin_m": [
-                0.0,
-                0.25
-              ],
-              "raw_group": "2//00",
-              "data_class": "ACTUAL",
-              "observation_type": "VISUAL_WIND_WAVE_CODE",
-              "instrument_hs": false
-            }
+            "sea_surface_temperature": null,
+            "wind_wave": null
           }
         },
         "qc": "PASS_RAW_WITH_TESTED_SUBSET_DECODE"
@@ -202,106 +172,32 @@
         "source_channel": "SYNOP_AAXX_RAW",
         "data_class": "ACTUAL",
         "observation_class": "RAW_OBS",
-        "observed_at": "2026-10-07T00:00:00+00:00",
-        "raw_observation": "AAXX 07001 48917 11598 60703 10277 20242 30130 40136 52013 69912 70382 83206 222// 00281 2//00 333 01027 20260 3/026 58020 83895 86299=",
-        "raw_payload_hash": "746035ff6ef9dac33978982a6252e0843e4335a58be80f399b9acbf3745d3060",
+        "observed_at": "2026-10-07T03:00:00+00:00",
+        "raw_observation": "AAXX 07031 48917 32598 63202 10300 20266 30143 40149 52013 82208 333 58012 82895 86299=",
+        "raw_payload_hash": "7b36db90bbe2a38919c2c005c15056823cf99c3d208a561a16733512280b638a",
         "decoded_actual": {
           "wind": {
-            "direction_deg": 70,
+            "direction_deg": 320,
             "direction_class": "DIRECTIONAL",
-            "speed_ms": 3.0,
-            "speed_kmh": 10.8,
+            "speed_ms": 2.0,
+            "speed_kmh": 7.2,
             "measurement_origin": "ANEMOMETER",
             "iw": 1,
-            "raw_group": "60703"
+            "raw_group": "63202"
           },
-          "air_temperature_c": 27.7,
-          "dewpoint_c": 24.2,
-          "station_pressure_hpa": 1013.0,
-          "sea_level_pressure_hpa": 1013.6,
-          "precipitation": [
-            {
-              "section": 1,
-              "accumulation_mm": 0.1,
-              "window_hours": 12,
-              "tR": 2,
-              "trace": false,
-              "raw_group": "69912",
-              "statistic": "ACCUMULATION",
-              "data_class": "ACTUAL"
-            }
-          ],
+          "air_temperature_c": 30.0,
+          "dewpoint_c": 26.6,
+          "station_pressure_hpa": 1014.3,
+          "sea_level_pressure_hpa": 1014.9,
+          "precipitation": [],
           "marine": {
-            "sea_surface_temperature": {
-              "temperature_c": 28.1,
-              "ss": 0,
-              "raw_group": "00281",
-              "data_class": "ACTUAL",
-              "observation_type": "SYNOP_SECTION2_SST"
-            },
-            "wind_wave": {
-              "period_s": null,
-              "period_code": "//",
-              "height_code": 0,
-              "height_nominal_m": 0.0,
-              "height_bin_m": [
-                0.0,
-                0.25
-              ],
-              "raw_group": "2//00",
-              "data_class": "ACTUAL",
-              "observation_type": "VISUAL_WIND_WAVE_CODE",
-              "instrument_hs": false
-            }
+            "sea_surface_temperature": null,
+            "wind_wave": null
           }
         },
         "qc": "PASS_RAW_WITH_TESTED_SUBSET_DECODE"
       },
       "recent_observations": [
-        {
-          "source_namespace": "WMO_INDEX",
-          "identifier": "48917",
-          "station_name": "PHU QUOC",
-          "reference_lat": 10.22,
-          "reference_lon": 103.97,
-          "coordinate_precision": "STATION_METADATA_APPROX_0_01_DEG",
-          "location_context": "DUONG_DONG_AREA",
-          "station_epoch": "CURRENT_2026_METADATA_DUONG_DONG",
-          "physical_identity": "PHU_QUOC_MARINE_SYNOPTIC_OBSERVATION_PROGRAM",
-          "identity_status": "INDEPENDENT_FROM_CURRENT_VVPQ",
-          "identity_confidence": "HIGH",
-          "identity_resolution_id": "WMO_INDEX:48917:CURRENT_2026_DUONG_DONG:v1",
-          "identity_policy": "Independent from current ICAO:VVPQ for operational evidence. Never merge with ICAO:VVPQ, KTT_BOOK_STATION_CODE:48917 or KTTV_AUTO:60018 solely by identifier/cross-id.",
-          "relocation_status": "NO_VERIFIED_POST_2012_RELOCATION_FOUND",
-          "source": "OGIMET_GETSYNOP",
-          "source_channel": "SYNOP_AAXX_RAW",
-          "data_class": "ACTUAL",
-          "observation_class": "RAW_OBS",
-          "observed_at": "2026-10-05T09:00:00+00:00",
-          "raw_observation": "AAXX 05091 48917 32598 62704 10309 20279 30085 40091 57015 82208 333 59010 82895 86299=",
-          "raw_payload_hash": "2e5e950368db54f724d55e03ec0845ebf2563e26e7c6852fe6ef813d48c4f859",
-          "decoded_actual": {
-            "wind": {
-              "direction_deg": 270,
-              "direction_class": "DIRECTIONAL",
-              "speed_ms": 4.0,
-              "speed_kmh": 14.4,
-              "measurement_origin": "ANEMOMETER",
-              "iw": 1,
-              "raw_group": "62704"
-            },
-            "air_temperature_c": 30.9,
-            "dewpoint_c": 27.9,
-            "station_pressure_hpa": 1008.5,
-            "sea_level_pressure_hpa": 1009.1,
-            "precipitation": [],
-            "marine": {
-              "sea_surface_temperature": null,
-              "wind_wave": null
-            }
-          },
-          "qc": "PASS_RAW_WITH_TESTED_SUBSET_DECODE"
-        },
         {
           "source_namespace": "WMO_INDEX",
           "identifier": "48917",
@@ -659,9 +555,53 @@
             }
           },
           "qc": "PASS_RAW_WITH_TESTED_SUBSET_DECODE"
+        },
+        {
+          "source_namespace": "WMO_INDEX",
+          "identifier": "48917",
+          "station_name": "PHU QUOC",
+          "reference_lat": 10.22,
+          "reference_lon": 103.97,
+          "coordinate_precision": "STATION_METADATA_APPROX_0_01_DEG",
+          "location_context": "DUONG_DONG_AREA",
+          "station_epoch": "CURRENT_2026_METADATA_DUONG_DONG",
+          "physical_identity": "PHU_QUOC_MARINE_SYNOPTIC_OBSERVATION_PROGRAM",
+          "identity_status": "INDEPENDENT_FROM_CURRENT_VVPQ",
+          "identity_confidence": "HIGH",
+          "identity_resolution_id": "WMO_INDEX:48917:CURRENT_2026_DUONG_DONG:v1",
+          "identity_policy": "Independent from current ICAO:VVPQ for operational evidence. Never merge with ICAO:VVPQ, KTT_BOOK_STATION_CODE:48917 or KTTV_AUTO:60018 solely by identifier/cross-id.",
+          "relocation_status": "NO_VERIFIED_POST_2012_RELOCATION_FOUND",
+          "source": "OGIMET_GETSYNOP",
+          "source_channel": "SYNOP_AAXX_RAW",
+          "data_class": "ACTUAL",
+          "observation_class": "RAW_OBS",
+          "observed_at": "2026-10-07T03:00:00+00:00",
+          "raw_observation": "AAXX 07031 48917 32598 63202 10300 20266 30143 40149 52013 82208 333 58012 82895 86299=",
+          "raw_payload_hash": "7b36db90bbe2a38919c2c005c15056823cf99c3d208a561a16733512280b638a",
+          "decoded_actual": {
+            "wind": {
+              "direction_deg": 320,
+              "direction_class": "DIRECTIONAL",
+              "speed_ms": 2.0,
+              "speed_kmh": 7.2,
+              "measurement_origin": "ANEMOMETER",
+              "iw": 1,
+              "raw_group": "63202"
+            },
+            "air_temperature_c": 30.0,
+            "dewpoint_c": 26.6,
+            "station_pressure_hpa": 1014.3,
+            "sea_level_pressure_hpa": 1014.9,
+            "precipitation": [],
+            "marine": {
+              "sea_surface_temperature": null,
+              "wind_wave": null
+            }
+          },
+          "qc": "PASS_RAW_WITH_TESTED_SUBSET_DECODE"
         }
       ],
-      "recent_count": 9,
+      "recent_count": 10,
       "production_role": "ACTIVE_NEAR_REALTIME_GROUND_OBSERVATION",
       "runtime_eligible": true
     }
@@ -670,9 +610,9 @@
     "status": "FRESH",
     "source": "VRAIN_PUBLIC",
     "period_start": "2026-10-06T12:00:00+00:00",
-    "period_end": "2026-10-07T03:11:18+00:00",
-    "source_reported_at": "2026-10-07T03:11:18+00:00",
-    "fetched_at": "2026-10-07T03:11:17.362018+00:00",
+    "period_end": "2026-10-07T03:41:20+00:00",
+    "source_reported_at": "2026-10-07T03:41:20+00:00",
+    "fetched_at": "2026-10-07T03:41:19.803925+00:00",
     "stations": {
       "bai_thom": {
         "station_id": "VRAIN_BAI_THOM",
@@ -684,13 +624,13 @@
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
         "observed_at": "2026-10-07T03:11:18+00:00",
-        "source_reported_at": "2026-10-07T03:11:18+00:00",
-        "fetched_at": "2026-10-07T03:11:17.362018+00:00",
-        "last_checked_at": "2026-10-07T03:11:17.362018+00:00",
+        "source_reported_at": "2026-10-07T03:41:20+00:00",
+        "fetched_at": "2026-10-07T03:41:19.803925+00:00",
+        "last_checked_at": "2026-10-07T03:41:19.803925+00:00",
         "last_value_changed_at": "2026-10-06T19:11:17+00:00",
-        "sample_state": "NEW_SOURCE_PAYLOAD",
+        "sample_state": "UNCHANGED_PAYLOAD",
         "value_changed": false,
-        "age_minutes": 0.0,
+        "age_minutes": 30.0,
         "variable": "precipitation",
         "accumulation_mm": 1.7999999999999998,
         "accumulation_label": "Mưa nhỏ",
@@ -702,10 +642,10 @@
         "increment_window_minutes": null,
         "rain_observed": null,
         "rain_intensity_mm_h": null,
-        "recent_change_mm": 0.0,
-        "recent_change_window_minutes": 480.0,
-        "rain_recently_observed": false,
-        "increment_qc": "WINDOW_TOO_OLD_FOR_CURRENT_RAIN",
+        "recent_change_mm": null,
+        "recent_change_window_minutes": null,
+        "rain_recently_observed": null,
+        "increment_qc": "NO_NEW_SENSOR_SAMPLE",
         "qc": "PASS",
         "provenance_url": "https://data.vrain.vn/public/current/all.json",
         "raw_payload_hash": "e10aae799ccda7bf7ca128c77424870bdd1cb9a9d8ca9cdc95bf808dc3b04bdf"
@@ -720,13 +660,13 @@
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
         "observed_at": "2026-10-06T20:11:10+00:00",
-        "source_reported_at": "2026-10-07T03:11:18+00:00",
-        "fetched_at": "2026-10-07T03:11:17.362018+00:00",
-        "last_checked_at": "2026-10-07T03:11:17.362018+00:00",
+        "source_reported_at": "2026-10-07T03:41:20+00:00",
+        "fetched_at": "2026-10-07T03:41:19.803925+00:00",
+        "last_checked_at": "2026-10-07T03:41:19.803925+00:00",
         "last_value_changed_at": "2026-10-06T20:11:10+00:00",
         "sample_state": "UNCHANGED_PAYLOAD",
         "value_changed": false,
-        "age_minutes": 420.1,
+        "age_minutes": 450.2,
         "variable": "precipitation",
         "accumulation_mm": 0.8,
         "accumulation_label": "Mưa nhỏ",
@@ -756,13 +696,13 @@
         "source_channel": "current/all.json",
         "data_class": "ACTUAL",
         "observed_at": "2026-10-04T13:11:02+00:00",
-        "source_reported_at": "2026-10-07T03:11:18+00:00",
-        "fetched_at": "2026-10-07T03:11:17.362018+00:00",
-        "last_checked_at": "2026-10-07T03:11:17.362018+00:00",
+        "source_reported_at": "2026-10-07T03:41:20+00:00",
+        "fetched_at": "2026-10-07T03:41:19.803925+00:00",
+        "last_checked_at": "2026-10-07T03:41:19.803925+00:00",
         "last_value_changed_at": "2026-10-04T13:11:02+00:00",
         "sample_state": "UNCHANGED_PAYLOAD",
         "value_changed": false,
-        "age_minutes": 3720.3,
+        "age_minutes": 3750.3,
         "variable": "precipitation",
         "accumulation_mm": 0.0,
         "accumulation_label": "Không mưa",
@@ -818,7 +758,7 @@
   },
   "source_registry": {
     "schema_version": "groundtruth-operational-registry-v1",
-    "generated_at": "2026-10-07T03:11:19.054082+00:00",
+    "generated_at": "2026-10-07T03:41:21.455807+00:00",
     "source_count": 18,
     "tiers": [
       "ACTIVE_REALTIME",
@@ -857,7 +797,7 @@
           "budget_minutes": 90
         },
         "health": "HEALTHY",
-        "last_observation": "2026-10-07T03:00:00+00:00",
+        "last_observation": "2026-10-07T03:30:00+00:00",
         "status_reason": "Current METAR/SPECI observation is usable."
       },
       {
@@ -943,17 +883,17 @@
         ],
         "tier": "ACTIVE_NEAR_REALTIME",
         "provenance": {
-          "feed": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610050311&end=202610070311&lang=eng&header=yes",
+          "feed": "https://www.ogimet.com/cgi-bin/getsynop?block=48917&begin=202610050341&end=202610070341&lang=eng&header=yes",
           "observation_channel": "WMO FM-12 SYNOP AAXX raw",
           "registry": "WEATHER_GROUNDTRUTH_FINAL_HANDOFF_20260930 + REGISTRY_V5"
         },
         "freshness": {
           "state": "FRESH",
-          "age_minutes": 191.3,
+          "age_minutes": 41.3,
           "budget_minutes": 480
         },
         "health": "HEALTHY",
-        "last_observation": "2026-10-07T00:00:00+00:00",
+        "last_observation": "2026-10-07T03:00:00+00:00",
         "status_reason": "Raw current SYNOP is available within the synoptic freshness budget."
       },
       {
@@ -976,7 +916,7 @@
         },
         "freshness": {
           "state": "FRESH",
-          "age_minutes": 0.0,
+          "age_minutes": 30.0,
           "budget_minutes": 90
         },
         "health": "HEALTHY",
@@ -1395,5 +1335,5 @@
     }
   },
   "errors": [],
-  "payload_hash": "147a3bb623c6fd3b1573dc2852f0206f8fd6a0681392d9175f0d9e4ed3d7257a"
+  "payload_hash": "f91c08a616b3261f5ab5817eeaf7aa3a0d3e9aa82573e676be58fb73c949eec8"
 }

@@ -1,15 +1,32 @@
-# JoTrip Weather Lab
+# JoTrip Weather Lab - legacy / R&D only
 
-Standalone public dashboard for JoTrip Weather Lab.
+> **Role lock (2026-10-07): this repository is the Weather Lab, not the production Weather product.**
 
-- Production domain: `https://weather.openphuquoc.com`
-- UI repository: `kenzuko/Jotrip-Weather`
-- Weather data engine: `kenzuko/Jotrip-Lab`, branch `feat/weather-lab-data-engine-v1`
-- GitHub Pages publishes `main` from `/ (root)`.
-- Live Weather JSON is read directly from the data engine with `cache: no-store`.
-- If the raw GitHub Weather JSON endpoint fails, the standalone data bridge retries through the GitHub Contents API.
-- Static UI dependencies are pinned to source commit `fa2b76f35cb1b8031023c95508246ceee484152c` so data updates cannot unexpectedly change the public interface.
-- Legacy `/weather.html` and `/weather/` URLs redirect to the production root.
-- `.github/workflows/qa.yml` validates the static contract and live Weather data on every push and every 6 hours.
+Canonical production terminology:
 
-The public site intentionally does not duplicate the collector/model pipeline. Data-engine development remains in `Jotrip-Lab`; this repository is the public presentation layer.
+- **Production Weather Product**: `https://openphuquoc.com/weather` (short name: `/weather`)
+- **Weather Lab**: `https://weather.openphuquoc.com` (this repository)
+- **Owned Weather Engine/Data**: `kenzuko/openpq-intelligence/producers/weather` + branch `data-weather`
+
+The Weather Lab is retained for historical comparison, replay, visual experiments, regression testing and R&D.
+
+It has **no canonical authority** and must never be an automatic fallback or runtime dependency of `/weather`.
+
+## Historical implementation
+
+This repository contains the former standalone Weather UI and its historical bridge code. Some files still refer to legacy `Jotrip-Lab` data paths because they are part of the archived implementation. Those references are not a production contract.
+
+## Shutdown boundary
+
+Production `/weather` is considered cleanly detached only when this site and its scheduled workflows can be unavailable without affecting:
+
+- current conditions
+- ground truth
+- cloud / nowcast
+- forecast
+- marine
+- metadata / health
+- critical summary
+- regional forecast
+
+New production development must occur in the OpenPQ-owned Weather path, not here.

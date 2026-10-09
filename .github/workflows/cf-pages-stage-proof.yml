@@ -1,0 +1,62 @@
+name: Cloudflare Pages weather isolated stage proof
+on:
+  push:
+    branches: [ops/cf-pages-migration-20261009]
+    paths: [.github/workflows/cf-pages-stage-proof.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_SEND_METRICS: 'false'
+      PROJECT: openpq-weather-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check independent deployment authorization
+        shell: bash
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "REPO_CLOUDFLARE_DEPLOY_ACCESS=NOT_CONFIGURED"
+            exit 1
+          fi
+          echo "REPO_CLOUDFLARE_DEPLOY_ACCESS=READY"
+      - name: Build identical static runtime in a separate dist directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          while IFS= read -r -d '' file; do
+            rel="${file#./}"
+            case "$rel" in
+              .git/*|.github/*|tests/*|scripts/*|collector/*|cloudflare/*|node_modules/*|.env*|*/.env*) continue;;
+            esac
+            case "$rel" in
+              *.html|*.js|*.css|*.json|*.svg|*.png|*.jpg|*.jpeg|*.webp|*.avif|*.gif|*.ico|*.woff|*.woff2|*.ttf|*.webmanifest|*.txt|*.xml)
+                mkdir -p "dist/$(dirname "$rel")"
+                cp "$file" "dist/$rel";;
+            esac
+          done < <(find . -type f -print0)
+          cat > dist/_headers <<'EOF'
+          /*
+            X-Robots-Tag: noindex, nofollow, noarchive
+          EOF
+          test -s dist/index.html
+          test -d dist/data
+          echo "SOURCE_SHA=$GITHUB_SHA FILES=$(find dist -type f | wc -l)"
+      - name: Deploy only non-production Cloudflare Pages candidate
+        run: npx --yes wrangler@4 pages deploy dist --project-name "$PROJECT" --branch main
+      - name: Verify candidate
+        run: |
+          set -euo pipefail
+          url="https://$PROJECT.pages.dev/"
+          code="$(curl -fsSL --max-time 15 -o /dev/null -w '%{http_code}' "$url")"
+          echo "STAGE_HTTP=$code URL=$url"
+          test "$code" = 200
